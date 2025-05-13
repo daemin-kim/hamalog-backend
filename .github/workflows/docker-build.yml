@@ -26,32 +26,6 @@ jobs:
         with:
           arguments: build
 
-      - name: 디버깅용 파일 목록 확인
-        run: |
-          echo "===== 현재 디렉터리 ====="
-          ls -la
-          echo "===== build 폴더 ====="
-          ls -la build/ || echo "build 폴더 없음"
-          echo "===== build/libs 폴더 ====="
-          ls -la build/libs/ || echo "libs 폴더 없음"
-          echo "===== JAR 파일 검색 ====="
-          find . -name "*.jar" -type f
-
-      - name: JAR 파일 이동
-        run: |
-          # 스프링 부트 JAR 파일 찾기
-          JAR_PATH=$(find . -name "*.jar" -not -name "*plain.jar" -not -name "*sources.jar" -not -name "*javadoc.jar" | head -n 1)
-          
-          if [ -n "$JAR_PATH" ]; then
-            echo "JAR 파일을 찾았습니다: $JAR_PATH"
-            cp $JAR_PATH Hamalog-0.0.1-SNAPSHOT.jar
-            echo "JAR 파일을 복사했습니다"
-            ls -la Hamalog-0.0.1-SNAPSHOT.jar
-          else
-            echo "JAR 파일을 찾을 수 없습니다. 빌드 과정을 확인하세요."
-            exit 1
-          fi
-
       - name: Docker 로그인
         uses: docker/login-action@v2
         with:
@@ -72,5 +46,5 @@ jobs:
           docker stop hamalog-container || true
           docker rm hamalog-container || true
           docker run -d --name hamalog-container -p 8080:8080 ghcr.io/daemin-kim/hamalog-backend/hamalog-app:latest
-          sleep 10  # 컨테이너 실행 후 잠시 대기
+          sleep 10  # 컨테이너 실행 대기
           docker logs hamalog-container  # 로그 확인

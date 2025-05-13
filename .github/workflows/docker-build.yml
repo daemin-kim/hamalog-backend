@@ -67,15 +67,10 @@ jobs:
           tags: ghcr.io/${{ github.repository }}/hamalog-app:latest
 
       - name: 서버에 배포
-        uses: appleboy/ssh-action@master
-        with:
-          host: ${{ secrets.SERVER_HOST }}
-          username: ${{ secrets.SERVER_USER }}
-          key: ${{ secrets.SERVER_SSH_KEY }}
-          script: |
-            echo ${{ secrets.CR_PAT }} | docker login ghcr.io -u ${{ github.repository_owner }} --password-stdin
-            docker pull ghcr.io/${{ github.repository }}/hamalog-app:latest
-            docker stop hamalog-container || true
-            docker rm hamalog-container || true
-            docker run -d --name hamalog-container -p 8080:8080 ghcr.io/${{ github.repository }}/hamalog-app:latest
-            docker system prune -af
+        run: |
+          docker pull ghcr.io/daemin-kim/hamalog-backend/hamalog-app:latest
+          docker stop hamalog-container || true
+          docker rm hamalog-container || true
+          docker run -d --name hamalog-container -p 8080:8080 ghcr.io/daemin-kim/hamalog-backend/hamalog-app:latest
+          docker system prune -af
+

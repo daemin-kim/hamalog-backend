@@ -72,5 +72,3 @@ jobs:
           docker stop hamalog-container || true
           docker rm hamalog-container || true
           docker run -d --name hamalog-container -p 8080:8080 ghcr.io/daemin-kim/hamalog-backend/hamalog-app:latest
-          docker system prune -af
-

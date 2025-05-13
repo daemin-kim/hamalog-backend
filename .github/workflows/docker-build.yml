@@ -39,6 +39,7 @@ jobs:
           context: .
           push: true
           tags: ghcr.io/${{ github.repository }}/hamalog-app:latest
+          file: Dockerfile  # Dockerfile 경로 명시 (필요시)
 
       - name: 서버에 배포
         run: |

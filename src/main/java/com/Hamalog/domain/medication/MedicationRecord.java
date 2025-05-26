@@ -1,10 +1,14 @@
 package com.Hamalog.domain.medication;
 
 import jakarta.persistence.*;
+import lombok.Getter;
+import lombok.NoArgsConstructor;
 
 import java.time.LocalDateTime;
 
 @Entity
+@Getter
+@NoArgsConstructor
 public class MedicationRecord {
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
@@ -23,5 +27,25 @@ public class MedicationRecord {
 
     @Column(nullable = false)
     private LocalDateTime realTakeTime;
+
+    public MedicationRecord(
+            MedicationSchedule medicationSchedule,
+            MedicationTime medicationTime,
+            Boolean isTakeMedication,
+            LocalDateTime realTakeTime
+    ) {
+        this.medicationSchedule = medicationSchedule;
+        this.medicationTime = medicationTime;
+        this.isTakeMedication = isTakeMedication;
+        this.realTakeTime = realTakeTime;
+    }
+
+    public void update(
+            Boolean isTakeMedication,
+            LocalDateTime realTakeTime
+    ) {
+        this.isTakeMedication = isTakeMedication;
+        this.realTakeTime = realTakeTime;
+    }
 
 }

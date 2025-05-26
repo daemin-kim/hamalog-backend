@@ -10,5 +10,4 @@ public record MedicationScheduleCreateRequest(
         Integer prescriptionDays,
         Integer perDay,
         String alarmType
-) {
-}
+) {}

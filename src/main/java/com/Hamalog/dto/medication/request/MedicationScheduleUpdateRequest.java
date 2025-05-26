@@ -5,7 +5,6 @@ import com.Hamalog.domain.medication.AlarmType;
 import java.time.LocalDate;
 
 public record MedicationScheduleUpdateRequest(
-        Long medicationScheduleId,
         String name,
         String hospitalName,
         LocalDate prescriptionDate,

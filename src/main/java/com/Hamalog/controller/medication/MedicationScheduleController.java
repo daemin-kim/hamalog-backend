@@ -20,7 +20,7 @@ public class MedicationScheduleController {
         this.medicationScheduleService = medicationScheduleService;
     }
 
-    @GetMapping("/{member-id}")
+    @GetMapping("/list/{member-id}")
     public ResponseEntity<List<MedicationSchedule>> getMedicationSchedules(
             @PathVariable("member-id") Long memberId
     ){

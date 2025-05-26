@@ -1,4 +1,10 @@
 package com.Hamalog.dto.medication.request;
 
-public class MedicationRecordCreateRequest {
-}
+import java.time.LocalDateTime;
+
+public record MedicationRecordCreateRequest(
+        Long medicationScheduleId,
+        Long medicationTimeId,
+        Boolean isTakeMedication,
+        LocalDateTime realTakeTime
+) {}

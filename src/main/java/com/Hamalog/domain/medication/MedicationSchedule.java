@@ -2,10 +2,14 @@ package com.Hamalog.domain.medication;
 
 import com.Hamalog.domain.member.Member;
 import jakarta.persistence.*;
+import lombok.Getter;
+import lombok.NoArgsConstructor;
 
 import java.time.LocalDate;
 
 @Entity
+@Getter
+@NoArgsConstructor
 public class MedicationSchedule {
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
@@ -39,4 +43,45 @@ public class MedicationSchedule {
     @Column(length = 20, nullable = false)
     private AlarmType alarmType;
 
+    public MedicationSchedule(
+            Member member,
+            String name,
+            String hospitalName,
+            LocalDate prescriptionDate,
+            String memo,
+            LocalDate startOfAd,
+            Integer prescriptionDays,
+            Integer perDay,
+            AlarmType alarmType
+    ) {
+        this.member = member;
+        this.name = name;
+        this.hospitalName = hospitalName;
+        this.prescriptionDate = prescriptionDate;
+        this.memo = memo;
+        this.startOfAd = startOfAd;
+        this.prescriptionDays = prescriptionDays;
+        this.perDay = perDay;
+        this.alarmType = alarmType;
+    }
+
+    public void update(
+            String name,
+            String hospitalName,
+            LocalDate prescriptionDate,
+            String memo,
+            LocalDate startOfAd,
+            Integer prescriptionDays,
+            Integer perDay,
+            AlarmType alarmType
+    ) {
+        this.name = name;
+        this.hospitalName = hospitalName;
+        this.prescriptionDate = prescriptionDate;
+        this.memo = memo;
+        this.startOfAd = startOfAd;
+        this.prescriptionDays = prescriptionDays;
+        this.perDay = perDay;
+        this.alarmType = alarmType;
+    }
 }

@@ -31,10 +31,12 @@ public class MedicationRecordService {
         this.medicationTimeRepository = medicationTimeRepository;
     }
 
+    @Transactional(readOnly = true)
     public List<MedicationRecord> getMedicationRecords(Long medicationScheduleId) {
         return medicationRecordRepository.findAllByMedicationSchedule_MedicationScheduleId(medicationScheduleId);
     }
 
+    @Transactional(readOnly = true)
     public MedicationRecord getMedicationRecord(
             Long medicationRecordId
     ) {

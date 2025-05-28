@@ -1,6 +1,5 @@
 package com.Hamalog.domain.sideEffect;
 
-import jakarta.persistence.Column;
 import jakarta.persistence.Entity;
 import jakarta.persistence.Id;
 import jakarta.persistence.IdClass;
@@ -13,8 +12,4 @@ public class SideEffectSideEffectRecord {
 
     @Id
     private Long sideEffectId;
-
-    @Column(length = 20, nullable = false)
-    private String degree;
-
 }

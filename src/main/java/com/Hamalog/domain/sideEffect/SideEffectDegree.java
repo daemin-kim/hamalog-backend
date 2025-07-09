@@ -1,8 +1,10 @@
 package com.Hamalog.domain.sideEffect;
 
 import jakarta.persistence.*;
+import lombok.Getter;
 
 @Entity
+@Getter
 public class SideEffectDegree {
 
     @Id

@@ -1,5 +1,6 @@
 package com.Hamalog.config;
 
+import com.Hamalog.service.oauth2.KakaoOAuth2UserService;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.security.config.annotation.web.builders.HttpSecurity;
@@ -11,14 +12,25 @@ import org.springframework.security.web.SecurityFilterChain;
 @EnableWebSecurity
 public class SecurityConfig {
 
+    private final KakaoOAuth2UserService kakaoOAuth2UserService;
+
+    public SecurityConfig(KakaoOAuth2UserService kakaoOAuth2UserService) {
+        this.kakaoOAuth2UserService = kakaoOAuth2UserService;
+    }
+
     @Bean
     public SecurityFilterChain securityFilterChain(HttpSecurity http) throws Exception {
         http
-            .csrf(AbstractHttpConfigurer::disable) // CSRF 보호 비활성화
-            .authorizeHttpRequests(auth -> auth
-                .requestMatchers("/test").permitAll() // /test 엔드포인트 허용
-                .anyRequest().authenticated() // 그 외 모든 요청 인증 필요
-            );
+                .csrf(AbstractHttpConfigurer::disable)
+                .authorizeHttpRequests(auth -> auth
+                        .requestMatchers("/test").permitAll()
+                        .anyRequest().authenticated()
+                )
+                .oauth2Login(oauth2 -> oauth2
+                        .userInfoEndpoint(userInfo -> userInfo
+                                .userService(kakaoOAuth2UserService) // 사용자 정보 후처리 등록
+                        )
+                );
 
         return http.build();
     }

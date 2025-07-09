@@ -1,9 +1,12 @@
 package com.Hamalog.domain.medication;
 
 import jakarta.persistence.*;
+import lombok.Getter;
+
 import java.time.LocalTime;
 
 @Entity
+@Getter
 public class MedicationTime {
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)

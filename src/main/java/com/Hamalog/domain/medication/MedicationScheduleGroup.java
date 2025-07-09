@@ -2,8 +2,10 @@ package com.Hamalog.domain.medication;
 
 import com.Hamalog.domain.member.Member;
 import jakarta.persistence.*;
+import lombok.Getter;
 
 @Entity
+@Getter
 public class MedicationScheduleGroup {
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)

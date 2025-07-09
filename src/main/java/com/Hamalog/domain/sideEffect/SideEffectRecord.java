@@ -2,9 +2,12 @@ package com.Hamalog.domain.sideEffect;
 
 import com.Hamalog.domain.member.Member;
 import jakarta.persistence.*;
+import lombok.Getter;
+
 import java.time.LocalDateTime;
 
 @Entity
+@Getter
 public class SideEffectRecord {
 
     @Id

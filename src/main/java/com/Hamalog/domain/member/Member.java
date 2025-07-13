@@ -25,6 +25,9 @@ public class Member {
     @Column(nullable = false)
     private String password;
 
+    @Column(nullable = false)
+    private String name;
+
     @Column(length = 13, nullable = false)
     private String phoneNumber;
 

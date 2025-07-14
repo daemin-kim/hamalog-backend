@@ -40,7 +40,8 @@ public class MedicationScheduleService {
     }
 
     public MedicationSchedule createMedicationSchedule(
-            MedicationScheduleCreateRequest medicationScheduleCreateRequest
+            MedicationScheduleCreateRequest medicationScheduleCreateRequest,
+            String imagePath
     ) {
         Member member = memberRepository.findById(medicationScheduleCreateRequest.memberId())
                 .orElseThrow(() -> new RuntimeException("Member not found"));
@@ -54,7 +55,8 @@ public class MedicationScheduleService {
                 LocalDate.parse(medicationScheduleCreateRequest.startOfAd()),
                 medicationScheduleCreateRequest.prescriptionDays(),
                 medicationScheduleCreateRequest.perDay(),
-                AlarmType.valueOf(medicationScheduleCreateRequest.alarmType())
+                AlarmType.valueOf(medicationScheduleCreateRequest.alarmType()),
+                imagePath
         );
 
         return medicationScheduleRepository.save(medicationSchedule);
@@ -74,7 +76,8 @@ public class MedicationScheduleService {
                 medicationSchedule.startOfAd(),
                 medicationSchedule.prescriptionDays(),
                 medicationSchedule.perDay(),
-                medicationSchedule.alarmType()
+                medicationSchedule.alarmType(),
+                ""
         );
 
         return medicationScheduleRepository.save(existingMedicationSchedule);

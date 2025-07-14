@@ -43,6 +43,9 @@ public class MedicationSchedule {
     @Column(length = 20, nullable = false)
     private AlarmType alarmType;
 
+    @Column(length = 500)
+    private String imagePath;
+
     public MedicationSchedule(
             Member member,
             String name,
@@ -52,7 +55,8 @@ public class MedicationSchedule {
             LocalDate startOfAd,
             Integer prescriptionDays,
             Integer perDay,
-            AlarmType alarmType
+            AlarmType alarmType,
+            String imagePath
     ) {
         this.member = member;
         this.name = name;
@@ -63,6 +67,7 @@ public class MedicationSchedule {
         this.prescriptionDays = prescriptionDays;
         this.perDay = perDay;
         this.alarmType = alarmType;
+        this.imagePath = imagePath;
     }
 
     public void update(
@@ -73,7 +78,8 @@ public class MedicationSchedule {
             LocalDate startOfAd,
             Integer prescriptionDays,
             Integer perDay,
-            AlarmType alarmType
+            AlarmType alarmType,
+            String imagePath
     ) {
         this.name = name;
         this.hospitalName = hospitalName;
@@ -83,5 +89,6 @@ public class MedicationSchedule {
         this.prescriptionDays = prescriptionDays;
         this.perDay = perDay;
         this.alarmType = alarmType;
+        this.imagePath = imagePath;
     }
 }

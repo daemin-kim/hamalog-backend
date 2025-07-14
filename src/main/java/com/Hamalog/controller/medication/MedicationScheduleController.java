@@ -4,9 +4,12 @@ import com.Hamalog.domain.medication.MedicationSchedule;
 import com.Hamalog.dto.medication.request.MedicationScheduleCreateRequest;
 import com.Hamalog.dto.medication.request.MedicationScheduleUpdateRequest;
 import com.Hamalog.service.medication.MedicationScheduleService;
+import com.Hamalog.service.medication.FileStorageService;
 import org.springframework.http.HttpStatus;
+import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
+import org.springframework.web.multipart.MultipartFile;
 
 import java.util.List;
 
@@ -15,9 +18,14 @@ import java.util.List;
 public class MedicationScheduleController {
 
     private final MedicationScheduleService medicationScheduleService;
+    private final FileStorageService fileStorageService;
 
-    public MedicationScheduleController(MedicationScheduleService medicationScheduleService) {
+    public MedicationScheduleController(
+            MedicationScheduleService medicationScheduleService,
+            FileStorageService fileStorageService
+    ) {
         this.medicationScheduleService = medicationScheduleService;
+        this.fileStorageService = fileStorageService;
     }
 
     @GetMapping("/list/{member-id}")
@@ -38,12 +46,17 @@ public class MedicationScheduleController {
         return ResponseEntity.ok(medicationSchedule);
     }
 
-    @PostMapping
+    @PostMapping(consumes = MediaType.MULTIPART_FORM_DATA_VALUE)
     public ResponseEntity<MedicationSchedule> createMedicationSchedule(
-            @RequestBody MedicationScheduleCreateRequest medicationScheduleCreateRequest
+            @RequestPart("data") MedicationScheduleCreateRequest medicationScheduleCreateRequest,
+            @RequestPart(value = "image", required = false) MultipartFile image
             ) {
+        String imagePath = null;
+        if (image != null && !image.isEmpty()) {
+            imagePath = fileStorageService.save(image);
+        }
         MedicationSchedule createdMedicationSchedule = medicationScheduleService
-                .createMedicationSchedule(medicationScheduleCreateRequest);
+                .createMedicationSchedule(medicationScheduleCreateRequest, imagePath);
         return ResponseEntity.status(HttpStatus.CREATED).body(createdMedicationSchedule);
     }
 

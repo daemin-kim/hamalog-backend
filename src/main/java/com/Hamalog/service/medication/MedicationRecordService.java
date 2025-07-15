@@ -5,6 +5,9 @@ import com.Hamalog.domain.medication.MedicationSchedule;
 import com.Hamalog.domain.medication.MedicationTime;
 import com.Hamalog.dto.medication.request.MedicationRecordCreateRequest;
 import com.Hamalog.dto.medication.request.MedicationRecordUpdateRequest;
+import com.Hamalog.exception.medication.MedicationRecordNotFoundException;
+import com.Hamalog.exception.medication.MedicationScheduleNotFoundException;
+import com.Hamalog.exception.medication.MedicationTimeNotFoundException;
 import com.Hamalog.repository.medication.MedicationRecordRepository;
 import com.Hamalog.repository.medication.MedicationScheduleRepository;
 import com.Hamalog.repository.medication.MedicationTimeRepository;
@@ -41,17 +44,17 @@ public class MedicationRecordService {
             Long medicationRecordId
     ) {
         return medicationRecordRepository.findById(medicationRecordId)
-                .orElseThrow(() -> new RuntimeException("Medication record not found with id: " + medicationRecordId));
+                .orElseThrow(MedicationRecordNotFoundException::new);
     }
 
     public MedicationRecord createMedicationRecord(
             MedicationRecordCreateRequest medicationRecordCreateRequest
     ) {
         MedicationSchedule medicationSchedule = medicationScheduleRepository.findById(medicationRecordCreateRequest.medicationScheduleId())
-                .orElseThrow(() -> new RuntimeException("Medication schedule not found with id: " + medicationRecordCreateRequest.medicationScheduleId()));
+                .orElseThrow(MedicationScheduleNotFoundException::new);
 
         MedicationTime medicationTime = medicationTimeRepository.findById(medicationRecordCreateRequest.medicationTimeId())
-                .orElseThrow(() -> new RuntimeException("Medication time not found with id: " + medicationRecordCreateRequest.medicationTimeId()));
+                .orElseThrow(MedicationTimeNotFoundException::new);
 
         MedicationRecord medicationRecord = new MedicationRecord(
                 medicationSchedule,
@@ -68,7 +71,7 @@ public class MedicationRecordService {
             MedicationRecordUpdateRequest medicationRecordUpdateRequest
     ) {
         MedicationRecord medicationRecord = medicationRecordRepository.findById(medicationRecordId)
-                .orElseThrow(() -> new RuntimeException("Medication record not found with id: " + medicationRecordId));
+                .orElseThrow(MedicationRecordNotFoundException::new);
 
         medicationRecord.update(
                 medicationRecordUpdateRequest.isTakeMedication(),
@@ -80,7 +83,7 @@ public class MedicationRecordService {
 
     public void deleteMedicationRecord(Long medicationRecordId) {
         MedicationRecord medicationRecord = medicationRecordRepository.findById(medicationRecordId)
-                .orElseThrow(() -> new RuntimeException("Medication record not found with id: " + medicationRecordId));
+                .orElseThrow(MedicationRecordNotFoundException::new);
         medicationRecordRepository.delete(medicationRecord);
     }
 }

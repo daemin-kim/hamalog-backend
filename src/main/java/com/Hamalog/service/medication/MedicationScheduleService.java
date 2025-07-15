@@ -5,6 +5,8 @@ import com.Hamalog.domain.medication.MedicationSchedule;
 import com.Hamalog.domain.member.Member;
 import com.Hamalog.dto.medication.request.MedicationScheduleCreateRequest;
 import com.Hamalog.dto.medication.request.MedicationScheduleUpdateRequest;
+import com.Hamalog.exception.medication.MedicationScheduleNotFoundException;
+import com.Hamalog.exception.member.MemberNotFoundException;
 import com.Hamalog.repository.medication.MedicationScheduleRepository;
 import com.Hamalog.repository.member.MemberRepository;
 import org.springframework.stereotype.Service;
@@ -36,7 +38,7 @@ public class MedicationScheduleService {
     @Transactional(readOnly = true)
     public MedicationSchedule getMedicationSchedule(Long medicationScheduleId) {
         return medicationScheduleRepository.findById(medicationScheduleId)
-                .orElseThrow(() -> new RuntimeException("Medication schedule not found"));
+                .orElseThrow(MedicationScheduleNotFoundException::new);
     }
 
     public MedicationSchedule createMedicationSchedule(
@@ -44,7 +46,7 @@ public class MedicationScheduleService {
             String imagePath
     ) {
         Member member = memberRepository.findById(medicationScheduleCreateRequest.memberId())
-                .orElseThrow(() -> new RuntimeException("Member not found"));
+                .orElseThrow(MemberNotFoundException::new);
 
         MedicationSchedule medicationSchedule = new MedicationSchedule(
                 member,

@@ -1,6 +1,8 @@
 package com.Hamalog.config;
 
 import com.Hamalog.security.CustomUserDetailsService;
+import com.Hamalog.security.jwt.JwtAuthenticationFilter;
+import com.Hamalog.security.jwt.JwtTokenProvider;
 import com.Hamalog.service.oauth2.KakaoOAuth2UserService;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
@@ -11,6 +13,7 @@ import org.springframework.security.config.annotation.web.configuration.EnableWe
 import org.springframework.security.crypto.bcrypt.BCryptPasswordEncoder;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.security.web.SecurityFilterChain;
+import org.springframework.security.web.authentication.UsernamePasswordAuthenticationFilter;
 
 @Configuration
 @EnableWebSecurity
@@ -18,10 +21,16 @@ public class SecurityConfig {
 
     private final CustomUserDetailsService customUserDetailsService;
     private final KakaoOAuth2UserService kakaoOAuth2UserService;
+    private final JwtTokenProvider jwtTokenProvider;
 
-    public SecurityConfig(CustomUserDetailsService customUserDetailsService, KakaoOAuth2UserService kakaoOAuth2UserService) {
+    public SecurityConfig(
+            CustomUserDetailsService customUserDetailsService,
+            KakaoOAuth2UserService kakaoOAuth2UserService,
+            JwtTokenProvider jwtTokenProvider
+    ) {
         this.customUserDetailsService = customUserDetailsService;
         this.kakaoOAuth2UserService = kakaoOAuth2UserService;
+        this.jwtTokenProvider = jwtTokenProvider;
     }
 
     @Bean
@@ -31,6 +40,10 @@ public class SecurityConfig {
                 .authorizeHttpRequests(auth -> auth
                         .requestMatchers("/auth/login", "/auth/signup", "/test").permitAll()
                         .anyRequest().authenticated()
+                )
+                .addFilterBefore(
+                        new JwtAuthenticationFilter(jwtTokenProvider, customUserDetailsService),
+                        UsernamePasswordAuthenticationFilter.class
                 )
                 .formLogin(form -> form
                         .loginPage("/auth/login") // 커스텀 로그인 페이지

@@ -21,10 +21,9 @@ public class ApiLoggingAspect {
         MethodSignature methodSignature = (MethodSignature) joinPoint.getSignature();
         String methodName = methodSignature.getDeclaringType().getSimpleName() + "." + methodSignature.getName();
 
-        // 파라미터 정보도 필요하다면 아래 참고
         Object[] args = joinPoint.getArgs();
 
         log.info("API 호출: {}", methodName);
-        log.debug("파라미터: {}", Arrays.toString(args)); // 필요시 파라미터도 로그로 남길 수 있음
+        log.debug("파라미터: {}", Arrays.toString(args));
     }
 }

@@ -20,7 +20,7 @@ public class SideEffectController {
 
     @GetMapping("/recent")
     public ResponseEntity<RecentSideEffectResponse> getRecentSideEffects(@RequestParam Long userId) {
-        return null;
+        return ResponseEntity.ok(sideEffectService.getRecentSideEffects(userId));
     }
 
 }

@@ -4,8 +4,10 @@ import jakarta.persistence.Entity;
 import jakarta.persistence.Id;
 import jakarta.persistence.IdClass;
 import lombok.EqualsAndHashCode;
+import lombok.Getter;
 
 @Entity
+@Getter
 @IdClass(SideEffectSideEffectRecord.class)
 @EqualsAndHashCode
 public class SideEffectSideEffectRecord {

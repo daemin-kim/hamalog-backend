@@ -1,5 +1,6 @@
 package com.Hamalog.service.medication;
 
+import com.Hamalog.exception.file.FileSaveFailException;
 import org.springframework.stereotype.Service;
 import org.springframework.web.multipart.MultipartFile;
 
@@ -16,7 +17,7 @@ public class FileStorageService {
         if (!uploadPath.exists()) {
             boolean made = uploadPath.mkdirs(); // 디렉토리 생성 시도
             if (!made) {
-                throw new RuntimeException("파일 저장 경로 생성에 실패했습니다: " + uploadDir);
+                throw new FileSaveFailException();
             }
         }
 
@@ -26,7 +27,7 @@ public class FileStorageService {
         try {
             file.transferTo(dest);
         } catch (Exception e) {
-            throw new RuntimeException("파일 저장에 실패했습니다.", e);
+            throw new FileSaveFailException();
         }
         return fileName;
     }

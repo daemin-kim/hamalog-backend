@@ -9,7 +9,7 @@ import java.util.Date;
 public class JwtTokenProvider {
 
     private final String secretKey = "매우_강력한_시크릿_키";
-    private final long validityInMilliseconds = 3600000;
+    private static final long validityInMilliseconds = 3600000;
 
     public String createToken(String loginId) {
         Claims claims = Jwts.claims().setSubject(loginId);

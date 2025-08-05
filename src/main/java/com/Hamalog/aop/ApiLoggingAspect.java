@@ -1,15 +1,12 @@
 package com.Hamalog.aop;
 
 import lombok.extern.slf4j.Slf4j;
-import org.aspectj.lang.JoinPoint;
 import org.aspectj.lang.ProceedingJoinPoint;
 import org.aspectj.lang.annotation.*;
 import org.aspectj.lang.reflect.MethodSignature;
 import org.springframework.security.core.Authentication;
 import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.stereotype.Component;
-
-import java.util.Arrays;
 
 @Slf4j
 @Aspect
@@ -19,59 +16,60 @@ public class ApiLoggingAspect {
     @Pointcut("execution(public * com.Hamalog.controller..*(..))")
     public void allControllerMethods() {}
 
-    @Before("allControllerMethods()")
-    public void logApiCall(JoinPoint joinPoint) {
-        MethodSignature methodSignature = (MethodSignature) joinPoint.getSignature();
-        String methodName = methodSignature.getDeclaringType().getSimpleName() + "." + methodSignature.getName();
-
-        Object[] args = joinPoint.getArgs();
-
-        log.info("API 호출: {}", methodName);
-        log.debug("파라미터: {}", Arrays.toString(args));
-    }
-
     @Around("allControllerMethods()")
     public Object logApiRequestAndResponse(ProceedingJoinPoint joinPoint) throws Throwable {
         long startTime = System.currentTimeMillis();
 
+        // 메소드 정보
         MethodSignature signature = (MethodSignature) joinPoint.getSignature();
         String methodName = signature.getDeclaringType().getSimpleName() + "." + signature.getName();
 
-        // 파라미터명/값 출력
-        String[] paramNames = signature.getParameterNames();
-        Object[] args = joinPoint.getArgs();
-        StringBuilder params = new StringBuilder();
-        for (int i = 0; i < paramNames.length; i++) {
-            params.append(paramNames[i]).append("=").append(args[i]).append(", ");
-        }
+        // 파라미터 정보
+        String params = getParameterInfo(signature, joinPoint.getArgs());
 
-        // 요청자 정보
-        String user = "anonymous";
-        Authentication auth = SecurityContextHolder.getContext().getAuthentication();
-        if (auth != null && auth.isAuthenticated()) {
-            user = String.valueOf(auth.getPrincipal());
-        }
+        // 인증 사용 정보 추출
+        String user = getAuthenticatedUser();
 
         // 요청 로그
-        log.info("[API 요청] {} | user={} | params=[{}]", methodName, user, params);
+        log.info("[API 요청] {} | user={} | params={}", methodName, user, params);
 
         try {
-            Object result = joinPoint.proceed();
+            Object result = joinPoint.proceed(); // 실제 메서드 실행
             long elapsed = System.currentTimeMillis() - startTime;
-            log.info("[API 응답] {} | user={} | time={}ms | result={}", methodName, user, elapsed, shorten(result));
+            log.info("[API 응답] {} | user={} | time={}ms | result={}",
+                    methodName, user, elapsed, shorten(result));
             return result;
         } catch (Exception e) {
             long elapsed = System.currentTimeMillis() - startTime;
-            log.error("[API 예외] {} | user={} | time={}ms | error={}", methodName, user, elapsed, e.toString(), e);
+            log.error("[API 예외] {} | user={} | time={}ms | error={}",
+                    methodName, user, elapsed, e.toString(), e);
             throw e;
         }
     }
 
-    // JSON 직렬화 또는 toString() 등으로 반환 데이터를 간단하게 처리(너무 길면 자름)
+    // 파라미터명=값1, 파라미터명2=값2, ... 형식 문자열
+    private String getParameterInfo(MethodSignature signature, Object[] args) {
+        String[] paramNames = signature.getParameterNames();
+        if (paramNames == null || args == null) return "";
+        StringBuilder sb = new StringBuilder();
+        for (int i = 0; i < paramNames.length; i++) {
+            sb.append(paramNames[i]).append('=').append(args[i]).append(", ");
+        }
+        return !sb.isEmpty() ? sb.substring(0, sb.length() - 2) : "";
+    }
+
+    // 인증 사용자 추출
+    private String getAuthenticatedUser() {
+        Authentication auth = SecurityContextHolder.getContext().getAuthentication();
+        if (auth == null || !auth.isAuthenticated())
+            return "anonymous";
+        return String.valueOf(auth.getPrincipal());
+    }
+
+    // 반환값 요약
     private String shorten(Object obj) {
         if (obj == null) return "null";
         String s = obj.toString();
         return s.length() > 200 ? s.substring(0, 200) + "..." : s;
     }
-
 }

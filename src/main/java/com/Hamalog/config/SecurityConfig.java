@@ -46,8 +46,8 @@ public class SecurityConfig {
                         UsernamePasswordAuthenticationFilter.class
                 )
                 .formLogin(form -> form
-                        .loginPage("/auth/login") // 커스텀 로그인 페이지
-                        .loginProcessingUrl("/auth/login") // 로그인 처리 URL
+                        .loginPage("/auth/login")
+                        .loginProcessingUrl("/auth/login")
                         .usernameParameter("loginId")
                         .passwordParameter("password")
                         .defaultSuccessUrl("/home", true)
@@ -58,7 +58,7 @@ public class SecurityConfig {
                         .logoutSuccessUrl("/auth/login")
                 )
                 .oauth2Login(oauth2 -> oauth2
-                                .loginPage("/auth/login") // 소셜 로그인도 같은 로그인 페이지 사용
+                                .loginPage("/auth/login")
                                 .userInfoEndpoint(userInfo -> userInfo
                                         .userService(kakaoOAuth2UserService)
                                 )

@@ -3,6 +3,7 @@ package com.Hamalog.config;
 import com.Hamalog.security.CustomUserDetailsService;
 import com.Hamalog.security.jwt.JwtAuthenticationFilter;
 import com.Hamalog.security.jwt.JwtTokenProvider;
+import com.Hamalog.security.oauth2.OAuth2AuthenticationSuccessHandler;
 import com.Hamalog.service.oauth2.KakaoOAuth2UserService;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
@@ -27,15 +28,18 @@ public class SecurityConfig {
     private final CustomUserDetailsService customUserDetailsService;
     private final KakaoOAuth2UserService kakaoOAuth2UserService;
     private final JwtTokenProvider jwtTokenProvider;
+    private final OAuth2AuthenticationSuccessHandler oAuth2AuthenticationSuccessHandler;
 
     public SecurityConfig(
             CustomUserDetailsService customUserDetailsService,
             KakaoOAuth2UserService kakaoOAuth2UserService,
-            JwtTokenProvider jwtTokenProvider
+            JwtTokenProvider jwtTokenProvider,
+            OAuth2AuthenticationSuccessHandler oAuth2AuthenticationSuccessHandler
     ) {
         this.customUserDetailsService = customUserDetailsService;
         this.kakaoOAuth2UserService = kakaoOAuth2UserService;
         this.jwtTokenProvider = jwtTokenProvider;
+        this.oAuth2AuthenticationSuccessHandler = oAuth2AuthenticationSuccessHandler;
     }
 
     @Bean
@@ -52,19 +56,20 @@ public class SecurityConfig {
                         .requestMatchers(
                                 "/auth/login", "/auth/signup",
                                 "/v3/api-docs/**", "/swagger-ui.html", "/swagger-ui/**",
-                                "/error"
+                                "/error",
+                                "/oauth2/**", "/login/oauth2/**", "/oauth2/authorization/**"
                         ).permitAll()
                         .requestMatchers(HttpMethod.GET, "/test").permitAll()
                         .anyRequest().authenticated()
+                )
+                .oauth2Login(oauth2 -> oauth2
+                        .userInfoEndpoint(u -> u.userService(kakaoOAuth2UserService))
+                        .successHandler(oAuth2AuthenticationSuccessHandler)
                 )
                 .addFilterBefore(
                         new JwtAuthenticationFilter(jwtTokenProvider, customUserDetailsService),
                         UsernamePasswordAuthenticationFilter.class
                 );
-
-        // Keep optional formLogin/oauth2 only if needed; comment out to encourage pure JWT stateless API
-        // .formLogin(form -> form.loginPage("/auth/login").permitAll())
-        // .oauth2Login(oauth2 -> oauth2.loginPage("/auth/login").userInfoEndpoint(u -> u.userService(kakaoOAuth2UserService)));
 
         return http.build();
     }

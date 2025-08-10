@@ -26,6 +26,16 @@ public class FileStorageService {
             throw new FileSaveFailException();
         }
 
+        // 간단한 콘텐츠 타입/크기 검증 (이미지 전용, 최대 5MB)
+        String contentType = file.getContentType();
+        if (contentType == null || !contentType.toLowerCase().startsWith("image/")) {
+            throw new FileSaveFailException();
+        }
+        long maxSizeBytes = 5L * 1024 * 1024;
+        if (file.getSize() > maxSizeBytes) {
+            throw new FileSaveFailException();
+        }
+
         // 원본 파일명 추출 및 확장자 추출
         String originalFilename = file.getOriginalFilename();
         String extension = "";

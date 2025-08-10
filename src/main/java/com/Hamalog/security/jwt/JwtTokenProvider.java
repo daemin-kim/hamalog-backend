@@ -24,7 +24,7 @@ public class JwtTokenProvider {
     private final long validityInMilliseconds;
 
     public JwtTokenProvider(
-            @Value("${jwt.secret}") String secret,
+            @Value("${jwt.secret:}") String secret,
             @Value("${jwt.expiry:3600000}") long validityInMilliseconds
     ) {
         this.secret = secret;
@@ -33,7 +33,18 @@ public class JwtTokenProvider {
 
     @PostConstruct
     protected void init() {
-        byte[] keyBytes = Base64.getDecoder().decode(secret);
+        if (secret == null || secret.isBlank()) {
+            throw new IllegalStateException("JWT secret is not configured. Set jwt.secret as a Base64-encoded 256-bit key.");
+        }
+        byte[] keyBytes;
+        try {
+            keyBytes = Base64.getDecoder().decode(secret);
+        } catch (IllegalArgumentException e) {
+            throw new IllegalStateException("JWT secret must be Base64-encoded.");
+        }
+        if (keyBytes.length < 32) { // 256-bit
+            throw new IllegalStateException("JWT secret must be at least 256-bit.");
+        }
         this.secretKey = Keys.hmacShaKeyFor(keyBytes);
     }
 
@@ -68,6 +79,7 @@ public class JwtTokenProvider {
     public boolean validateToken(String token) {
         try {
             Jwts.parser()
+                    .clockSkewSeconds(60)
                     .verifyWith((SecretKey) secretKey)
                     .build()
                     .parseSignedClaims(token);
@@ -96,6 +108,7 @@ public class JwtTokenProvider {
      */
     public Claims getAllClaims(String token) {
         return Jwts.parser()
+                .clockSkewSeconds(60)
                 .verifyWith((SecretKey) secretKey)
                 .build()
                 .parseSignedClaims(token)

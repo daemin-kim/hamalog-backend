@@ -46,11 +46,13 @@ public class MedicationScheduleController {
             @ApiResponse(responseCode = "404", description = "회원이 존재하지 않음", content = @Content)
     })
     @GetMapping("/list/{member-id}")
-    public ResponseEntity<List<MedicationSchedule>> getMedicationSchedules(
+    public ResponseEntity<org.springframework.data.domain.Page<MedicationSchedule>> getMedicationSchedules(
             @Parameter(description = "회원 ID", required = true, example = "1", in = ParameterIn.PATH)
-            @PathVariable("member-id") Long memberId
+            @PathVariable("member-id") Long memberId,
+            @Parameter(description = "페이지네이션 정보", required = false)
+            org.springframework.data.domain.Pageable pageable
     ){
-        List<MedicationSchedule> medicationSchedules = medicationScheduleService.getMedicationSchedules(memberId);
+        org.springframework.data.domain.Page<MedicationSchedule> medicationSchedules = medicationScheduleService.getMedicationSchedules(memberId, pageable);
         return ResponseEntity.ok(medicationSchedules);
     }
 
@@ -83,7 +85,7 @@ public class MedicationScheduleController {
     @PostMapping(consumes = MediaType.MULTIPART_FORM_DATA_VALUE)
     public ResponseEntity<MedicationSchedule> createMedicationSchedule(
             @Parameter(description = "복약 스케줄 생성 요청 데이터", required = true)
-            @RequestPart("data") MedicationScheduleCreateRequest medicationScheduleCreateRequest,
+            @RequestPart("data") @jakarta.validation.Valid MedicationScheduleCreateRequest medicationScheduleCreateRequest,
 
             @Parameter(description = "복약 스케줄에 첨부할 이미지 파일 (선택 사항)", required = false, content = @Content(mediaType = MediaType.APPLICATION_OCTET_STREAM_VALUE))
             @RequestPart(value = "image", required = false) MultipartFile image
@@ -110,7 +112,7 @@ public class MedicationScheduleController {
             @PathVariable("medication-schedule-id") Long medicationScheduleId,
 
             @Parameter(description = "복약 스케줄 수정 요청 데이터", required = true)
-            @RequestBody MedicationScheduleUpdateRequest medicationScheduleUpdateRequest
+            @RequestBody @jakarta.validation.Valid MedicationScheduleUpdateRequest medicationScheduleUpdateRequest
     ) {
         MedicationSchedule updatedMedicationSchedule = medicationScheduleService.updateMedicationSchedule(medicationScheduleId, medicationScheduleUpdateRequest);
         return ResponseEntity.ok(updatedMedicationSchedule);

@@ -36,6 +36,11 @@ public class MedicationScheduleService {
     }
 
     @Transactional(readOnly = true)
+    public org.springframework.data.domain.Page<MedicationSchedule> getMedicationSchedules(Long memberId, org.springframework.data.domain.Pageable pageable) {
+        return medicationScheduleRepository.findByMember_MemberId(memberId, pageable);
+    }
+
+    @Transactional(readOnly = true)
     public MedicationSchedule getMedicationSchedule(Long medicationScheduleId) {
         return medicationScheduleRepository.findById(medicationScheduleId)
                 .orElseThrow(MedicationScheduleNotFoundException::new);
@@ -79,7 +84,7 @@ public class MedicationScheduleService {
                 medicationSchedule.prescriptionDays(),
                 medicationSchedule.perDay(),
                 medicationSchedule.alarmType(),
-                ""
+                existingMedicationSchedule.getImagePath()
         );
 
         return medicationScheduleRepository.save(existingMedicationSchedule);

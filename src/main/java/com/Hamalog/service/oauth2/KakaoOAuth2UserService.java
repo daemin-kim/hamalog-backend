@@ -31,17 +31,14 @@ public class KakaoOAuth2UserService extends DefaultOAuth2UserService {
     @Override
     @Transactional
     public OAuth2User loadUser(OAuth2UserRequest userRequest) throws OAuth2AuthenticationException {
-        // 1) Delegate to default loader
         OAuth2User oAuth2User = super.loadUser(userRequest);
 
-        // 2) Verify provider (defensive)
         String registrationId = userRequest.getClientRegistration().getRegistrationId();
         if (!"kakao".equalsIgnoreCase(registrationId)) {
             throw new OAuth2AuthenticationException(new OAuth2Error("invalid_request"),
                     "Unsupported OAuth2 provider: " + registrationId);
         }
 
-        // 3) Safely extract attributes
         Map<String, Object> attributes = safeAsMap(oAuth2User.getAttributes(), "root attributes");
 
         Long kakaoId = safeAsLong(attributes.get("id"), "id")
@@ -53,21 +50,17 @@ public class KakaoOAuth2UserService extends DefaultOAuth2UserService {
 
         String nickname = safeAsString(profile.get("nickname")).orElse(null);
 
-        // Optional: check agreement flags when present
-        // Boolean hasEmail = safeAsBoolean(kakaoAccount.get("has_email")).orElse(null);
-        // String email = safeAsString(kakaoAccount.get("email")).orElse(null);
 
-        // 4) Persist or update local member
-        String loginId = "kakao_" + kakaoId; // ex: kakao_12345678
+        String loginId = "kakao_" + kakaoId;
         Optional<Member> optionalMember = memberRepository.findByLoginId(loginId);
         if (optionalMember.isEmpty()) {
             String name = (nickname != null && !nickname.isBlank()) ? nickname : "카카오사용자";
-            String phoneNumber = "0000000000000"; // 13 digits placeholder
-            LocalDate birth = LocalDate.of(1970, 1, 1); // default placeholder
+            String phoneNumber = "0000000000000";
+            LocalDate birth = LocalDate.of(1970, 1, 1);
 
             Member member = Member.builder()
                     .loginId(loginId)
-                    .password("{noop}") // Social login placeholder; not used
+                    .password("{noop}")
                     .name(name)
                     .phoneNumber(phoneNumber)
                     .birth(birth)
@@ -76,15 +69,12 @@ public class KakaoOAuth2UserService extends DefaultOAuth2UserService {
             memberRepository.save(member);
             log.debug("Created new member for Kakao id {} as loginId {}", kakaoId, loginId);
         } else {
-            // Optionally update simple profile fields if present
             Member existing = optionalMember.get();
             if (nickname != null && !nickname.isBlank() && !nickname.equals(existing.getName())) {
-                // Since Member fields are immutable (no setters), skip update for now to keep minimal changes
                 log.debug("Nickname provided '{}' differs from stored name '{}', but Member is immutable; skipping update.", nickname, existing.getName());
             }
         }
 
-        // 5) Return the delegate-provided user (authorities handled by framework)
         return oAuth2User;
     }
 

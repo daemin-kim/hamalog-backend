@@ -35,7 +35,6 @@ public class OAuth2AuthenticationSuccessHandler implements AuthenticationSuccess
         if (principal instanceof OAuth2User oAuth2User) {
             Object idObj = oAuth2User.getAttributes().get("id");
             if (idObj == null) {
-                // Fallback to name
                 loginId = authentication.getName();
             } else {
                 long kakaoId = ((Number) idObj).longValue();
@@ -48,7 +47,6 @@ public class OAuth2AuthenticationSuccessHandler implements AuthenticationSuccess
         String token = jwtTokenProvider.createToken(loginId);
 
         String target = redirectBase;
-        // append token as query param
         String sep = target.contains("?") ? "&" : "?";
         String url = target + sep + "token=" + URLEncoder.encode(token, StandardCharsets.UTF_8);
 

@@ -42,15 +42,12 @@ public class JwtTokenProvider {
         } catch (IllegalArgumentException e) {
             throw new IllegalStateException("JWT secret must be Base64-encoded.");
         }
-        if (keyBytes.length < 32) { // 256-bit
+        if (keyBytes.length < 32) {
             throw new IllegalStateException("JWT secret must be at least 256-bit.");
         }
         this.secretKey = Keys.hmacShaKeyFor(keyBytes);
     }
 
-    /**
-     * JWT 생성 (loginId를 subject로, 추가 클레임 optional)
-     */
     public String createToken(String loginId) {
         return createToken(loginId, null);
     }
@@ -73,9 +70,6 @@ public class JwtTokenProvider {
                 .compact();
     }
 
-    /**
-     * JWT 토큰 유효성 검사
-     */
     public boolean validateToken(String token) {
         try {
             Jwts.parser()
@@ -96,9 +90,6 @@ public class JwtTokenProvider {
         return false;
     }
 
-    /**
-     * JWT에서 loginId(subject) 추출
-     */
     public String getLoginIdFromToken(String token) {
         return getAllClaims(token).getSubject();
     }

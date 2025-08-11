@@ -9,8 +9,6 @@ import org.springframework.security.core.Authentication;
 import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.stereotype.Component;
 
-import java.util.UUID;
-
 @Slf4j
 @Aspect
 @Component
@@ -22,8 +20,13 @@ public class ApiLoggingAspect {
     @Around("allControllerMethods()")
     public Object logApiRequestAndResponse(ProceedingJoinPoint joinPoint) throws Throwable {
         long startTime = System.currentTimeMillis();
-        String requestId = UUID.randomUUID().toString();
-        MDC.put("requestId", requestId);
+        String existingRequestId = MDC.get("requestId");
+        boolean putRequestId = false;
+        if (existingRequestId == null) {
+            MDC.put("requestId", java.util.UUID.randomUUID().toString());
+            putRequestId = true;
+        }
+        String requestId = MDC.get("requestId");
 
         MethodSignature signature = (MethodSignature) joinPoint.getSignature();
         String methodName = signature.getDeclaringType().getSimpleName() + "." + signature.getName();
@@ -44,7 +47,9 @@ public class ApiLoggingAspect {
                     methodName, requestId, user, elapsed, e.toString(), e);
             throw e;
         } finally {
-            MDC.remove("requestId");
+            if (putRequestId) {
+                MDC.remove("requestId");
+            }
         }
     }
 
@@ -72,7 +77,7 @@ public class ApiLoggingAspect {
         Authentication auth = SecurityContextHolder.getContext().getAuthentication();
         if (auth == null || !auth.isAuthenticated())
             return "anonymous";
-        return String.valueOf(auth.getPrincipal());
+        return String.valueOf(auth.getName());
     }
 
     private String shorten(Object obj) {

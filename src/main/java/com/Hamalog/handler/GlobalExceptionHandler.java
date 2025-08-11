@@ -7,6 +7,9 @@ import com.Hamalog.exception.medication.MedicationScheduleNotFoundException;
 import com.Hamalog.exception.medication.MedicationTimeNotFoundException;
 import com.Hamalog.exception.member.MemberNotFoundException;
 import jakarta.servlet.http.HttpServletRequest;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+import org.slf4j.MDC;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.validation.FieldError;
@@ -20,6 +23,8 @@ import java.util.Map;
 
 @RestControllerAdvice
 public class GlobalExceptionHandler {
+
+    private static final Logger log = LoggerFactory.getLogger(GlobalExceptionHandler.class);
 
     @ExceptionHandler({
             MedicationScheduleNotFoundException.class,
@@ -35,6 +40,7 @@ public class GlobalExceptionHandler {
                 request.getRequestURI(),
                 null
         );
+        log.warn("[NOT_FOUND] path={} code={} message={} traceId={}", request.getRequestURI(), ex.getErrorCode().getCode(), ex.getErrorCode().getMessage(), MDC.get("requestId"));
         return ResponseEntity.status(HttpStatus.NOT_FOUND).body(error);
     }
 
@@ -51,6 +57,7 @@ public class GlobalExceptionHandler {
                 request.getRequestURI(),
                 violations
         );
+        log.info("[BAD_REQUEST] path={} reason=validation_error traceId={} violations={}", request.getRequestURI(), MDC.get("requestId"), violations);
         return ResponseEntity.status(HttpStatus.BAD_REQUEST).body(error);
     }
 
@@ -63,6 +70,7 @@ public class GlobalExceptionHandler {
                 request.getRequestURI(),
                 null
         );
+        log.warn("[BUSINESS_ERROR] path={} code={} message={} traceId={}", request.getRequestURI(), ex.getErrorCode().getCode(), ex.getErrorCode().getMessage(), MDC.get("requestId"));
         return ResponseEntity.status(HttpStatus.BAD_REQUEST).body(error);
     }
 
@@ -75,6 +83,7 @@ public class GlobalExceptionHandler {
                 request.getRequestURI(),
                 null
         );
+        log.error("[UNEXPECTED_ERROR] path={} traceId={} message={}", request.getRequestURI(), MDC.get("requestId"), ex.toString(), ex);
         return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body(error);
     }
 

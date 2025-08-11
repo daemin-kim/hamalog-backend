@@ -33,16 +33,16 @@ public class JwtTokenProvider {
     @PostConstruct
     protected void init() {
         if (secret == null || secret.isBlank()) {
-            throw new IllegalStateException("JWT secret is not configured. Set jwt.secret as a Base64-encoded 256-bit key.");
+            throw new IllegalStateException("JWT 비밀키가 설정되지 않았습니다. jwt.secret에 256비트 Base64 값을 설정하세요.");
         }
         byte[] keyBytes;
         try {
             keyBytes = Base64.getDecoder().decode(secret);
         } catch (IllegalArgumentException e) {
-            throw new IllegalStateException("JWT secret must be Base64-encoded.");
+            throw new IllegalStateException("JWT 비밀키는 Base64로 인코딩되어야 합니다.");
         }
         if (keyBytes.length < 32) {
-            throw new IllegalStateException("JWT secret must be at least 256-bit.");
+            throw new IllegalStateException("JWT 비밀키는 최소 256비트여야 합니다.");
         }
         this.secretKey = Keys.hmacShaKeyFor(keyBytes);
     }

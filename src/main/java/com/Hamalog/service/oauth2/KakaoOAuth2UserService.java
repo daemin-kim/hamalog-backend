@@ -36,14 +36,14 @@ public class KakaoOAuth2UserService extends DefaultOAuth2UserService {
         String registrationId = userRequest.getClientRegistration().getRegistrationId();
         if (!"kakao".equalsIgnoreCase(registrationId)) {
             throw new OAuth2AuthenticationException(new OAuth2Error("invalid_request"),
-                    "Unsupported OAuth2 provider: " + registrationId);
+                    "지원하지 않는 OAuth2 제공자입니다: " + registrationId);
         }
 
         Map<String, Object> attributes = safeAsMap(oAuth2User.getAttributes(), "root attributes");
 
         Long kakaoId = safeAsLong(attributes.get("id"), "id")
                 .orElseThrow(() -> new OAuth2AuthenticationException(new OAuth2Error("invalid_user_info"),
-                        "Kakao user info missing 'id'"));
+                        "카카오 사용자 정보에 'id' 값이 없습니다."));
 
         Map<String, Object> kakaoAccount = safeAsMap(attributes.get("kakao_account"), "kakao_account");
         Map<String, Object> profile = safeAsMap(kakaoAccount.get("profile"), "profile");

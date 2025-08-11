@@ -9,7 +9,6 @@ import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Component;
 
 import javax.crypto.SecretKey;
-import java.security.Key;
 import java.util.Base64;
 import java.util.Date;
 import java.util.Map;
@@ -19,7 +18,7 @@ public class JwtTokenProvider {
 
     private static final Logger log = LoggerFactory.getLogger(JwtTokenProvider.class);
 
-    private Key secretKey;
+    private SecretKey secretKey;
     private final String secret;
     private final long validityInMilliseconds;
 
@@ -74,7 +73,7 @@ public class JwtTokenProvider {
         try {
             Jwts.parser()
                     .clockSkewSeconds(60)
-                    .verifyWith((SecretKey) secretKey)
+                    .verifyWith(secretKey)
                     .build()
                     .parseSignedClaims(token);
             return true;
@@ -94,13 +93,10 @@ public class JwtTokenProvider {
         return getAllClaims(token).getSubject();
     }
 
-    /**
-     * JWT 내 모든 Claims 추출 (추가 클레임 포함)
-     */
     public Claims getAllClaims(String token) {
         return Jwts.parser()
                 .clockSkewSeconds(60)
-                .verifyWith((SecretKey) secretKey)
+                .verifyWith(secretKey)
                 .build()
                 .parseSignedClaims(token)
                 .getPayload();

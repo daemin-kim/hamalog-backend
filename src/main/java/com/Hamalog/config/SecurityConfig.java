@@ -5,10 +5,12 @@ import com.Hamalog.security.jwt.JwtAuthenticationFilter;
 import com.Hamalog.security.jwt.JwtTokenProvider;
 import com.Hamalog.security.oauth2.OAuth2AuthenticationSuccessHandler;
 import com.Hamalog.service.oauth2.KakaoOAuth2UserService;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.http.HttpMethod;
 import org.springframework.security.authentication.AuthenticationManager;
+import org.springframework.security.config.Customizer;
 import org.springframework.security.config.annotation.authentication.configuration.AuthenticationConfiguration;
 import org.springframework.security.config.annotation.web.builders.HttpSecurity;
 import org.springframework.security.config.annotation.web.configuration.EnableWebSecurity;
@@ -29,27 +31,32 @@ public class SecurityConfig {
     private final KakaoOAuth2UserService kakaoOAuth2UserService;
     private final JwtTokenProvider jwtTokenProvider;
     private final OAuth2AuthenticationSuccessHandler oAuth2AuthenticationSuccessHandler;
+    private final CorsConfigurationSource corsConfigurationSource;
 
     public SecurityConfig(
             CustomUserDetailsService customUserDetailsService,
             KakaoOAuth2UserService kakaoOAuth2UserService,
             JwtTokenProvider jwtTokenProvider,
-            OAuth2AuthenticationSuccessHandler oAuth2AuthenticationSuccessHandler
+            OAuth2AuthenticationSuccessHandler oAuth2AuthenticationSuccessHandler,
+            CorsConfigurationSource corsConfigurationSource
     ) {
         this.customUserDetailsService = customUserDetailsService;
         this.kakaoOAuth2UserService = kakaoOAuth2UserService;
         this.jwtTokenProvider = jwtTokenProvider;
         this.oAuth2AuthenticationSuccessHandler = oAuth2AuthenticationSuccessHandler;
+        this.corsConfigurationSource = corsConfigurationSource;
     }
 
     @Bean
     public SecurityFilterChain securityFilterChain(HttpSecurity http) throws Exception {
         http
                 .csrf(csrf -> csrf.disable())
-                .cors(cors -> cors.configurationSource(corsConfigurationSource()))
+                .cors(cors -> cors.configurationSource(corsConfigurationSource))
                 .headers(headers -> headers
                         .contentSecurityPolicy(csp -> csp.policyDirectives("default-src 'self'"))
                         .frameOptions(frame -> frame.sameOrigin())
+                        .contentTypeOptions(Customizer.withDefaults())
+                        .referrerPolicy(ref -> ref.policy(org.springframework.security.web.header.writers.ReferrerPolicyHeaderWriter.ReferrerPolicy.STRICT_ORIGIN_WHEN_CROSS_ORIGIN))
                 )
                 .sessionManagement(sess -> sess.sessionCreationPolicy(SessionCreationPolicy.STATELESS))
                 .authorizeHttpRequests(auth -> auth
@@ -85,12 +92,29 @@ public class SecurityConfig {
     }
 
     @Bean
-    public CorsConfigurationSource corsConfigurationSource() {
+    public CorsConfigurationSource corsConfigurationSource(
+            @Value("${hamalog.cors.allowed-origins:http://localhost:3000}") String allowedOriginsCsv
+    ) {
         CorsConfiguration config = new CorsConfiguration();
-        config.addAllowedOriginPattern("*");
-        config.addAllowedHeader("*");
-        config.addAllowedMethod("*");
+        if (allowedOriginsCsv != null && !allowedOriginsCsv.isBlank()) {
+            for (String origin : allowedOriginsCsv.split(",")) {
+                String trimmed = origin.trim();
+                if (!trimmed.isEmpty()) {
+                    config.addAllowedOrigin(trimmed);
+                }
+            }
+        }
         config.setAllowCredentials(true);
+        config.addAllowedHeader("Authorization");
+        config.addAllowedHeader("Content-Type");
+        config.addAllowedHeader("Accept");
+        config.addAllowedMethod("GET");
+        config.addAllowedMethod("POST");
+        config.addAllowedMethod("PUT");
+        config.addAllowedMethod("PATCH");
+        config.addAllowedMethod("DELETE");
+        config.addAllowedMethod("OPTIONS");
+        config.setMaxAge(3600L);
         UrlBasedCorsConfigurationSource source = new UrlBasedCorsConfigurationSource();
         source.registerCorsConfiguration("/**", config);
         return source;

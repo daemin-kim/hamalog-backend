@@ -12,6 +12,7 @@ import org.slf4j.LoggerFactory;
 import org.slf4j.MDC;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
+import org.springframework.security.core.AuthenticationException;
 import org.springframework.validation.FieldError;
 import org.springframework.web.bind.MethodArgumentNotValidException;
 import org.springframework.web.bind.annotation.ExceptionHandler;
@@ -59,6 +60,19 @@ public class GlobalExceptionHandler {
         );
         log.info("[BAD_REQUEST] path={} reason=validation_error traceId={} violations={}", request.getRequestURI(), MDC.get("requestId"), violations);
         return ResponseEntity.status(HttpStatus.BAD_REQUEST).body(error);
+    }
+
+    @ExceptionHandler(AuthenticationException.class)
+    public ResponseEntity<ErrorResponse> handleAuth(AuthenticationException ex, HttpServletRequest request) {
+        ErrorResponse error = ErrorResponse.of(
+                HttpStatus.UNAUTHORIZED,
+                "UNAUTHORIZED",
+                "인증에 실패했습니다.",
+                request.getRequestURI(),
+                null
+        );
+        log.warn("[UNAUTHORIZED] path={} traceId={} message={}", request.getRequestURI(), MDC.get("requestId"), ex.getMessage());
+        return ResponseEntity.status(HttpStatus.UNAUTHORIZED).body(error);
     }
 
     @ExceptionHandler(CustomException.class)

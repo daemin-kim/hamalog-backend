@@ -6,6 +6,7 @@ import lombok.Getter;
 public enum ErrorCode {
 
     MEMBER_NOT_FOUND("MEMBER_NOT_FOUND", "회원을 찾을 수 없습니다."),
+    DUPLICATE_MEMBER("DUPLICATE_MEMBER", "이미 존재하는 회원입니다."),
     MEDICATION_SCHEDULE_NOT_FOUND("SCHEDULE_NOT_FOUND", "복약 스케줄을 찾을 수 없습니다."),
     MEDICATION_RECORD_NOT_FOUND("RECORD_NOT_FOUND", "복약 기록을 찾을 수 없습니다."),
     MEDICATION_TIME_NOT_FOUND("TIME_NOT_FOUND", "복약 시간 정보를 찾을 수 없습니다."),

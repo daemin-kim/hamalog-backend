@@ -8,7 +8,10 @@ import io.swagger.v3.oas.annotations.enums.ParameterIn;
 import io.swagger.v3.oas.annotations.responses.ApiResponse;
 import io.swagger.v3.oas.annotations.responses.ApiResponses;
 import io.swagger.v3.oas.annotations.tags.Tag;
+import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
+import org.springframework.security.core.annotation.AuthenticationPrincipal;
+import org.springframework.security.core.userdetails.UserDetails;
 import org.springframework.web.bind.annotation.*;
 
 @Tag(name = "Side Effect API", description = "사용자 부작용 기록 관련 API")
@@ -36,7 +39,15 @@ public class SideEffectController {
                     required = true,
                     example = "1"
             )
-            @RequestParam Long userId) {
+            @RequestParam Long userId,
+            @AuthenticationPrincipal UserDetails userDetails) {
+        
+        // Authorization check: ensure user can only access their own side effect data
+        String currentLoginId = userDetails.getUsername();
+        if (!sideEffectService.isOwner(userId, currentLoginId)) {
+            return ResponseEntity.status(HttpStatus.FORBIDDEN).build();
+        }
+        
         return ResponseEntity.ok(sideEffectService.getRecentSideEffects(userId));
     }
 }

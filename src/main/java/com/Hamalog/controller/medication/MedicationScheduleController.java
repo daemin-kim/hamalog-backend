@@ -18,6 +18,8 @@ import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 import org.springframework.web.multipart.MultipartFile;
+import org.springframework.security.core.annotation.AuthenticationPrincipal;
+import org.springframework.security.core.userdetails.UserDetails;
 
 import java.util.List;
 
@@ -50,8 +52,15 @@ public class MedicationScheduleController {
             @Parameter(description = "회원 ID", required = true, example = "1", in = ParameterIn.PATH)
             @PathVariable("member-id") Long memberId,
             @Parameter(description = "페이지네이션 정보", required = false)
-            org.springframework.data.domain.Pageable pageable
+            org.springframework.data.domain.Pageable pageable,
+            @AuthenticationPrincipal UserDetails userDetails
     ){
+        // Authorization check: ensure user can only access their own data
+        String currentLoginId = userDetails.getUsername();
+        if (!medicationScheduleService.isOwner(memberId, currentLoginId)) {
+            return ResponseEntity.status(HttpStatus.FORBIDDEN).build();
+        }
+        
         org.springframework.data.domain.Page<MedicationSchedule> medicationSchedules = medicationScheduleService.getMedicationSchedules(memberId, pageable);
         return ResponseEntity.ok(medicationSchedules);
     }
@@ -67,9 +76,17 @@ public class MedicationScheduleController {
     @GetMapping("/{medication-schedule-id}")
     public ResponseEntity<MedicationSchedule> getMedicationScheduleById(
             @Parameter(description = "복약 스케줄 ID", required = true, example = "1", in = ParameterIn.PATH)
-            @PathVariable("medication-schedule-id") Long medicationScheduleId
+            @PathVariable("medication-schedule-id") Long medicationScheduleId,
+            @AuthenticationPrincipal UserDetails userDetails
     ){
         MedicationSchedule medicationSchedule = medicationScheduleService.getMedicationSchedule(medicationScheduleId);
+        
+        // Authorization check: ensure user can only access their own data
+        String currentLoginId = userDetails.getUsername();
+        if (!medicationScheduleService.isOwner(medicationSchedule.getMember().getMemberId(), currentLoginId)) {
+            return ResponseEntity.status(HttpStatus.FORBIDDEN).build();
+        }
+        
         return ResponseEntity.ok(medicationSchedule);
     }
 
@@ -88,8 +105,15 @@ public class MedicationScheduleController {
             @RequestPart("data") @jakarta.validation.Valid MedicationScheduleCreateRequest medicationScheduleCreateRequest,
 
             @Parameter(description = "복약 스케줄에 첨부할 이미지 파일 (선택 사항)", required = false, content = @Content(mediaType = MediaType.APPLICATION_OCTET_STREAM_VALUE))
-            @RequestPart(value = "image", required = false) MultipartFile image
+            @RequestPart(value = "image", required = false) MultipartFile image,
+            @AuthenticationPrincipal UserDetails userDetails
     ) {
+        // Authorization check: ensure user can only create schedules for themselves
+        String currentLoginId = userDetails.getUsername();
+        if (!medicationScheduleService.isOwner(medicationScheduleCreateRequest.memberId(), currentLoginId)) {
+            return ResponseEntity.status(HttpStatus.FORBIDDEN).build();
+        }
+        
         String imagePath = null;
         if (image != null && !image.isEmpty()) {
             imagePath = fileStorageService.save(image);
@@ -112,8 +136,17 @@ public class MedicationScheduleController {
             @PathVariable("medication-schedule-id") Long medicationScheduleId,
 
             @Parameter(description = "복약 스케줄 수정 요청 데이터", required = true)
-            @RequestBody @jakarta.validation.Valid MedicationScheduleUpdateRequest medicationScheduleUpdateRequest
+            @RequestBody @jakarta.validation.Valid MedicationScheduleUpdateRequest medicationScheduleUpdateRequest,
+            @AuthenticationPrincipal UserDetails userDetails
     ) {
+        MedicationSchedule medicationSchedule = medicationScheduleService.getMedicationSchedule(medicationScheduleId);
+        
+        // Authorization check: ensure user can only update their own data
+        String currentLoginId = userDetails.getUsername();
+        if (!medicationScheduleService.isOwner(medicationSchedule.getMember().getMemberId(), currentLoginId)) {
+            return ResponseEntity.status(HttpStatus.FORBIDDEN).build();
+        }
+        
         MedicationSchedule updatedMedicationSchedule = medicationScheduleService.updateMedicationSchedule(medicationScheduleId, medicationScheduleUpdateRequest);
         return ResponseEntity.ok(updatedMedicationSchedule);
     }
@@ -127,8 +160,17 @@ public class MedicationScheduleController {
     @DeleteMapping("/{medication-schedule-id}")
     public ResponseEntity<Void> deleteMedicationSchedule(
             @Parameter(description = "삭제할 복약 스케줄 ID", required = true, example = "1", in = ParameterIn.PATH)
-            @PathVariable("medication-schedule-id") Long medicationScheduleId
+            @PathVariable("medication-schedule-id") Long medicationScheduleId,
+            @AuthenticationPrincipal UserDetails userDetails
     ) {
+        MedicationSchedule medicationSchedule = medicationScheduleService.getMedicationSchedule(medicationScheduleId);
+        
+        // Authorization check: ensure user can only delete their own data
+        String currentLoginId = userDetails.getUsername();
+        if (!medicationScheduleService.isOwner(medicationSchedule.getMember().getMemberId(), currentLoginId)) {
+            return ResponseEntity.status(HttpStatus.FORBIDDEN).build();
+        }
+        
         medicationScheduleService.deleteMedicationSchedule(medicationScheduleId);
         return ResponseEntity.noContent().build();
     }

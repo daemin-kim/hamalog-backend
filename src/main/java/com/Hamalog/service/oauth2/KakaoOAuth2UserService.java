@@ -54,20 +54,21 @@ public class KakaoOAuth2UserService extends DefaultOAuth2UserService {
         String loginId = "kakao_" + kakaoId;
         Optional<Member> optionalMember = memberRepository.findByLoginId(loginId);
         if (optionalMember.isEmpty()) {
-            String name = (nickname != null && !nickname.isBlank()) ? nickname : "카카오사용자";
-            String phoneNumber = "0000000000000";
-            LocalDate birth = LocalDate.of(1970, 1, 1);
+            String name = (nickname != null && !nickname.isBlank()) ? nickname : "OAuth2_User_" + kakaoId;
+            // Use null values instead of fake defaults to indicate incomplete profile
+            String phoneNumber = null;
+            LocalDate birth = null;
 
             Member member = Member.builder()
                     .loginId(loginId)
-                    .password("{noop}")
+                    .password("{oauth2}") // Mark as OAuth2 account, not regular password
                     .name(name)
                     .phoneNumber(phoneNumber)
                     .birth(birth)
                     .createdAt(LocalDateTime.now())
                     .build();
             memberRepository.save(member);
-            log.debug("Created new member for Kakao id {} as loginId {}", kakaoId, loginId);
+            log.info("Created new OAuth2 member for Kakao id {} as loginId {} - Profile completion required", kakaoId, loginId);
         } else {
             Member existing = optionalMember.get();
             if (nickname != null && !nickname.isBlank() && !nickname.equals(existing.getName())) {

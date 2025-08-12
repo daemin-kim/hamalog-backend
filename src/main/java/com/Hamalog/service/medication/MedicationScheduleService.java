@@ -94,4 +94,11 @@ public class MedicationScheduleService {
         MedicationSchedule medicationSchedule = getMedicationSchedule(medicationScheduleId);
         medicationScheduleRepository.delete(medicationSchedule);
     }
+    
+    @Transactional(readOnly = true)
+    public boolean isOwner(Long memberId, String loginId) {
+        return memberRepository.findById(memberId)
+                .map(member -> member.getLoginId().equals(loginId))
+                .orElse(false);
+    }
 }

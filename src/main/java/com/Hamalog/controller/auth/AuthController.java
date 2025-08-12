@@ -8,6 +8,8 @@ import com.Hamalog.exception.CustomException;
 import com.Hamalog.exception.ErrorCode;
 import com.Hamalog.repository.member.MemberRepository;
 import com.Hamalog.security.jwt.JwtTokenProvider;
+import com.Hamalog.security.jwt.TokenBlacklistService;
+import jakarta.servlet.http.HttpServletRequest;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.ResponseEntity;
@@ -27,6 +29,7 @@ public class AuthController {
     private final MemberRepository memberRepository;
     private final PasswordEncoder passwordEncoder;
     private final JwtTokenProvider jwtTokenProvider;
+    private final TokenBlacklistService tokenBlacklistService;
     private final AuthenticationManager authenticationManager;
 
     @PostMapping("/signup")
@@ -51,7 +54,7 @@ public class AuthController {
     }
 
     @PostMapping("/login")
-    public ResponseEntity<LoginResponse> login(@RequestBody LoginRequest request) {
+    public ResponseEntity<LoginResponse> login(@Valid @RequestBody LoginRequest request) {
 
         Authentication authentication = authenticationManager.authenticate(
                 new UsernamePasswordAuthenticationToken(request.loginId(), request.password())
@@ -63,7 +66,18 @@ public class AuthController {
     }
 
     @PostMapping("/logout")
-    public ResponseEntity<String> logout() {
+    public ResponseEntity<String> logout(HttpServletRequest request) {
+        String authorizationHeader = request.getHeader("Authorization");
+        
+        if (authorizationHeader != null && authorizationHeader.startsWith("Bearer ")) {
+            String token = authorizationHeader.substring(7);
+            
+            // Add token to blacklist to invalidate it
+            tokenBlacklistService.blacklistToken(token);
+            
+            return ResponseEntity.ok("로그아웃 성공 - 토큰이 무효화되었습니다");
+        }
+        
         return ResponseEntity.ok("로그아웃 성공");
     }
 }

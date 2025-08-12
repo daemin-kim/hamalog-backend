@@ -46,11 +46,16 @@ public class OAuth2AuthenticationSuccessHandler implements AuthenticationSuccess
 
         String token = jwtTokenProvider.createToken(loginId);
 
-        String target = redirectBase;
-        String sep = target.contains("?") ? "&" : "?";
-        String url = target + sep + "token=" + URLEncoder.encode(token, StandardCharsets.UTF_8);
+        // Use secure HTTP-only cookie instead of URL parameter for token delivery
+        jakarta.servlet.http.Cookie tokenCookie = new jakarta.servlet.http.Cookie("auth_token", token);
+        tokenCookie.setHttpOnly(true);
+        tokenCookie.setSecure(true); // Use HTTPS in production
+        tokenCookie.setPath("/");
+        tokenCookie.setMaxAge(3600); // 1 hour
+        tokenCookie.setAttribute("SameSite", "Strict");
+        response.addCookie(tokenCookie);
 
         response.setStatus(HttpServletResponse.SC_FOUND);
-        response.setHeader("Location", url);
+        response.setHeader("Location", redirectBase);
     }
 }

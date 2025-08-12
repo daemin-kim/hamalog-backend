@@ -15,6 +15,8 @@ import io.swagger.v3.oas.annotations.tags.Tag;
 
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
+import org.springframework.security.core.annotation.AuthenticationPrincipal;
+import org.springframework.security.core.userdetails.UserDetails;
 import org.springframework.web.bind.annotation.*;
 
 import java.util.List;
@@ -44,8 +46,15 @@ public class MedicationRecordController {
     @GetMapping("/list/{medication-schedule-id}")
     public ResponseEntity<List<MedicationRecord>> getMedicationRecords(
             @Parameter(in = ParameterIn.PATH, description = "복약 스케줄 ID", required = true, example = "1")
-            @PathVariable("medication-schedule-id") Long medicationScheduleId
+            @PathVariable("medication-schedule-id") Long medicationScheduleId,
+            @AuthenticationPrincipal UserDetails userDetails
     ) {
+        // Authorization check: ensure user can only access their own medication records
+        String currentLoginId = userDetails.getUsername();
+        if (!medicationRecordService.isOwnerOfSchedule(medicationScheduleId, currentLoginId)) {
+            return ResponseEntity.status(HttpStatus.FORBIDDEN).build();
+        }
+        
         List<MedicationRecord> medicationRecords = medicationRecordService.getMedicationRecords(medicationScheduleId);
         return ResponseEntity.ok(medicationRecords);
     }
@@ -64,8 +73,15 @@ public class MedicationRecordController {
     @GetMapping("/{medication-record-id}")
     public ResponseEntity<MedicationRecord> getMedicationRecordById(
             @Parameter(in = ParameterIn.PATH, description = "복약 기록 ID", required = true, example = "1")
-            @PathVariable("medication-record-id") Long medicationRecordId
+            @PathVariable("medication-record-id") Long medicationRecordId,
+            @AuthenticationPrincipal UserDetails userDetails
     ) {
+        // Authorization check: ensure user can only access their own medication records
+        String currentLoginId = userDetails.getUsername();
+        if (!medicationRecordService.isOwnerOfRecord(medicationRecordId, currentLoginId)) {
+            return ResponseEntity.status(HttpStatus.FORBIDDEN).build();
+        }
+        
         MedicationRecord medicationRecord = medicationRecordService.getMedicationRecord(medicationRecordId);
         return ResponseEntity.ok(medicationRecord);
     }
@@ -84,8 +100,15 @@ public class MedicationRecordController {
     @PostMapping
     public ResponseEntity<MedicationRecord> createMedicationRecord(
             @Parameter(description = "복약 기록 생성 요청 데이터", required = true)
-            @RequestBody MedicationRecordCreateRequest medicationRecordCreateRequest
+            @RequestBody MedicationRecordCreateRequest medicationRecordCreateRequest,
+            @AuthenticationPrincipal UserDetails userDetails
     ) {
+        // Authorization check: ensure user can only create records for their own schedules
+        String currentLoginId = userDetails.getUsername();
+        if (!medicationRecordService.isOwnerOfSchedule(medicationRecordCreateRequest.medicationScheduleId(), currentLoginId)) {
+            return ResponseEntity.status(HttpStatus.FORBIDDEN).build();
+        }
+        
         MedicationRecord createdMedicationRecord = medicationRecordService.createMedicationRecord(medicationRecordCreateRequest);
         return ResponseEntity.status(HttpStatus.CREATED).body(createdMedicationRecord);
     }
@@ -107,8 +130,15 @@ public class MedicationRecordController {
             @PathVariable("medication-record-id") Long medicationRecordId,
 
             @Parameter(description = "복약 기록 수정 요청 데이터", required = true)
-            @RequestBody MedicationRecordUpdateRequest medicationRecordUpdateRequest
+            @RequestBody MedicationRecordUpdateRequest medicationRecordUpdateRequest,
+            @AuthenticationPrincipal UserDetails userDetails
     ) {
+        // Authorization check: ensure user can only update their own medication records
+        String currentLoginId = userDetails.getUsername();
+        if (!medicationRecordService.isOwnerOfRecord(medicationRecordId, currentLoginId)) {
+            return ResponseEntity.status(HttpStatus.FORBIDDEN).build();
+        }
+        
         MedicationRecord updatedMedicationRecord = medicationRecordService.updateMedicationRecord(medicationRecordId, medicationRecordUpdateRequest);
         return ResponseEntity.ok(updatedMedicationRecord);
     }
@@ -124,8 +154,15 @@ public class MedicationRecordController {
     @DeleteMapping("/{medication-record-id}")
     public ResponseEntity<Void> deleteMedicationRecord(
             @Parameter(in = ParameterIn.PATH, description = "삭제할 복약 기록 ID", required = true, example = "1")
-            @PathVariable("medication-record-id") Long medicationRecordId
+            @PathVariable("medication-record-id") Long medicationRecordId,
+            @AuthenticationPrincipal UserDetails userDetails
     ) {
+        // Authorization check: ensure user can only delete their own medication records
+        String currentLoginId = userDetails.getUsername();
+        if (!medicationRecordService.isOwnerOfRecord(medicationRecordId, currentLoginId)) {
+            return ResponseEntity.status(HttpStatus.FORBIDDEN).build();
+        }
+        
         medicationRecordService.deleteMedicationRecord(medicationRecordId);
         return ResponseEntity.noContent().build();
     }

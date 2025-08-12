@@ -21,13 +21,16 @@ public class JwtTokenProvider {
     private SecretKey secretKey;
     private final String secret;
     private final long validityInMilliseconds;
+    private final TokenBlacklistService tokenBlacklistService;
 
     public JwtTokenProvider(
             @Value("${jwt.secret:}") String secret,
-            @Value("${jwt.expiry:3600000}") long validityInMilliseconds
+            @Value("${jwt.expiry:3600000}") long validityInMilliseconds,
+            TokenBlacklistService tokenBlacklistService
     ) {
         this.secret = secret;
         this.validityInMilliseconds = validityInMilliseconds;
+        this.tokenBlacklistService = tokenBlacklistService;
     }
 
     @PostConstruct
@@ -70,6 +73,12 @@ public class JwtTokenProvider {
     }
 
     public boolean validateToken(String token) {
+        // First check if token is blacklisted
+        if (tokenBlacklistService.isTokenBlacklisted(token)) {
+            log.info("JWT 토큰이 블랙리스트에 있습니다");
+            return false;
+        }
+        
         try {
             Jwts.parser()
                     .clockSkewSeconds(60)
@@ -78,13 +87,13 @@ public class JwtTokenProvider {
                     .parseSignedClaims(token);
             return true;
         } catch (ExpiredJwtException e) {
-            log.info("JWT 만료됨: {}", token);
+            log.info("JWT 만료됨");
         } catch (UnsupportedJwtException e) {
-            log.warn("JWT 지원하지 않는 형식: {}", token);
+            log.warn("JWT 지원하지 않는 형식");
         } catch (MalformedJwtException e) {
-            log.warn("JWT 위조 또는 변조 가능: {}", token);
+            log.warn("JWT 위조 또는 변조 가능");
         } catch (SignatureException | IllegalArgumentException e) {
-            log.warn("JWT 서명 오류 및 잘못된 토큰: {}", token);
+            log.warn("JWT 서명 오류 및 잘못된 토큰");
         }
         return false;
     }

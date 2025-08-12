@@ -13,6 +13,7 @@ import java.time.LocalDate;
 public class MedicationSchedule {
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
+    @Column(name = "medication_schedule_id")
     private Long medicationScheduleId;
 
     @ManyToOne(fetch = FetchType.LAZY)
@@ -22,29 +23,27 @@ public class MedicationSchedule {
     @Column(length = 20, nullable = false)
     private String name;
 
-    @Column(length = 20, nullable = false)
+    @Column(name = "hospital_name", length = 20, nullable = false)
     private String hospitalName;
 
-    @Column(nullable = false)
+    @Column(name = "prescription_date", nullable = false)
     private LocalDate prescriptionDate;
 
+    @Column(columnDefinition = "TEXT")
     private String memo;
 
-    @Column(nullable = false)
+    @Column(name = "start_of_ad", nullable = false)
     private LocalDate startOfAd;
 
-    @Column(nullable = false)
+    @Column(name = "prescription_days", nullable = false)
     private Integer prescriptionDays;
 
-    @Column(nullable = false)
+    @Column(name = "per_day", nullable = false)
     private Integer perDay;
 
     @Enumerated(EnumType.STRING)
-    @Column(length = 20, nullable = false)
+    @Column(name = "alarm_type", nullable = false)
     private AlarmType alarmType;
-
-    @Column(length = 500)
-    private String imagePath;
 
     public MedicationSchedule(
             Member member,
@@ -55,8 +54,7 @@ public class MedicationSchedule {
             LocalDate startOfAd,
             Integer prescriptionDays,
             Integer perDay,
-            AlarmType alarmType,
-            String imagePath
+            AlarmType alarmType
     ) {
         this.member = member;
         this.name = name;
@@ -67,7 +65,6 @@ public class MedicationSchedule {
         this.prescriptionDays = prescriptionDays;
         this.perDay = perDay;
         this.alarmType = alarmType;
-        this.imagePath = imagePath;
     }
 
     public void update(
@@ -78,8 +75,7 @@ public class MedicationSchedule {
             LocalDate startOfAd,
             Integer prescriptionDays,
             Integer perDay,
-            AlarmType alarmType,
-            String imagePath
+            AlarmType alarmType
     ) {
         this.name = name;
         this.hospitalName = hospitalName;
@@ -89,6 +85,5 @@ public class MedicationSchedule {
         this.prescriptionDays = prescriptionDays;
         this.perDay = perDay;
         this.alarmType = alarmType;
-        this.imagePath = imagePath;
     }
 }

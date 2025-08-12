@@ -12,6 +12,7 @@ import java.time.LocalDateTime;
 public class MedicationRecord {
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
+    @Column(name = "medication_record_id")
     private Long medicationRecordId;
 
     @ManyToOne(fetch = FetchType.LAZY)
@@ -22,10 +23,10 @@ public class MedicationRecord {
     @JoinColumn(name = "medication_time_id", nullable = false)
     private MedicationTime medicationTime;
 
-    @Column(nullable = false)
+    @Column(name = "is_take_medication", nullable = false)
     private Boolean isTakeMedication;
 
-    @Column(nullable = false)
+    @Column(name = "real_take_time")
     private LocalDateTime realTakeTime;
 
     public MedicationRecord(

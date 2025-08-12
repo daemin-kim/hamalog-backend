@@ -14,8 +14,7 @@ public record MedicationScheduleResponse(
         LocalDate startOfAd,
         Integer prescriptionDays,
         Integer perDay,
-        AlarmType alarmType,
-        String imagePath
+        AlarmType alarmType
 ) {
     public static MedicationScheduleResponse from(MedicationSchedule medicationSchedule) {
         return new MedicationScheduleResponse(
@@ -28,8 +27,7 @@ public record MedicationScheduleResponse(
                 medicationSchedule.getStartOfAd(),
                 medicationSchedule.getPrescriptionDays(),
                 medicationSchedule.getPerDay(),
-                medicationSchedule.getAlarmType(),
-                medicationSchedule.getImagePath()
+                medicationSchedule.getAlarmType()
         );
     }
 }

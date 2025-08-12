@@ -9,6 +9,7 @@ public class SideEffect {
 
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
+    @Column(name = "side_effect_id")
     private Long sideEffectId;
 
     @Column(length = 20, nullable = false)

@@ -10,13 +10,14 @@ import java.time.LocalTime;
 public class MedicationTime {
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
+    @Column(name = "medication_time_id")
     private Long medicationTimeId;
 
     @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "medication_schedule_id", nullable = false)
     private MedicationSchedule medicationSchedule;
 
-    @Column(nullable = false)
-    private LocalTime time;
+    @Column(name = "take_time", nullable = false)
+    private LocalTime takeTime;
 
 }

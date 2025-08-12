@@ -9,6 +9,7 @@ import lombok.Getter;
 public class MedicationScheduleGroup {
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
+    @Column(name = "medication_schedule_group_id")
     private Long medicationScheduleGroupId;
 
     @ManyToOne(fetch = FetchType.LAZY)

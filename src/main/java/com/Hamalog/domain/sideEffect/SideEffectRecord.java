@@ -12,6 +12,7 @@ public class SideEffectRecord {
 
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
+    @Column(name = "side_effect_record_id")
     private Long sideEffectRecordId;
 
     @ManyToOne(fetch = FetchType.LAZY)

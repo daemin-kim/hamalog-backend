@@ -115,11 +115,8 @@ public class MedicationScheduleController {
             return ResponseEntity.status(HttpStatus.FORBIDDEN).build();
         }
         
-        String imagePath = null;
-        if (image != null && !image.isEmpty()) {
-            imagePath = fileStorageService.save(image);
-        }
-        MedicationSchedule createdMedicationSchedule = medicationScheduleService.createMedicationSchedule(medicationScheduleCreateRequest, imagePath);
+        // Note: Image handling removed as imagePath field doesn't exist in database schema
+        MedicationSchedule createdMedicationSchedule = medicationScheduleService.createMedicationSchedule(medicationScheduleCreateRequest);
         return ResponseEntity.status(HttpStatus.CREATED).body(createdMedicationSchedule);
     }
 

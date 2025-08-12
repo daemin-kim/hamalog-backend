@@ -3,6 +3,7 @@ package com.Hamalog.controller.medication;
 import com.Hamalog.domain.medication.MedicationSchedule;
 import com.Hamalog.dto.medication.request.MedicationScheduleCreateRequest;
 import com.Hamalog.dto.medication.request.MedicationScheduleUpdateRequest;
+import com.Hamalog.dto.medication.response.MedicationScheduleResponse;
 import com.Hamalog.service.medication.MedicationScheduleService;
 import com.Hamalog.service.medication.FileStorageService;
 import io.swagger.v3.oas.annotations.Operation;
@@ -74,7 +75,7 @@ public class MedicationScheduleController {
             @ApiResponse(responseCode = "404", description = "복약 스케줄이 존재하지 않음", content = @Content)
     })
     @GetMapping("/{medication-schedule-id}")
-    public ResponseEntity<MedicationSchedule> getMedicationScheduleById(
+    public ResponseEntity<MedicationScheduleResponse> getMedicationScheduleById(
             @Parameter(description = "복약 스케줄 ID", required = true, example = "1", in = ParameterIn.PATH)
             @PathVariable("medication-schedule-id") Long medicationScheduleId,
             @AuthenticationPrincipal UserDetails userDetails
@@ -87,7 +88,7 @@ public class MedicationScheduleController {
             return ResponseEntity.status(HttpStatus.FORBIDDEN).build();
         }
         
-        return ResponseEntity.ok(medicationSchedule);
+        return ResponseEntity.ok(MedicationScheduleResponse.from(medicationSchedule));
     }
 
     @Operation(summary = "복약 스케줄 생성",

@@ -1,129 +1,164 @@
-# Hamalog Security Audit & Improvement Tasks
+# Hamalog Improvement Tasks
 
-**CRITICAL SECURITY ISSUES - IMMEDIATE ATTENTION REQUIRED:**
-
-## 🚨 CRITICAL (Fix Immediately)
-
-1. **[CRITICAL] JWT Token Exposure in Logs**
-   - **Issue**: JwtTokenProvider.validateToken() logs full JWT tokens in plain text
-   - **Risk**: Tokens exposed in log files can be used for unauthorized access
-   - **Fix**: Remove token logging, log only token validation results
-
-2. **[CRITICAL] JWT Token in URL Parameters** 
-   - **Issue**: OAuth2AuthenticationSuccessHandler passes JWT tokens as URL parameters
-   - **Risk**: Tokens exposed in browser history, server logs, referrer headers
-   - **Fix**: Use secure cookie or POST redirect with form data
-
-3. **[CRITICAL] Hardcoded JWT Secret**
-   - **Issue**: Weak Base64 JWT secret "AAAA..." hardcoded in application.properties
-   - **Risk**: Anyone with source code access can forge tokens
-   - **Fix**: Use strong randomly generated secret via environment variables
-
-4. **[CRITICAL] Authorization Bypass (IDOR)**
-   - **Issue**: No authorization checks in controllers - users can access other members' data
-   - **Risk**: Any authenticated user can view/modify other users' medication schedules
-   - **Fix**: Implement proper authorization checks matching authenticated user to resource owner
-
-5. **[CRITICAL] OAuth2 Credentials Exposed**
-   - **Issue**: Placeholder OAuth2 credentials ({REST API}, {Admin Key}) in source code
-   - **Risk**: Configuration structure exposed, non-functional OAuth2
-   - **Fix**: Move to environment variables with proper placeholder documentation
-
-## 🔴 HIGH PRIORITY
-
-6. **Missing Input Validation on Login**
-   - **Issue**: LoginRequest DTO has no validation annotations
-   - **Risk**: Null/empty credentials processed
-   - **Fix**: Add @NotBlank validation to loginId and password fields
-
-7. **Ineffective Logout Implementation**
-   - **Issue**: /logout endpoint doesn't invalidate JWT tokens
-   - **Risk**: Tokens remain valid after logout
-   - **Fix**: Implement token blacklist or short-lived tokens with refresh mechanism
-
-8. **Weak OAuth2 User Creation**
-   - **Issue**: Default values (phone: "0000000000000", birth: 1970-01-01, password: "{noop}")
-   - **Risk**: Invalid/fake user data, weak authentication
-   - **Fix**: Require proper user data completion flow
-
-## 🟡 MEDIUM PRIORITY
-
-9. **File Upload Security Enhancements**
-   - **Status**: Partially implemented (content type, size limits)
-   - **Needed**: File signature validation, extension whitelist, virus scanning
-   - **Fix**: Implement deeper file validation and security scanning
-
-10. **CSRF Protection**
-    - **Issue**: CSRF completely disabled in SecurityConfig
-    - **Risk**: Cross-site request forgery attacks
-    - **Fix**: Enable CSRF for state-changing operations or implement custom CSRF tokens
-
-11. **Rate Limiting Missing**
-    - **Issue**: No rate limiting on authentication or sensitive endpoints
-    - **Risk**: Brute force attacks, API abuse
-    - **Fix**: Implement rate limiting with Spring Security or external solutions
-
-12. **Exception Handling Improvement**
-    - **Issue**: Silent exception catching in JwtAuthenticationFilter
-    - **Risk**: Difficult debugging of authentication issues
-    - **Fix**: Add appropriate logging for authentication failures
-
-## 🟢 IMPLEMENTED WELL / LOW PRIORITY
-
-13. **Password Encoding** ✅
-    - BCrypt properly implemented
-
-14. **Security Headers** ✅
-    - CSP, X-Frame-Options, X-Content-Type-Options configured
-
-15. **Error Handling** ✅
-    - GlobalExceptionHandler properly masks sensitive information
-
-16. **SQL Injection Protection** ✅
-    - Spring Data JPA provides parameterized queries
-
-17. **CORS Configuration** ✅
-    - Configurable via environment variables
-
-18. **Logging Structure** ✅
-    - Request ID tracking, proper log levels
-
-## IMPLEMENTATION PRIORITY ORDER
-
-### Phase 1 - Critical Security Fixes (Week 1)
-- [ ] Fix JWT token logging vulnerability
-- [ ] Implement secure OAuth2 token delivery
-- [ ] Replace hardcoded JWT secret with environment variable
-- [ ] Add authorization checks to all controllers
-- [ ] Move OAuth2 credentials to environment variables
-
-### Phase 2 - High Priority Security (Week 2)  
-- [ ] Add validation to LoginRequest DTO
-- [ ] Implement proper logout with token invalidation
-- [ ] Fix OAuth2 user creation with proper data validation
-- [ ] Add rate limiting to authentication endpoints
-
-### Phase 3 - Medium Priority Hardening (Week 3-4)
-- [ ] Enhance file upload security
-- [ ] Implement CSRF protection strategy
-- [ ] Add comprehensive rate limiting
-- [ ] Improve exception handling and logging
-
-### Phase 4 - Additional Security Features (Future)
-- [ ] Add API request/response DTOs (avoid exposing entities)
-- [ ] Implement audit logging for sensitive operations
-- [ ] Add security testing and vulnerability scanning
-- [ ] Performance and scalability improvements
-
-## VALIDATION CHECKLIST
-
-Before marking items complete:
-- [ ] Security issue reproduced and confirmed
-- [ ] Fix implemented and tested
-- [ ] No new vulnerabilities introduced
-- [ ] Documentation updated
-- [ ] Tests added/updated for security feature
+**Last Updated**: 2025-08-12 13:36  
+**Status**: Comprehensive improvement plan covering security, architecture, code quality, and performance
 
 ---
-**Last Updated**: 2025-08-12 13:02 (Security Audit Completed)
-**Next Review**: Weekly security review recommended until Phase 2 complete
+
+## 🚨 CRITICAL SECURITY ISSUES (Phase 1 - Week 1)
+
+### Authentication & Authorization
+- [x] **[CRITICAL] JWT Token Exposure in Logs** - Remove token logging from JwtTokenProvider.validateToken(), log only validation results
+- [x] **[CRITICAL] JWT Token in URL Parameters** - Fix OAuth2AuthenticationSuccessHandler to use secure cookies instead of URL parameters
+- [x] **[CRITICAL] Hardcoded JWT Secret** - Replace weak Base64 JWT secret with strong environment variable-based secret
+- [x] **[CRITICAL] Authorization Bypass (IDOR)** - Implement proper authorization checks in all controllers to prevent users accessing other members' data
+- [x] **[CRITICAL] OAuth2 Credentials Exposed** - Move OAuth2 client credentials to environment variables with proper documentation
+
+### Input Validation & Security
+- [x] **Missing Input Validation on Login** - Add @NotBlank validation to LoginRequest DTO fields
+- [x] **Ineffective Logout Implementation** - Implement proper token blacklist mechanism (already partially implemented)
+- [x] **Weak OAuth2 User Creation** - Fix default values and require proper user data completion flow
+
+---
+
+## 🔴 HIGH PRIORITY ARCHITECTURAL IMPROVEMENTS (Phase 2 - Week 2)
+
+### Service Layer Architecture
+- [ ] **Extract Business Logic from Controllers** - Move member registration logic from AuthController to dedicated AuthService
+- [ ] **Implement DTO Pattern Consistently** - Create response DTOs to avoid exposing entities directly in API responses
+- [ ] **Extract Authorization Logic** - Create @PreAuthorize annotations or dedicated authorization service to eliminate repetitive authorization checks
+- [ ] **Improve Service Method Naming** - Use more descriptive method names (e.g., `isResourceOwner` instead of `isOwner`)
+
+### Repository & Data Access
+- [ ] **Implement Custom Repository Methods** - Add specialized query methods with @Query annotations for complex operations
+- [ ] **Add Database Indexing** - Create indexes on frequently queried fields (loginId, memberId foreign keys)
+- [ ] **Optimize Pagination** - Implement proper sorting and filtering capabilities for paginated endpoints
+- [ ] **Add Audit Trail Support** - Implement CreatedDate, LastModifiedDate, CreatedBy, LastModifiedBy using Spring Data JPA auditing
+
+### Exception Handling
+- [ ] **Standardize Exception Messages** - Move hardcoded Korean messages to message bundles for internationalization
+- [ ] **Improve Exception Logging** - Add proper logging context in JwtAuthenticationFilter exception handling
+- [ ] **Create Custom Exception Hierarchy** - Organize exceptions by domain (auth, medication, sideEffect) with specific error codes
+
+---
+
+## 🟡 MEDIUM PRIORITY CODE QUALITY IMPROVEMENTS (Phase 3 - Week 3-4)
+
+### Code Consistency & Standards
+- [ ] **Standardize Dependency Injection** - Use @RequiredArgsConstructor consistently across all classes instead of mixed constructor approaches
+- [ ] **Improve Builder Pattern Usage** - Use Builder pattern consistently in services instead of manual constructor calls
+- [ ] **Fix Date Handling** - Replace string parsing with proper LocalDate validation and formatting
+- [ ] **Implement Soft Delete** - Add soft delete capability to entities instead of hard delete
+- [ ] **Add Entity Validation** - Add proper JPA validation annotations to entity fields
+
+### API Design & Documentation
+- [ ] **Implement API Versioning** - Add version prefixes to API endpoints (/api/v1/)
+- [ ] **Improve OpenAPI Documentation** - Add detailed examples and error response documentation
+- [ ] **Standardize HTTP Status Codes** - Use appropriate status codes consistently (201 for creation, 204 for deletion)
+- [ ] **Add Request/Response Logging** - Implement structured request/response logging with correlation IDs
+
+### Configuration Management
+- [ ] **Implement Profile-based Configuration** - Create separate application-{profile}.properties files for dev/test/prod
+- [ ] **Add Connection Pool Configuration** - Configure HikariCP connection pool settings
+- [ ] **Environment-specific URLs** - Replace hardcoded localhost URLs with environment-configurable values
+- [ ] **Add Health Check Endpoints** - Enable Spring Boot Actuator for monitoring and health checks
+
+---
+
+## 🟢 PERFORMANCE & SCALABILITY (Phase 4 - Week 5-6)
+
+### Database Performance
+- [ ] **Implement Query Optimization** - Add @EntityGraph to prevent N+1 query problems
+- [ ] **Add Database Connection Monitoring** - Configure connection pool metrics and monitoring
+- [ ] **Implement Database Migration** - Add Flyway or Liquibase for database version control
+- [ ] **Add Query Performance Logging** - Enable slow query logging and analysis
+
+### Caching & Performance
+- [ ] **Implement Application Caching** - Add Spring Cache with Redis for frequently accessed data
+- [ ] **Add File Upload Optimization** - Implement file compression and thumbnail generation
+- [ ] **Implement API Rate Limiting** - Add rate limiting with Redis or in-memory storage
+- [ ] **Add Performance Monitoring** - Integrate Micrometer metrics for application monitoring
+
+### Security Hardening
+- [ ] **Enhance File Upload Security** - Add file signature validation, extension whitelist, virus scanning
+- [ ] **Implement CSRF Protection** - Enable CSRF protection for state-changing operations
+- [ ] **Add Security Headers** - Implement comprehensive security headers configuration
+- [ ] **Add API Request Validation** - Implement request size limits and input sanitization
+
+---
+
+## 🔧 DEVELOPMENT & BUILD IMPROVEMENTS (Phase 5 - Week 7-8)
+
+### Build Configuration
+- [ ] **Clean Up Dependencies** - Remove unnecessary spring-boot-starter-data-jdbc dependency
+- [ ] **Add Static Analysis Tools** - Integrate SpotBugs, Checkstyle, PMD for code quality analysis
+- [ ] **Implement Test Coverage** - Add JaCoCo for test coverage reporting with minimum thresholds
+- [ ] **Add Build Optimization** - Configure parallel builds and dependency caching
+
+### Testing Infrastructure
+- [ ] **Improve Test Structure** - Create comprehensive unit tests for all service methods
+- [ ] **Add Integration Tests** - Implement @SpringBootTest integration tests for controllers
+- [ ] **Add Test Containers** - Use TestContainers for database integration testing
+- [ ] **Implement Security Testing** - Add security-specific tests for authentication and authorization
+
+### DevOps & Deployment
+- [ ] **Enhance Docker Configuration** - Optimize Dockerfile with multi-stage builds and security scanning
+- [ ] **Add CI/CD Pipeline** - Implement GitHub Actions workflow for automated testing and deployment
+- [ ] **Add Environment Configuration** - Create comprehensive environment setup documentation
+- [ ] **Implement Database Seeding** - Add data initialization scripts for different environments
+
+---
+
+## 📚 DOCUMENTATION & MAINTENANCE (Phase 6 - Ongoing)
+
+### Code Documentation
+- [ ] **Add Comprehensive JavaDoc** - Document all public methods with proper parameter and return descriptions
+- [ ] **Create Architecture Documentation** - Document system architecture, data flow, and design decisions
+- [ ] **Add API Usage Examples** - Create comprehensive API usage examples and integration guides
+- [ ] **Document Security Implementation** - Create security configuration and best practices guide
+
+### Operational Documentation
+- [ ] **Create Deployment Guide** - Comprehensive deployment instructions for different environments
+- [ ] **Add Troubleshooting Guide** - Common issues and resolution steps
+- [ ] **Implement Monitoring Dashboards** - Set up application and infrastructure monitoring
+- [ ] **Create Backup & Recovery Procedures** - Database backup and disaster recovery processes
+
+---
+
+## 🎯 IMPLEMENTATION PRIORITY SUMMARY
+
+### Week 1: Critical Security Fixes
+Focus on JWT security, authorization bypass, and credential management
+
+### Week 2: High Priority Architecture  
+Service layer improvements, DTO implementation, and exception handling
+
+### Week 3-4: Code Quality & Standards
+Consistency improvements, configuration management, and API design
+
+### Week 5-6: Performance & Scalability
+Database optimization, caching, and performance monitoring
+
+### Week 7-8: Development Infrastructure
+Build improvements, testing infrastructure, and DevOps setup
+
+### Ongoing: Documentation & Maintenance
+Comprehensive documentation and operational procedures
+
+---
+
+## ✅ VALIDATION CHECKLIST
+
+Before marking any task complete:
+- [ ] Issue reproduced and root cause identified
+- [ ] Solution implemented following best practices
+- [ ] Unit tests added or updated
+- [ ] Integration tests verified
+- [ ] Documentation updated
+- [ ] Code review completed
+- [ ] No new vulnerabilities or regressions introduced
+- [ ] Performance impact assessed
+
+---
+
+**Note**: This comprehensive improvement plan addresses security vulnerabilities, architectural debt, code quality issues, and scalability concerns identified through codebase analysis. Priority should be given to security fixes, followed by architectural improvements that will provide the foundation for future enhancements.

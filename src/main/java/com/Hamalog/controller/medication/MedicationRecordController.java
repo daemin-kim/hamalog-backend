@@ -3,6 +3,7 @@ package com.Hamalog.controller.medication;
 import com.Hamalog.domain.medication.MedicationRecord;
 import com.Hamalog.dto.medication.request.MedicationRecordCreateRequest;
 import com.Hamalog.dto.medication.request.MedicationRecordUpdateRequest;
+import com.Hamalog.dto.medication.response.MedicationRecordResponse;
 import com.Hamalog.service.medication.MedicationRecordService;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.Parameter;
@@ -66,12 +67,12 @@ public class MedicationRecordController {
     @ApiResponses({
             @ApiResponse(responseCode = "200", description = "복약 기록 조회 성공",
                     content = @Content(mediaType = "application/json",
-                            schema = @Schema(implementation = MedicationRecord.class))),
+                            schema = @Schema(implementation = MedicationRecordResponse.class))),
             @ApiResponse(responseCode = "404", description = "복약 기록을 찾을 수 없음",
                     content = @Content)
     })
     @GetMapping("/{medication-record-id}")
-    public ResponseEntity<MedicationRecord> getMedicationRecordById(
+    public ResponseEntity<MedicationRecordResponse> getMedicationRecordById(
             @Parameter(in = ParameterIn.PATH, description = "복약 기록 ID", required = true, example = "1")
             @PathVariable("medication-record-id") Long medicationRecordId,
             @AuthenticationPrincipal UserDetails userDetails
@@ -83,7 +84,7 @@ public class MedicationRecordController {
         }
         
         MedicationRecord medicationRecord = medicationRecordService.getMedicationRecord(medicationRecordId);
-        return ResponseEntity.ok(medicationRecord);
+        return ResponseEntity.ok(MedicationRecordResponse.from(medicationRecord));
     }
 
     @Operation(
@@ -93,12 +94,12 @@ public class MedicationRecordController {
     @ApiResponses({
             @ApiResponse(responseCode = "201", description = "복약 기록 생성 성공",
                     content = @Content(mediaType = "application/json",
-                            schema = @Schema(implementation = MedicationRecord.class))),
+                            schema = @Schema(implementation = MedicationRecordResponse.class))),
             @ApiResponse(responseCode = "400", description = "잘못된 요청 데이터",
                     content = @Content)
     })
     @PostMapping
-    public ResponseEntity<MedicationRecord> createMedicationRecord(
+    public ResponseEntity<MedicationRecordResponse> createMedicationRecord(
             @Parameter(description = "복약 기록 생성 요청 데이터", required = true)
             @RequestBody MedicationRecordCreateRequest medicationRecordCreateRequest,
             @AuthenticationPrincipal UserDetails userDetails
@@ -110,7 +111,7 @@ public class MedicationRecordController {
         }
         
         MedicationRecord createdMedicationRecord = medicationRecordService.createMedicationRecord(medicationRecordCreateRequest);
-        return ResponseEntity.status(HttpStatus.CREATED).body(createdMedicationRecord);
+        return ResponseEntity.status(HttpStatus.CREATED).body(MedicationRecordResponse.from(createdMedicationRecord));
     }
 
     @Operation(
@@ -120,12 +121,12 @@ public class MedicationRecordController {
     @ApiResponses({
             @ApiResponse(responseCode = "200", description = "복약 기록 수정 성공",
                     content = @Content(mediaType = "application/json",
-                            schema = @Schema(implementation = MedicationRecord.class))),
+                            schema = @Schema(implementation = MedicationRecordResponse.class))),
             @ApiResponse(responseCode = "404", description = "복약 기록을 찾을 수 없음",
                     content = @Content)
     })
     @PutMapping("/{medication-record-id}")
-    public ResponseEntity<MedicationRecord> updateMedicationRecord(
+    public ResponseEntity<MedicationRecordResponse> updateMedicationRecord(
             @Parameter(in = ParameterIn.PATH, description = "수정할 복약 기록 ID", required = true, example = "1")
             @PathVariable("medication-record-id") Long medicationRecordId,
 
@@ -140,7 +141,7 @@ public class MedicationRecordController {
         }
         
         MedicationRecord updatedMedicationRecord = medicationRecordService.updateMedicationRecord(medicationRecordId, medicationRecordUpdateRequest);
-        return ResponseEntity.ok(updatedMedicationRecord);
+        return ResponseEntity.ok(MedicationRecordResponse.from(updatedMedicationRecord));
     }
 
     @Operation(

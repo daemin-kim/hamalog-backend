@@ -12,6 +12,7 @@ import com.Hamalog.repository.medication.MedicationRecordRepository;
 import com.Hamalog.repository.medication.MedicationScheduleRepository;
 import com.Hamalog.repository.medication.MedicationTimeRepository;
 import com.Hamalog.repository.member.MemberRepository;
+import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -19,24 +20,13 @@ import java.util.List;
 
 @Service
 @Transactional
+@RequiredArgsConstructor
 public class MedicationRecordService {
 
     private final MedicationRecordRepository medicationRecordRepository;
     private final MedicationScheduleRepository medicationScheduleRepository;
     private final MedicationTimeRepository medicationTimeRepository;
     private final MemberRepository memberRepository;
-
-    public MedicationRecordService(
-            MedicationRecordRepository medicationRecordRepository,
-            MedicationScheduleRepository medicationScheduleRepository,
-            MedicationTimeRepository medicationTimeRepository,
-            MemberRepository memberRepository
-    ) {
-        this.medicationRecordRepository = medicationRecordRepository;
-        this.medicationScheduleRepository = medicationScheduleRepository;
-        this.medicationTimeRepository = medicationTimeRepository;
-        this.memberRepository = memberRepository;
-    }
 
     @Transactional(readOnly = true)
     public List<MedicationRecord> getMedicationRecords(Long medicationScheduleId) {

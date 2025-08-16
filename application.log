@@ -191,3 +191,6 @@ Caused by: org.hibernate.HibernateException: Unable to determine Dialect without
 
 BUILD SUCCESSFUL in 5s
 4 actionable tasks: 1 executed, 3 up-to-date
+Exception in thread "Thread-0" org.gradle.api.UncheckedIOException: java.io.IOException: Input/output error
+	at org.gradle.internal.UncheckedException.throwAsUncheckedException(UncheckedException.java:63)
+	at org.gradle.internal.UncheckedException.throwAsUncheckedException(UncheckedException.java:42)

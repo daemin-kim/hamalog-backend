@@ -20,6 +20,7 @@ import org.springframework.security.core.annotation.AuthenticationPrincipal;
 import org.springframework.security.core.userdetails.UserDetails;
 import org.springframework.web.bind.annotation.*;
 
+import jakarta.validation.Valid;
 import java.util.List;
 
 @Tag(name = "Medication Record API", description = "복약 기록(CRUD) 관련 API")
@@ -101,7 +102,7 @@ public class MedicationRecordController {
     @PostMapping
     public ResponseEntity<MedicationRecordResponse> createMedicationRecord(
             @Parameter(description = "복약 기록 생성 요청 데이터", required = true)
-            @RequestBody MedicationRecordCreateRequest medicationRecordCreateRequest,
+            @Valid @RequestBody MedicationRecordCreateRequest medicationRecordCreateRequest,
             @AuthenticationPrincipal UserDetails userDetails
     ) {
         // Authorization check: ensure user can only create records for their own schedules
@@ -131,7 +132,7 @@ public class MedicationRecordController {
             @PathVariable("medication-record-id") Long medicationRecordId,
 
             @Parameter(description = "복약 기록 수정 요청 데이터", required = true)
-            @RequestBody MedicationRecordUpdateRequest medicationRecordUpdateRequest,
+            @Valid @RequestBody MedicationRecordUpdateRequest medicationRecordUpdateRequest,
             @AuthenticationPrincipal UserDetails userDetails
     ) {
         // Authorization check: ensure user can only update their own medication records

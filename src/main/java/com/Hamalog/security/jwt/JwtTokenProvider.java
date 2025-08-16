@@ -68,7 +68,7 @@ public class JwtTokenProvider {
         }
 
         return builder
-                .signWith(secretKey, SignatureAlgorithm.HS256)
+                .signWith(secretKey)
                 .compact();
     }
 

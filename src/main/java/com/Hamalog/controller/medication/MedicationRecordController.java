@@ -41,12 +41,12 @@ public class MedicationRecordController {
     @ApiResponses({
             @ApiResponse(responseCode = "200", description = "복약 기록 목록 조회 성공",
                     content = @Content(mediaType = "application/json",
-                            schema = @Schema(implementation = MedicationRecord.class))),
+                            schema = @Schema(implementation = MedicationRecordResponse.class))),
             @ApiResponse(responseCode = "404", description = "복약 스케줄을 찾을 수 없음",
                     content = @Content)
     })
     @GetMapping("/list/{medication-schedule-id}")
-    public ResponseEntity<List<MedicationRecord>> getMedicationRecords(
+    public ResponseEntity<List<MedicationRecordResponse>> getMedicationRecords(
             @Parameter(in = ParameterIn.PATH, description = "복약 스케줄 ID", required = true, example = "1")
             @PathVariable("medication-schedule-id") Long medicationScheduleId,
             @AuthenticationPrincipal UserDetails userDetails
@@ -58,7 +58,10 @@ public class MedicationRecordController {
         }
         
         List<MedicationRecord> medicationRecords = medicationRecordService.getMedicationRecords(medicationScheduleId);
-        return ResponseEntity.ok(medicationRecords);
+        List<MedicationRecordResponse> medicationRecordResponses = medicationRecords.stream()
+                .map(MedicationRecordResponse::from)
+                .toList();
+        return ResponseEntity.ok(medicationRecordResponses);
     }
 
     @Operation(

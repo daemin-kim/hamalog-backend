@@ -4,6 +4,7 @@ import com.Hamalog.domain.medication.MedicationSchedule;
 import com.Hamalog.dto.medication.request.MedicationScheduleCreateRequest;
 import com.Hamalog.dto.medication.request.MedicationScheduleUpdateRequest;
 import com.Hamalog.dto.medication.response.MedicationScheduleResponse;
+import com.Hamalog.dto.medication.response.MedicationScheduleListResponse;
 import com.Hamalog.service.medication.MedicationScheduleService;
 import com.Hamalog.service.medication.FileStorageService;
 import io.swagger.v3.oas.annotations.Operation;
@@ -45,11 +46,11 @@ public class MedicationScheduleController {
     @ApiResponses({
             @ApiResponse(responseCode = "200", description = "복약 스케줄 목록 조회 성공",
                     content = @Content(mediaType = "application/json",
-                            schema = @Schema(implementation = MedicationSchedule.class))),
+                            schema = @Schema(implementation = MedicationScheduleListResponse.class))),
             @ApiResponse(responseCode = "404", description = "회원이 존재하지 않음", content = @Content)
     })
     @GetMapping("/list/{member-id}")
-    public ResponseEntity<org.springframework.data.domain.Page<MedicationSchedule>> getMedicationSchedules(
+    public ResponseEntity<MedicationScheduleListResponse> getMedicationSchedules(
             @Parameter(description = "회원 ID", required = true, example = "1", in = ParameterIn.PATH)
             @PathVariable("member-id") Long memberId,
             @Parameter(description = "페이지네이션 정보", required = false)
@@ -63,7 +64,9 @@ public class MedicationScheduleController {
         }
         
         org.springframework.data.domain.Page<MedicationSchedule> medicationSchedules = medicationScheduleService.getMedicationSchedules(memberId, pageable);
-        return ResponseEntity.ok(medicationSchedules);
+        org.springframework.data.domain.Page<MedicationScheduleResponse> medicationScheduleResponses = medicationSchedules.map(MedicationScheduleResponse::from);
+        MedicationScheduleListResponse response = MedicationScheduleListResponse.from(medicationScheduleResponses);
+        return ResponseEntity.ok(response);
     }
 
     @Operation(summary = "특정 복약 스케줄 상세 조회",
@@ -96,12 +99,12 @@ public class MedicationScheduleController {
     @ApiResponses({
             @ApiResponse(responseCode = "201", description = "복약 스케줄 생성 성공",
                     content = @Content(mediaType = "application/json",
-                            schema = @Schema(implementation = MedicationSchedule.class))),
+                            schema = @Schema(implementation = MedicationScheduleResponse.class))),
             @ApiResponse(responseCode = "400", description = "잘못된 요청 데이터", content = @Content),
             @ApiResponse(responseCode = "404", description = "회원이 존재하지 않음", content = @Content)
     })
     @PostMapping(consumes = MediaType.MULTIPART_FORM_DATA_VALUE)
-    public ResponseEntity<MedicationSchedule> createMedicationSchedule(
+    public ResponseEntity<MedicationScheduleResponse> createMedicationSchedule(
             @Parameter(description = "복약 스케줄 생성 요청 데이터", required = true)
             @RequestPart("data") @jakarta.validation.Valid MedicationScheduleCreateRequest medicationScheduleCreateRequest,
 
@@ -117,7 +120,7 @@ public class MedicationScheduleController {
         
         // Note: Image handling removed as imagePath field doesn't exist in database schema
         MedicationSchedule createdMedicationSchedule = medicationScheduleService.createMedicationSchedule(medicationScheduleCreateRequest);
-        return ResponseEntity.status(HttpStatus.CREATED).body(createdMedicationSchedule);
+        return ResponseEntity.status(HttpStatus.CREATED).body(MedicationScheduleResponse.from(createdMedicationSchedule));
     }
 
     @Operation(summary = "복약 스케줄 수정",
@@ -125,11 +128,11 @@ public class MedicationScheduleController {
     @ApiResponses({
             @ApiResponse(responseCode = "200", description = "복약 스케줄 수정 성공",
                     content = @Content(mediaType = "application/json",
-                            schema = @Schema(implementation = MedicationSchedule.class))),
+                            schema = @Schema(implementation = MedicationScheduleResponse.class))),
             @ApiResponse(responseCode = "404", description = "복약 스케줄이 존재하지 않음", content = @Content)
     })
     @PutMapping("/{medication-schedule-id}")
-    public ResponseEntity<MedicationSchedule> updateMedicationSchedule(
+    public ResponseEntity<MedicationScheduleResponse> updateMedicationSchedule(
             @Parameter(description = "수정할 복약 스케줄 ID", required = true, example = "1", in = ParameterIn.PATH)
             @PathVariable("medication-schedule-id") Long medicationScheduleId,
 
@@ -146,7 +149,7 @@ public class MedicationScheduleController {
         }
         
         MedicationSchedule updatedMedicationSchedule = medicationScheduleService.updateMedicationSchedule(medicationScheduleId, medicationScheduleUpdateRequest);
-        return ResponseEntity.ok(updatedMedicationSchedule);
+        return ResponseEntity.ok(MedicationScheduleResponse.from(updatedMedicationSchedule));
     }
 
     @Operation(summary = "복약 스케줄 삭제",

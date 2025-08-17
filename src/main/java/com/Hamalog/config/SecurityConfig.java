@@ -1,10 +1,13 @@
 package com.Hamalog.config;
 
 import com.Hamalog.security.CustomUserDetailsService;
+import com.Hamalog.security.filter.RateLimitingFilter;
+import com.Hamalog.security.filter.RequestSizeMonitoringFilter;
 import com.Hamalog.security.jwt.JwtAuthenticationFilter;
 import com.Hamalog.security.jwt.JwtTokenProvider;
 import com.Hamalog.security.oauth2.OAuth2AuthenticationSuccessHandler;
 import com.Hamalog.service.oauth2.KakaoOAuth2UserService;
+import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
@@ -32,19 +35,25 @@ public class SecurityConfig {
     private final JwtTokenProvider jwtTokenProvider;
     private final OAuth2AuthenticationSuccessHandler oAuth2AuthenticationSuccessHandler;
     private final CorsConfigurationSource corsConfigurationSource;
+    private final RateLimitingFilter rateLimitingFilter;
+    private final RequestSizeMonitoringFilter requestSizeMonitoringFilter;
 
     public SecurityConfig(
             CustomUserDetailsService customUserDetailsService,
             KakaoOAuth2UserService kakaoOAuth2UserService,
             JwtTokenProvider jwtTokenProvider,
             OAuth2AuthenticationSuccessHandler oAuth2AuthenticationSuccessHandler,
-            CorsConfigurationSource corsConfigurationSource
+            CorsConfigurationSource corsConfigurationSource,
+            @Autowired(required = false) RateLimitingFilter rateLimitingFilter,
+            RequestSizeMonitoringFilter requestSizeMonitoringFilter
     ) {
         this.customUserDetailsService = customUserDetailsService;
         this.kakaoOAuth2UserService = kakaoOAuth2UserService;
         this.jwtTokenProvider = jwtTokenProvider;
         this.oAuth2AuthenticationSuccessHandler = oAuth2AuthenticationSuccessHandler;
         this.corsConfigurationSource = corsConfigurationSource;
+        this.rateLimitingFilter = rateLimitingFilter;
+        this.requestSizeMonitoringFilter = requestSizeMonitoringFilter;
     }
 
     @Bean
@@ -73,10 +82,17 @@ public class SecurityConfig {
                         .userInfoEndpoint(u -> u.userService(kakaoOAuth2UserService))
                         .successHandler(oAuth2AuthenticationSuccessHandler)
                 )
-                .addFilterBefore(
-                        new JwtAuthenticationFilter(jwtTokenProvider, customUserDetailsService),
-                        UsernamePasswordAuthenticationFilter.class
-                );
+                .addFilterBefore(requestSizeMonitoringFilter, UsernamePasswordAuthenticationFilter.class);
+        
+        // Only add rate limiting filter if it's available (Redis configured)
+        if (rateLimitingFilter != null) {
+            http.addFilterBefore(rateLimitingFilter, UsernamePasswordAuthenticationFilter.class);
+        }
+        
+        http.addFilterBefore(
+                new JwtAuthenticationFilter(jwtTokenProvider, customUserDetailsService),
+                UsernamePasswordAuthenticationFilter.class
+        );
 
         return http.build();
     }

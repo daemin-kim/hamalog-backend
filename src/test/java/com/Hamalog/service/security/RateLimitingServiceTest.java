@@ -16,6 +16,7 @@ import static org.mockito.ArgumentMatchers.*;
 import static org.mockito.BDDMockito.given;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
+import static org.mockito.Mockito.lenient;
 
 /**
  * RateLimitingService 테스트
@@ -34,7 +35,7 @@ class RateLimitingServiceTest {
 
     @BeforeEach
     void setUp() {
-        when(redisTemplate.opsForZSet()).thenReturn(zSetOperations);
+        lenient().when(redisTemplate.opsForZSet()).thenReturn(zSetOperations);
         rateLimitingService = new RateLimitingService(redisTemplate);
     }
 

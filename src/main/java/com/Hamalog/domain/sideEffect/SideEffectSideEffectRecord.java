@@ -2,11 +2,18 @@ package com.Hamalog.domain.sideEffect;
 
 import com.Hamalog.domain.idClass.SideEffectSideEffectRecordId;
 import jakarta.persistence.*;
+import lombok.AccessLevel;
+import lombok.AllArgsConstructor;
+import lombok.Builder;
 import lombok.EqualsAndHashCode;
 import lombok.Getter;
+import lombok.NoArgsConstructor;
 
 @Entity
 @Getter
+@Builder
+@NoArgsConstructor(access = AccessLevel.PROTECTED)
+@AllArgsConstructor
 @IdClass(SideEffectSideEffectRecordId.class)
 @EqualsAndHashCode
 public class SideEffectSideEffectRecord {

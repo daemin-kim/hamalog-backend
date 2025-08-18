@@ -1,0 +1,58 @@
+version: '3.8'
+
+services:
+  hamalog-app:
+    build: .
+    ports:
+      - "8080:8080"
+    environment:
+      # Database Configuration (MySQL for production)
+      - SPRING_DATASOURCE_URL=jdbc:mysql://mysql:3306/hamalog
+      - SPRING_DATASOURCE_USERNAME=hamalog_user
+      - SPRING_DATASOURCE_PASSWORD=hamalog_password
+      - SPRING_DATASOURCE_DRIVER=com.mysql.cj.jdbc.Driver
+      
+      # Redis Configuration
+      - SPRING_DATA_REDIS_HOST=redis
+      - SPRING_DATA_REDIS_PORT=6379
+      
+      # JWT Configuration (should be set via environment variables in production)
+      - JWT_SECRET=${JWT_SECRET:-DPy5yMHkeq4GfH0pRRUTmC7D7x3wFVegFLGmjDI7auo=}
+      - JWT_EXPIRY=${JWT_EXPIRY:-3600000}
+      
+      # OAuth2 Configuration (should be set via environment variables in production)
+      - KAKAO_CLIENT_ID=${KAKAO_CLIENT_ID:-dummy-client-id}
+      - KAKAO_CLIENT_SECRET=${KAKAO_CLIENT_SECRET:-dummy-client-secret}
+    depends_on:
+      - mysql
+      - redis
+    volumes:
+      - hamalog-uploads:/data/hamalog/images
+    restart: unless-stopped
+
+  redis:
+    image: redis:7-alpine
+    ports:
+      - "6379:6379"
+    command: redis-server --appendonly yes
+    volumes:
+      - redis-data:/data
+    restart: unless-stopped
+
+  mysql:
+    image: mysql:8.0
+    ports:
+      - "3306:3306"
+    environment:
+      - MYSQL_ROOT_PASSWORD=root_password
+      - MYSQL_DATABASE=hamalog
+      - MYSQL_USER=hamalog_user
+      - MYSQL_PASSWORD=hamalog_password
+    volumes:
+      - mysql-data:/var/lib/mysql
+    restart: unless-stopped
+
+volumes:
+  mysql-data:
+  redis-data:
+  hamalog-uploads:

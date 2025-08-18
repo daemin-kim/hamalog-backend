@@ -50,7 +50,21 @@ jobs:
             docker network create hamalog-network
           }
 
-          # 2. MySQL 컨테이너가 없으면 실행
+          # 2. Redis 컨테이너가 없으면 실행
+          if (-not (docker ps -a --format "{{.Names}}" | Select-String "redis-hamalog")) {
+            docker run -d `
+              --name redis-hamalog `
+              -p 6379:6379 `
+              --network hamalog-network `
+              -v C:/redis-data:/data `
+              redis:7-alpine redis-server --appendonly yes
+            Write-Output "Redis 컨테이너 생성됨"
+            Start-Sleep -Seconds 5  # Redis 부팅 대기
+          } else {
+            Write-Output "Redis 컨테이너 이미 존재함"
+          }
+
+          # 3. MySQL 컨테이너가 없으면 실행
           if (-not (docker ps -a --format "{{.Names}}" | Select-String "mysql-hamalog")) {
             docker run -d `
               --name mysql-hamalog `
@@ -68,14 +82,14 @@ jobs:
             Write-Output "MySQL 컨테이너 이미 존재함"
           }
 
-          # 3. 기존 앱 컨테이너 정리
+          # 4. 기존 앱 컨테이너 정리
           docker stop hamalog-container -ErrorAction SilentlyContinue
           docker rm hamalog-container -ErrorAction SilentlyContinue
 
-          # 4. 최신 Spring Boot 앱 이미지 pull
+          # 5. 최신 Spring Boot 앱 이미지 pull
           docker pull ghcr.io/daemin-kim/hamalog-backend/hamalog-app:latest
 
-          # 5. 앱 컨테이너 실행
+          # 6. 앱 컨테이너 실행
           docker run -d `
             --name hamalog-container `
             --network hamalog-network `
@@ -83,6 +97,12 @@ jobs:
             -e SPRING_DATASOURCE_URL=jdbc:mysql://mysql-hamalog:3306/Hamalog `
             -e SPRING_DATASOURCE_USERNAME=user `
             -e SPRING_DATASOURCE_PASSWORD=password `
+            -e SPRING_DATA_REDIS_HOST=redis-hamalog `
+            -e SPRING_DATA_REDIS_PORT=6379 `
+            -e JWT_SECRET=${{ secrets.JWT_SECRET }} `
+            -e JWT_EXPIRY=3600000 `
+            -e KAKAO_CLIENT_ID=${{ secrets.KAKAO_CLIENT_ID }} `
+            -e KAKAO_CLIENT_SECRET=${{ secrets.KAKAO_CLIENT_SECRET }} `
             ghcr.io/daemin-kim/hamalog-backend/hamalog-app:latest
 
           Start-Sleep -Seconds 10

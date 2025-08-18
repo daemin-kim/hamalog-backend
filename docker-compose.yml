@@ -20,7 +20,7 @@ services:
       - SPRING_DATA_REDIS_PORT=6379
       
       # JWT Configuration (should be set via environment variables in production)
-      - JWT_SECRET=${JWT_SECRET:-DPy5yMHkeq4GfH0pRRUTmC7D7x3wFVegFLGmjDI7auo=}
+      - JWT_SECRET=${JWT_SECRET:-EzUuJwKK4vLnvk5r7yAgdNP/sa1dL87febZhlayPGjI=}
       - JWT_EXPIRY=${JWT_EXPIRY:-3600000}
       
       # OAuth2 Configuration (should be set via environment variables in production)

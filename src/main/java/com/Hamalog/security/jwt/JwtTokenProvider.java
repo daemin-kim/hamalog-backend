@@ -24,7 +24,7 @@ public class JwtTokenProvider {
     private final TokenBlacklistService tokenBlacklistService;
 
     public JwtTokenProvider(
-            @Value("${jwt.secret:EzUuJwKK4vLnvk5r7yAgdNP/sa1dL87febZhlayPGjI=}") String secret,
+            @Value("${jwt.secret:jjw2tdYPOFoT9+iXg1Uz12xL4R/cIiFfrW6UG/n1zRc=}") String secret,
             @Value("${jwt.expiry:3600000}") long validityInMilliseconds,
             TokenBlacklistService tokenBlacklistService
     ) {

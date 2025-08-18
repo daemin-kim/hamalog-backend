@@ -11,9 +11,9 @@ services:
       
       # Database Configuration (MySQL for production)
       # Driver is automatically detected based on URL
-      - SPRING_DATASOURCE_URL=jdbc:mysql://mysql-hamalog:3306/Hamalog
-      - SPRING_DATASOURCE_USERNAME=hamalog_user
-      - SPRING_DATASOURCE_PASSWORD=hamalog_password
+      - SPRING_DATASOURCE_URL=jdbc:mysql://mysql-hamalog:3306/${DB_NAME:-Hamalog}
+      - SPRING_DATASOURCE_USERNAME=${DB_USERNAME:-hamalog_user}
+      - SPRING_DATASOURCE_PASSWORD=${DB_PASSWORD:-hamalog_password}
       
       # Redis Configuration
       - SPRING_DATA_REDIS_HOST=redis
@@ -47,10 +47,10 @@ services:
     ports:
       - "3306:3306"
     environment:
-      - MYSQL_ROOT_PASSWORD=root_password
-      - MYSQL_DATABASE=Hamalog
-      - MYSQL_USER=hamalog_user
-      - MYSQL_PASSWORD=hamalog_password
+      - MYSQL_ROOT_PASSWORD=${MYSQL_ROOT_PASSWORD:-root_password}
+      - MYSQL_DATABASE=${DB_NAME:-Hamalog}
+      - MYSQL_USER=${DB_USERNAME:-hamalog_user}
+      - MYSQL_PASSWORD=${DB_PASSWORD:-hamalog_password}
     volumes:
       - mysql-data:/var/lib/mysql
     restart: unless-stopped

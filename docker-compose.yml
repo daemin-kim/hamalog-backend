@@ -6,6 +6,9 @@ services:
     ports:
       - "8080:8080"
     environment:
+      # Spring Profile Configuration (use prod profile for production settings)
+      - SPRING_PROFILES_ACTIVE=prod
+      
       # Database Configuration (MySQL for production)
       # Driver is automatically detected based on URL
       - SPRING_DATASOURCE_URL=jdbc:mysql://mysql-hamalog:3306/Hamalog

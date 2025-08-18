@@ -10,7 +10,7 @@ services:
       - SPRING_DATASOURCE_URL=jdbc:mysql://mysql-hamalog:3306/Hamalog
       - SPRING_DATASOURCE_USERNAME=hamalog_user
       - SPRING_DATASOURCE_PASSWORD=hamalog_password
-      - SPRING_DATASOURCE_DRIVER=com.mysql.cj.jdbc.Driver
+      - SPRING_DATASOURCE_DRIVER_CLASS_NAME=com.mysql.cj.jdbc.Driver
       
       # Redis Configuration
       - SPRING_DATA_REDIS_HOST=redis

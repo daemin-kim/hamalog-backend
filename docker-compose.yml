@@ -7,7 +7,7 @@ services:
       - "8080:8080"
     environment:
       # Database Configuration (MySQL for production)
-      - SPRING_DATASOURCE_URL=jdbc:mysql://mysql:3306/hamalog
+      - SPRING_DATASOURCE_URL=jdbc:mysql://mysql-hamalog:3306/Hamalog
       - SPRING_DATASOURCE_USERNAME=hamalog_user
       - SPRING_DATASOURCE_PASSWORD=hamalog_password
       - SPRING_DATASOURCE_DRIVER=com.mysql.cj.jdbc.Driver
@@ -24,7 +24,7 @@ services:
       - KAKAO_CLIENT_ID=${KAKAO_CLIENT_ID:-dummy-client-id}
       - KAKAO_CLIENT_SECRET=${KAKAO_CLIENT_SECRET:-dummy-client-secret}
     depends_on:
-      - mysql
+      - mysql-hamalog
       - redis
     volumes:
       - hamalog-uploads:/data/hamalog/images
@@ -39,13 +39,13 @@ services:
       - redis-data:/data
     restart: unless-stopped
 
-  mysql:
+  mysql-hamalog:
     image: mysql:8.0
     ports:
       - "3306:3306"
     environment:
       - MYSQL_ROOT_PASSWORD=root_password
-      - MYSQL_DATABASE=hamalog
+      - MYSQL_DATABASE=Hamalog
       - MYSQL_USER=hamalog_user
       - MYSQL_PASSWORD=hamalog_password
     volumes:

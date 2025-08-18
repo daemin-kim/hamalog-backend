@@ -166,7 +166,7 @@ class TokenBlacklistServiceTest {
 
         // Redis 복구
         reset(redisTemplate);
-        when(redisTemplate.opsForValue()).thenReturn(valueOperations);
+        lenient().when(redisTemplate.opsForValue()).thenReturn(valueOperations);
 
         // When
         tokenBlacklistService.removeExpiredToken(TEST_TOKEN);
@@ -189,7 +189,7 @@ class TokenBlacklistServiceTest {
 
         // Redis 복구
         reset(redisTemplate);
-        when(redisTemplate.opsForValue()).thenReturn(valueOperations);
+        lenient().when(redisTemplate.opsForValue()).thenReturn(valueOperations);
         given(redisTemplate.keys("jwt_blacklist:*")).willReturn(redisKeys);
 
         // When
@@ -228,7 +228,7 @@ class TokenBlacklistServiceTest {
 
         // Redis 복구
         reset(redisTemplate);
-        when(redisTemplate.opsForValue()).thenReturn(valueOperations);
+        lenient().when(redisTemplate.opsForValue()).thenReturn(valueOperations);
         given(redisTemplate.keys("jwt_blacklist:*")).willReturn(redisKeys);
 
         // When
@@ -236,6 +236,8 @@ class TokenBlacklistServiceTest {
 
         // Then
         verify(redisTemplate).delete(redisKeys);
+        // Mock empty keys for size check after clearing
+        given(redisTemplate.keys("jwt_blacklist:*")).willReturn(Set.of());
         assertThat(tokenBlacklistService.getBlacklistSize()).isEqualTo(0);
     }
 

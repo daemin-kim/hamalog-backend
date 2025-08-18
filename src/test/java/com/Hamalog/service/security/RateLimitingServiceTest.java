@@ -17,6 +17,7 @@ import static org.mockito.BDDMockito.given;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 import static org.mockito.Mockito.lenient;
+import static org.mockito.Mockito.times;
 
 /**
  * RateLimitingService 테스트
@@ -52,9 +53,9 @@ class RateLimitingServiceTest {
 
         // Then
         assertThat(result).isTrue();
-        verify(zSetOperations).removeRangeByScore(anyString(), eq(0.0), anyDouble());
-        verify(zSetOperations).add(anyString(), anyString(), anyDouble());
-        verify(redisTemplate).expire(anyString(), anyLong(), eq(TimeUnit.MILLISECONDS));
+        verify(zSetOperations, times(2)).removeRangeByScore(anyString(), eq(0.0), anyDouble());
+        verify(zSetOperations, times(2)).add(anyString(), anyString(), anyDouble());
+        verify(redisTemplate, times(2)).expire(anyString(), anyLong(), eq(TimeUnit.MILLISECONDS));
     }
 
     @Test
@@ -85,9 +86,9 @@ class RateLimitingServiceTest {
 
         // Then
         assertThat(result).isTrue();
-        verify(zSetOperations).removeRangeByScore(anyString(), eq(0.0), anyDouble());
-        verify(zSetOperations).add(anyString(), anyString(), anyDouble());
-        verify(redisTemplate).expire(anyString(), anyLong(), eq(TimeUnit.MILLISECONDS));
+        verify(zSetOperations, times(2)).removeRangeByScore(anyString(), eq(0.0), anyDouble());
+        verify(zSetOperations, times(2)).add(anyString(), anyString(), anyDouble());
+        verify(redisTemplate, times(2)).expire(anyString(), anyLong(), eq(TimeUnit.MILLISECONDS));
     }
 
     @Test

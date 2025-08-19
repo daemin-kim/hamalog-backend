@@ -51,7 +51,6 @@ public class MedicationRecordController {
             @PathVariable("medication-schedule-id") Long medicationScheduleId,
             @AuthenticationPrincipal UserDetails userDetails
     ) {
-        // Authorization check: ensure user can only access their own medication records
         String currentLoginId = userDetails.getUsername();
         if (!medicationRecordService.isOwnerOfSchedule(medicationScheduleId, currentLoginId)) {
             return ResponseEntity.status(HttpStatus.FORBIDDEN).build();
@@ -81,7 +80,6 @@ public class MedicationRecordController {
             @PathVariable("medication-record-id") Long medicationRecordId,
             @AuthenticationPrincipal UserDetails userDetails
     ) {
-        // Authorization check: ensure user can only access their own medication records
         String currentLoginId = userDetails.getUsername();
         if (!medicationRecordService.isOwnerOfRecord(medicationRecordId, currentLoginId)) {
             return ResponseEntity.status(HttpStatus.FORBIDDEN).build();
@@ -108,7 +106,6 @@ public class MedicationRecordController {
             @Valid @RequestBody MedicationRecordCreateRequest medicationRecordCreateRequest,
             @AuthenticationPrincipal UserDetails userDetails
     ) {
-        // Authorization check: ensure user can only create records for their own schedules
         String currentLoginId = userDetails.getUsername();
         if (!medicationRecordService.isOwnerOfSchedule(medicationRecordCreateRequest.medicationScheduleId(), currentLoginId)) {
             return ResponseEntity.status(HttpStatus.FORBIDDEN).build();
@@ -138,7 +135,6 @@ public class MedicationRecordController {
             @Valid @RequestBody MedicationRecordUpdateRequest medicationRecordUpdateRequest,
             @AuthenticationPrincipal UserDetails userDetails
     ) {
-        // Authorization check: ensure user can only update their own medication records
         String currentLoginId = userDetails.getUsername();
         if (!medicationRecordService.isOwnerOfRecord(medicationRecordId, currentLoginId)) {
             return ResponseEntity.status(HttpStatus.FORBIDDEN).build();
@@ -162,7 +158,6 @@ public class MedicationRecordController {
             @PathVariable("medication-record-id") Long medicationRecordId,
             @AuthenticationPrincipal UserDetails userDetails
     ) {
-        // Authorization check: ensure user can only delete their own medication records
         String currentLoginId = userDetails.getUsername();
         if (!medicationRecordService.isOwnerOfRecord(medicationRecordId, currentLoginId)) {
             return ResponseEntity.status(HttpStatus.FORBIDDEN).build();

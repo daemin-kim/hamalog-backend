@@ -57,7 +57,6 @@ public class MedicationScheduleController {
             org.springframework.data.domain.Pageable pageable,
             @AuthenticationPrincipal UserDetails userDetails
     ){
-        // Authorization check: ensure user can only access their own data
         String currentLoginId = userDetails.getUsername();
         if (!medicationScheduleService.isOwner(memberId, currentLoginId)) {
             return ResponseEntity.status(HttpStatus.FORBIDDEN).build();
@@ -85,7 +84,6 @@ public class MedicationScheduleController {
     ){
         MedicationSchedule medicationSchedule = medicationScheduleService.getMedicationSchedule(medicationScheduleId);
         
-        // Authorization check: ensure user can only access their own data
         String currentLoginId = userDetails.getUsername();
         if (!medicationScheduleService.isOwner(medicationSchedule.getMember().getMemberId(), currentLoginId)) {
             return ResponseEntity.status(HttpStatus.FORBIDDEN).build();
@@ -112,13 +110,11 @@ public class MedicationScheduleController {
             @RequestPart(value = "image", required = false) MultipartFile image,
             @AuthenticationPrincipal UserDetails userDetails
     ) {
-        // Authorization check: ensure user can only create schedules for themselves
         String currentLoginId = userDetails.getUsername();
         if (!medicationScheduleService.isOwner(medicationScheduleCreateRequest.memberId(), currentLoginId)) {
             return ResponseEntity.status(HttpStatus.FORBIDDEN).build();
         }
         
-        // Note: Image handling removed as imagePath field doesn't exist in database schema
         MedicationSchedule createdMedicationSchedule = medicationScheduleService.createMedicationSchedule(medicationScheduleCreateRequest);
         return ResponseEntity.status(HttpStatus.CREATED).body(MedicationScheduleResponse.from(createdMedicationSchedule));
     }
@@ -142,7 +138,6 @@ public class MedicationScheduleController {
     ) {
         MedicationSchedule medicationSchedule = medicationScheduleService.getMedicationSchedule(medicationScheduleId);
         
-        // Authorization check: ensure user can only update their own data
         String currentLoginId = userDetails.getUsername();
         if (!medicationScheduleService.isOwner(medicationSchedule.getMember().getMemberId(), currentLoginId)) {
             return ResponseEntity.status(HttpStatus.FORBIDDEN).build();
@@ -166,7 +161,6 @@ public class MedicationScheduleController {
     ) {
         MedicationSchedule medicationSchedule = medicationScheduleService.getMedicationSchedule(medicationScheduleId);
         
-        // Authorization check: ensure user can only delete their own data
         String currentLoginId = userDetails.getUsername();
         if (!medicationScheduleService.isOwner(medicationSchedule.getMember().getMemberId(), currentLoginId)) {
             return ResponseEntity.status(HttpStatus.FORBIDDEN).build();

@@ -5,9 +5,12 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty;
 import org.springframework.context.annotation.Lazy;
 import org.springframework.data.redis.core.RedisTemplate;
+import org.springframework.data.redis.core.ScanOptions;
+import org.springframework.scheduling.annotation.Scheduled;
 import org.springframework.stereotype.Service;
 
 import java.time.Duration;
+import java.util.Map;
 import java.util.Set;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.TimeUnit;
@@ -25,7 +28,8 @@ public class TokenBlacklistService {
         this.jwtTokenProvider = jwtTokenProvider;
     }
     
-    private final Set<String> blacklistedTokens = ConcurrentHashMap.newKeySet();
+    // In-memory storage with expiration times to prevent memory leaks
+    private final Map<String, Long> blacklistedTokensWithExpiry = new ConcurrentHashMap<>();
     
     private static final String BLACKLIST_PREFIX = "jwt_blacklist:";
     
@@ -48,12 +52,14 @@ public class TokenBlacklistService {
                     log.debug("Token blacklisted in Redis with default TTL: 24 hours");
                 }
             } else {
-                blacklistedTokens.add(token);
-                log.debug("Token blacklisted in memory storage");
+                long expiryTime = calculateTokenExpiryTime(token);
+                blacklistedTokensWithExpiry.put(token, expiryTime);
+                log.debug("Token blacklisted in memory storage with expiry: {}", expiryTime);
             }
         } catch (Exception e) {
             log.error("Failed to blacklist token in Redis, falling back to memory storage", e);
-            blacklistedTokens.add(token);
+            long expiryTime = calculateTokenExpiryTime(token);
+            blacklistedTokensWithExpiry.put(token, expiryTime);
         }
     }
     
@@ -71,11 +77,31 @@ public class TokenBlacklistService {
                 }
             }
             
-            return blacklistedTokens.contains(token);
+            // Check in-memory storage and validate expiry
+            Long expiryTime = blacklistedTokensWithExpiry.get(token);
+            if (expiryTime != null) {
+                if (System.currentTimeMillis() < expiryTime) {
+                    return true;
+                } else {
+                    // Token expired, remove it
+                    blacklistedTokensWithExpiry.remove(token);
+                }
+            }
+            return false;
             
         } catch (Exception e) {
             log.error("Error checking token blacklist status, checking memory storage", e);
-            return blacklistedTokens.contains(token);
+            // Check in-memory storage and validate expiry
+            Long expiryTime = blacklistedTokensWithExpiry.get(token);
+            if (expiryTime != null) {
+                if (System.currentTimeMillis() < expiryTime) {
+                    return true;
+                } else {
+                    // Token expired, remove it
+                    blacklistedTokensWithExpiry.remove(token);
+                }
+            }
+            return false;
         }
     }
     
@@ -90,22 +116,36 @@ public class TokenBlacklistService {
                 redisTemplate.delete(redisKey);
             }
             
-            blacklistedTokens.remove(token);
+            blacklistedTokensWithExpiry.remove(token);
             log.debug("Expired token removed from blacklist");
             
         } catch (Exception e) {
             log.error("Error removing expired token from blacklist", e);
-            blacklistedTokens.remove(token);
+            blacklistedTokensWithExpiry.remove(token);
         }
     }
     
     public int getBlacklistSize() {
-        int memorySize = blacklistedTokens.size();
+        // Clean up expired tokens before counting
+        cleanupExpiredTokens();
+        int memorySize = blacklistedTokensWithExpiry.size();
         
         try {
             if (redisTemplate != null) {
-                Set<String> keys = redisTemplate.keys(BLACKLIST_PREFIX + "*");
-                int redisSize = keys != null ? keys.size() : 0;
+                // Use SCAN instead of KEYS to avoid loading all keys into memory
+                int redisSize = 0;
+                ScanOptions scanOptions = ScanOptions.scanOptions()
+                    .match(BLACKLIST_PREFIX + "*")
+                    .count(100)
+                    .build();
+                
+                try (var cursor = redisTemplate.scan(scanOptions)) {
+                    while (cursor.hasNext()) {
+                        cursor.next();
+                        redisSize++;
+                    }
+                }
+                
                 log.debug("Blacklist size - Redis: {}, Memory: {}", redisSize, memorySize);
                 return redisSize + memorySize;
             }
@@ -133,21 +173,80 @@ public class TokenBlacklistService {
         return -1;
     }
     
+    /**
+     * Calculate token expiry time in milliseconds for in-memory storage
+     */
+    private long calculateTokenExpiryTime(String token) {
+        try {
+            if (jwtTokenProvider != null) {
+                var claims = jwtTokenProvider.getAllClaims(token);
+                if (claims != null && claims.getExpiration() != null) {
+                    return claims.getExpiration().getTime();
+                }
+            }
+        } catch (Exception e) {
+            log.warn("Failed to calculate token expiry time", e);
+        }
+        // Default to 24 hours from now if we can't determine expiry
+        return System.currentTimeMillis() + TimeUnit.HOURS.toMillis(24);
+    }
+    
+    /**
+     * Clean up expired tokens from in-memory storage
+     */
+    private void cleanupExpiredTokens() {
+        long currentTime = System.currentTimeMillis();
+        int removedCount = 0;
+        
+        var iterator = blacklistedTokensWithExpiry.entrySet().iterator();
+        while (iterator.hasNext()) {
+            var entry = iterator.next();
+            if (entry.getValue() < currentTime) {
+                iterator.remove();
+                removedCount++;
+            }
+        }
+        
+        if (removedCount > 0) {
+            log.debug("Cleaned up {} expired tokens from memory storage", removedCount);
+        }
+    }
+    
+    /**
+     * Scheduled cleanup of expired tokens (runs every 30 minutes)
+     */
+    @Scheduled(fixedRate = 30 * 60 * 1000) // 30 minutes
+    public void scheduledCleanup() {
+        log.debug("Starting scheduled cleanup of expired tokens");
+        cleanupExpiredTokens();
+    }
+    
     public void clearBlacklist() {
         try {
             if (redisTemplate != null) {
-                Set<String> keys = redisTemplate.keys(BLACKLIST_PREFIX + "*");
-                if (keys != null && !keys.isEmpty()) {
-                    redisTemplate.delete(keys);
-                    log.debug("Cleared {} tokens from Redis blacklist", keys.size());
+                // Use SCAN instead of KEYS to avoid loading all keys into memory
+                ScanOptions scanOptions = ScanOptions.scanOptions()
+                    .match(BLACKLIST_PREFIX + "*")
+                    .count(1000)
+                    .build();
+                
+                int deletedCount = 0;
+                try (var cursor = redisTemplate.scan(scanOptions)) {
+                    while (cursor.hasNext()) {
+                        String key = cursor.next();
+                        redisTemplate.delete(key);
+                        deletedCount++;
+                    }
                 }
+                
+                log.debug("Cleared {} tokens from Redis blacklist", deletedCount);
             }
         } catch (Exception e) {
             log.error("Error clearing Redis blacklist", e);
         }
         
-        int memorySize = blacklistedTokens.size();
-        blacklistedTokens.clear();
+        int memorySize = blacklistedTokensWithExpiry.size();
+        blacklistedTokensWithExpiry.clear();
         log.debug("Cleared {} tokens from memory blacklist", memorySize);
     }
 }

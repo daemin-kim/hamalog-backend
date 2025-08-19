@@ -7,7 +7,9 @@ import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
+import org.springframework.data.redis.core.Cursor;
 import org.springframework.data.redis.core.RedisTemplate;
+import org.springframework.data.redis.core.ScanOptions;
 import org.springframework.data.redis.core.ValueOperations;
 
 import java.util.Date;
@@ -38,6 +40,9 @@ class TokenBlacklistServiceTest {
 
     @Mock
     private Claims claims;
+
+    @Mock
+    private Cursor<String> cursor;
 
     private TokenBlacklistService tokenBlacklistService;
 
@@ -180,17 +185,18 @@ class TokenBlacklistServiceTest {
     @DisplayName("블랙리스트 크기 확인 - Redis와 메모리 합산")
     void getBlacklistSize_CombineRedisAndMemory() {
         // Given
-        Set<String> redisKeys = Set.of("jwt_blacklist:token1", "jwt_blacklist:token2");
-        given(redisTemplate.keys("jwt_blacklist:*")).willReturn(redisKeys);
-        
         // 메모리에 토큰 추가
         when(redisTemplate.opsForValue()).thenThrow(new RuntimeException("Redis failed"));
         tokenBlacklistService.blacklistToken("memoryToken");
 
-        // Redis 복구
+        // Redis 복구 - SCAN 기반으로 모킹
         reset(redisTemplate);
         lenient().when(redisTemplate.opsForValue()).thenReturn(valueOperations);
-        given(redisTemplate.keys("jwt_blacklist:*")).willReturn(redisKeys);
+        
+        // SCAN operation 모킹 - 2개의 Redis 키를 반환
+        when(cursor.hasNext()).thenReturn(true, true, false);
+        when(cursor.next()).thenReturn("jwt_blacklist:token1", "jwt_blacklist:token2");
+        given(redisTemplate.scan(any(ScanOptions.class))).willReturn(cursor);
 
         // When
         int size = tokenBlacklistService.getBlacklistSize();
@@ -206,7 +212,7 @@ class TokenBlacklistServiceTest {
         when(redisTemplate.opsForValue()).thenThrow(new RuntimeException("Redis failed"));
         tokenBlacklistService.blacklistToken(TEST_TOKEN);
         
-        when(redisTemplate.keys(anyString())).thenThrow(new RuntimeException("Redis failed"));
+        when(redisTemplate.scan(any(ScanOptions.class))).thenThrow(new RuntimeException("Redis failed"));
 
         // When
         int size = tokenBlacklistService.getBlacklistSize();
@@ -219,25 +225,28 @@ class TokenBlacklistServiceTest {
     @DisplayName("블랙리스트 완전 정리")
     void clearBlacklist_ClearBothRedisAndMemory() {
         // Given
-        Set<String> redisKeys = Set.of("jwt_blacklist:token1", "jwt_blacklist:token2");
-        given(redisTemplate.keys("jwt_blacklist:*")).willReturn(redisKeys);
-        
         // 메모리에 토큰 추가
         when(redisTemplate.opsForValue()).thenThrow(new RuntimeException("Redis failed"));
         tokenBlacklistService.blacklistToken(TEST_TOKEN);
 
-        // Redis 복구
+        // Redis 복구 - SCAN 기반으로 모킹
         reset(redisTemplate);
         lenient().when(redisTemplate.opsForValue()).thenReturn(valueOperations);
-        given(redisTemplate.keys("jwt_blacklist:*")).willReturn(redisKeys);
+        
+        // clearBlacklist에서 SCAN operation 모킹 - 2개의 Redis 키를 반환
+        when(cursor.hasNext()).thenReturn(true, true, false);
+        when(cursor.next()).thenReturn("jwt_blacklist:token1", "jwt_blacklist:token2");
+        given(redisTemplate.scan(any(ScanOptions.class))).willReturn(cursor);
 
         // When
         tokenBlacklistService.clearBlacklist();
 
         // Then
-        verify(redisTemplate).delete(redisKeys);
-        // Mock empty keys for size check after clearing
-        given(redisTemplate.keys("jwt_blacklist:*")).willReturn(Set.of());
+        verify(redisTemplate, times(2)).delete(anyString()); // 각 키별로 delete 호출
+        
+        // getBlacklistSize에서 SCAN operation 모킹 - 빈 결과 반환 (정리 후)
+        reset(cursor);
+        when(cursor.hasNext()).thenReturn(false);
         assertThat(tokenBlacklistService.getBlacklistSize()).isEqualTo(0);
     }
 

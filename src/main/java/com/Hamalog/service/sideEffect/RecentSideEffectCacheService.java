@@ -1,5 +1,6 @@
 package com.Hamalog.service.sideEffect;
 
+import lombok.extern.slf4j.Slf4j;
 import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty;
 import org.springframework.data.redis.core.RedisTemplate;
 import org.springframework.stereotype.Service;
@@ -11,6 +12,7 @@ import java.util.List;
  * Redis를 사용하여 최근 부작용 목록을 캐싱하는 서비스
  * 사용자별로 최대 5개의 최근 부작용 이름을 저장합니다.
  */
+@Slf4j
 @Service
 @ConditionalOnProperty(name = "spring.data.redis.host")
 public class RecentSideEffectCacheService {
@@ -43,6 +45,7 @@ public class RecentSideEffectCacheService {
                     .toList();
         } catch (Exception e) {
             // Redis 오류 시 빈 리스트 반환 (데이터베이스 폴백 허용)
+            log.warn("Failed to get recent side effects from Redis cache for member {}: {}", memberId, e.getMessage());
             return Collections.emptyList();
         }
     }
@@ -72,7 +75,8 @@ public class RecentSideEffectCacheService {
             
         } catch (Exception e) {
             // Redis 오류 시 로그만 기록하고 계속 진행
-            // 실제 운영 환경에서는 적절한 로깅 처리 필요
+            log.error("Failed to add recent side effect '{}' to Redis cache for member {}: {}", 
+                     sideEffectName, memberId, e.getMessage(), e);
         }
     }
 
@@ -101,6 +105,8 @@ public class RecentSideEffectCacheService {
             
         } catch (Exception e) {
             // Redis 오류 시 로그만 기록하고 계속 진행
+            log.error("Failed to refresh recent side effects cache for member {}: {}", 
+                     memberId, e.getMessage(), e);
         }
     }
 

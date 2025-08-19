@@ -33,7 +33,15 @@ public class JwtTokenProvider {
         log.info("[DEBUG_LOG] JWT secret 값: '{}'", secret != null ? secret : "NULL");
         log.info("[DEBUG_LOG] JWT expiry: {}", validityInMilliseconds);
         
-        this.secret = secret;
+        // Handle empty JWT_SECRET environment variable by using default fallback
+        if (secret == null || secret.isBlank()) {
+            log.warn("[DEBUG_LOG] JWT secret이 null이거나 비어있음 - 기본값 사용");
+            this.secret = "EzUuJwKK4vLnvk5r7yAgdNP/sa1dL87febZhlayPGjI=";
+            log.info("[DEBUG_LOG] JWT secret 기본값으로 설정됨");
+        } else {
+            this.secret = secret;
+        }
+        
         this.validityInMilliseconds = validityInMilliseconds;
         this.tokenBlacklistService = tokenBlacklistService;
     }

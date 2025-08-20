@@ -24,16 +24,11 @@ public class JwtTokenProvider {
     private final TokenBlacklistService tokenBlacklistService;
 
     public JwtTokenProvider(
-            @Value("${jwt.secret:EzUuJwKK4vLnvk5r7yAgdNP/sa1dL87febZhlayPGjI=}") String secret,
+            @Value("${jwt.secret}") String secret,
             @Value("${jwt.expiry:3600000}") long validityInMilliseconds,
             TokenBlacklistService tokenBlacklistService
     ) {
-        if (secret == null || secret.isBlank()) {
-            this.secret = "EzUuJwKK4vLnvk5r7yAgdNP/sa1dL87febZhlayPGjI=";
-        } else {
-            this.secret = secret;
-        }
-        
+        this.secret = secret;
         this.validityInMilliseconds = validityInMilliseconds;
         this.tokenBlacklistService = tokenBlacklistService;
     }

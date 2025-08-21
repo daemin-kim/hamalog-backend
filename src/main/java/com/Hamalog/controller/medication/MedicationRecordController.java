@@ -23,7 +23,6 @@ import org.springframework.web.bind.annotation.*;
 import jakarta.validation.Valid;
 import java.util.List;
 
-@Tag(name = "Medication Record API", description = "복약 기록(CRUD) 관련 API")
 @RestController
 @RequestMapping("/medication-record")
 public class MedicationRecordController {

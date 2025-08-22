@@ -41,7 +41,16 @@ public class GlobalExceptionHandler {
                 request.getRequestURI(),
                 null
         );
-        log.warn("[NOT_FOUND] path={} code={} message={} traceId={}", request.getRequestURI(), ex.getErrorCode().getCode(), ex.getErrorCode().getMessage(), MDC.get("requestId"));
+        // Add error context to MDC
+        MDC.put("error.type", "NOT_FOUND");
+        MDC.put("error.code", ex.getErrorCode().getCode());
+        MDC.put("error.httpStatus", "404");
+        
+        log.warn("[NOT_FOUND] Resource not found - path={} code={} message={} traceId={}", 
+            request.getRequestURI(), ex.getErrorCode().getCode(), ex.getErrorCode().getMessage(), MDC.get("requestId"));
+        
+        // Clean up error context
+        cleanupErrorMDC();
         return ResponseEntity.status(HttpStatus.NOT_FOUND).body(error);
     }
 
@@ -54,11 +63,22 @@ public class GlobalExceptionHandler {
         ErrorResponse error = ErrorResponse.of(
                 HttpStatus.BAD_REQUEST,
                 "INVALID_INPUT",
-                "요청 데이터가 유효하지 않습니다.",
+                "Request data validation failed",
                 request.getRequestURI(),
                 violations
         );
-        log.info("[BAD_REQUEST] path={} reason=validation_error traceId={} violations={}", request.getRequestURI(), MDC.get("requestId"), violations);
+        
+        // Add error context to MDC
+        MDC.put("error.type", "VALIDATION_ERROR");
+        MDC.put("error.code", "INVALID_INPUT");
+        MDC.put("error.httpStatus", "400");
+        MDC.put("error.violationCount", String.valueOf(violations.size()));
+        
+        log.info("[VALIDATION_ERROR] Input validation failed - path={} traceId={} violationCount={} violations={}", 
+            request.getRequestURI(), MDC.get("requestId"), violations.size(), violations);
+        
+        // Clean up error context
+        cleanupErrorMDC();
         return ResponseEntity.status(HttpStatus.BAD_REQUEST).body(error);
     }
 
@@ -67,11 +87,21 @@ public class GlobalExceptionHandler {
         ErrorResponse error = ErrorResponse.of(
                 HttpStatus.UNAUTHORIZED,
                 "UNAUTHORIZED",
-                "인증에 실패했습니다.",
+                "Authentication failed",
                 request.getRequestURI(),
                 null
         );
-        log.warn("[UNAUTHORIZED] path={} traceId={} message={}", request.getRequestURI(), MDC.get("requestId"), ex.getMessage());
+        
+        // Add error context to MDC
+        MDC.put("error.type", "AUTHENTICATION_ERROR");
+        MDC.put("error.code", "UNAUTHORIZED");
+        MDC.put("error.httpStatus", "401");
+        
+        log.warn("[AUTHENTICATION_ERROR] Authentication failed - path={} traceId={} message={}", 
+            request.getRequestURI(), MDC.get("requestId"), ex.getMessage());
+        
+        // Clean up error context
+        cleanupErrorMDC();
         return ResponseEntity.status(HttpStatus.UNAUTHORIZED).body(error);
     }
 
@@ -84,7 +114,16 @@ public class GlobalExceptionHandler {
                 request.getRequestURI(),
                 null
         );
-        log.warn("[BUSINESS_ERROR] path={} code={} message={} traceId={}", request.getRequestURI(), ex.getErrorCode().getCode(), ex.getErrorCode().getMessage(), MDC.get("requestId"));
+        // Add error context to MDC
+        MDC.put("error.type", "BUSINESS_ERROR");
+        MDC.put("error.code", ex.getErrorCode().getCode());
+        MDC.put("error.httpStatus", "400");
+        
+        log.warn("[BUSINESS_ERROR] Business logic error - path={} code={} message={} traceId={}", 
+            request.getRequestURI(), ex.getErrorCode().getCode(), ex.getErrorCode().getMessage(), MDC.get("requestId"));
+        
+        // Clean up error context
+        cleanupErrorMDC();
         return ResponseEntity.status(HttpStatus.BAD_REQUEST).body(error);
     }
 
@@ -97,8 +136,27 @@ public class GlobalExceptionHandler {
                 request.getRequestURI(),
                 null
         );
-        log.error("[UNEXPECTED_ERROR] path={} traceId={} message={}", request.getRequestURI(), MDC.get("requestId"), ex.toString(), ex);
+        
+        // Add error context to MDC
+        MDC.put("error.type", "UNEXPECTED_ERROR");
+        MDC.put("error.code", ErrorCode.INTERNAL_SERVER_ERROR.getCode());
+        MDC.put("error.httpStatus", "500");
+        MDC.put("error.exception", ex.getClass().getSimpleName());
+        
+        log.error("[UNEXPECTED_ERROR] Unexpected system error - path={} traceId={} exception={} message={}", 
+            request.getRequestURI(), MDC.get("requestId"), ex.getClass().getSimpleName(), ex.getMessage(), ex);
+        
+        // Clean up error context
+        cleanupErrorMDC();
         return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body(error);
+    }
+    
+    private void cleanupErrorMDC() {
+        MDC.remove("error.type");
+        MDC.remove("error.code");
+        MDC.remove("error.httpStatus");
+        MDC.remove("error.violationCount");
+        MDC.remove("error.exception");
     }
 
     public record ErrorResponse(

@@ -33,20 +33,42 @@ public class ApiLoggingAspect {
         String params = getParameterInfo(signature, joinPoint.getArgs());
         String user = getAuthenticatedUser();
 
-        log.info("[API 요청] {} | requestId={} | user={} | params={}", methodName, requestId, user, params);
+        // Add additional structured logging context
+        MDC.put("api.method", methodName);
+        MDC.put("api.user", user);
+        
+        log.info("[API_REQUEST] method={} requestId={} user={} params={}", methodName, requestId, user, params);
 
         try {
             Object result = joinPoint.proceed();
             long elapsed = System.currentTimeMillis() - startTime;
-            log.info("[API 응답] {} | requestId={} | user={} | time={}ms | result={}",
+            
+            // Add performance metrics to MDC
+            MDC.put("api.duration", String.valueOf(elapsed));
+            MDC.put("api.status", "success");
+            
+            log.info("[API_RESPONSE] method={} requestId={} user={} duration={}ms result={}",
                     methodName, requestId, user, elapsed, shorten(result));
             return result;
         } catch (Exception e) {
             long elapsed = System.currentTimeMillis() - startTime;
-            log.error("[API 예외] {} | requestId={} | user={} | time={}ms | error={}",
-                    methodName, requestId, user, elapsed, e.toString(), e);
+            
+            // Add error context to MDC
+            MDC.put("api.duration", String.valueOf(elapsed));
+            MDC.put("api.status", "error");
+            MDC.put("api.errorType", e.getClass().getSimpleName());
+            
+            log.error("[API_ERROR] method={} requestId={} user={} duration={}ms errorType={} error={}",
+                    methodName, requestId, user, elapsed, e.getClass().getSimpleName(), e.getMessage(), e);
             throw e;
         } finally {
+            // Clean up MDC context
+            MDC.remove("api.method");
+            MDC.remove("api.user");
+            MDC.remove("api.duration");
+            MDC.remove("api.status");
+            MDC.remove("api.errorType");
+            
             if (putRequestId) {
                 MDC.remove("requestId");
             }

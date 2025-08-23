@@ -8,7 +8,8 @@ COPY build/libs/*.jar app.jar
 
 # Declare environment variables for documentation and validation
 ENV SPRING_PROFILES_ACTIVE=prod
-ENV JWT_SECRET=""
+# Note: JWT_SECRET should be set at runtime via docker run -e JWT_SECRET=value
+# Do not declare JWT_SECRET with empty value here as it overrides fallback values
 ENV JWT_EXPIRY=3600000
 ENV SPRING_DATASOURCE_URL=""
 ENV SPRING_DATASOURCE_USERNAME=""
@@ -30,10 +31,13 @@ ENTRYPOINT ["sh", "-c", "\
     echo 'Starting Hamalog application...' && \
     echo 'Active Profile: ${SPRING_PROFILES_ACTIVE}' && \
     if [ -z \"$JWT_SECRET\" ]; then \
-        echo 'WARNING: JWT_SECRET environment variable is not set. Using fallback value.' && \
-        echo 'For production deployment, please set JWT_SECRET environment variable.'; \
+        echo 'INFO: JWT_SECRET environment variable is not set. Using fallback value from application properties.' && \
+        echo 'For production deployment, set JWT_SECRET via: docker run -e JWT_SECRET=your-secret'; \
+    elif [ \"$JWT_SECRET\" = \"\" ]; then \
+        echo 'WARNING: JWT_SECRET is set but empty. This may cause startup failures.' && \
+        echo 'Either unset JWT_SECRET or provide a valid Base64 value.'; \
     else \
-        echo 'JWT_SECRET environment variable is properly configured.'; \
+        echo 'INFO: JWT_SECRET environment variable is properly configured.'; \
     fi && \
     java -Djava.security.egd=file:/dev/./urandom \
          -Dspring.profiles.active=${SPRING_PROFILES_ACTIVE} \

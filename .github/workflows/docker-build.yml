@@ -99,7 +99,7 @@ jobs:
             -e SPRING_DATASOURCE_PASSWORD=password `
             -e SPRING_DATA_REDIS_HOST=redis-hamalog `
             -e SPRING_DATA_REDIS_PORT=6379 `
-            -e JWT_SECRET=xcrVqYlPMcLeEoEX+h8vjxZ97lS6AETwQJXJSLJ/h8g=`
+            -e JWT_SECRET=xcrVqYlPMcLeEoEX+h8vjxZ97lS6AETwQJXJSLJ/h8g= `
             -e JWT_EXPIRY=3600000 `
             -e KAKAO_CLIENT_ID=${{ secrets.KAKAO_CLIENT_ID }} `
             -e KAKAO_CLIENT_SECRET=${{ secrets.KAKAO_CLIENT_SECRET }} `

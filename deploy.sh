@@ -45,8 +45,8 @@ cleanup_containers() {
     print_status "Stopping existing containers..."
     
     # Stop all services in the compose file
-    if docker-compose -f $COMPOSE_FILE -p $PROJECT_NAME ps -q | grep -q .; then
-        docker-compose -f $COMPOSE_FILE -p $PROJECT_NAME down --remove-orphans
+    if docker compose -f $COMPOSE_FILE -p $PROJECT_NAME ps -q | grep -q .; then
+        docker compose -f $COMPOSE_FILE -p $PROJECT_NAME down --remove-orphans
         print_status "Existing containers stopped and removed"
     else
         print_warning "No existing containers found"
@@ -90,7 +90,7 @@ build_and_start() {
     print_status "Building and starting containers..."
     
     # Build and start all services
-    docker-compose -f $COMPOSE_FILE -p $PROJECT_NAME up -d --build
+    docker compose -f $COMPOSE_FILE -p $PROJECT_NAME up -d --build
     
     if [ $? -eq 0 ]; then
         print_status "Containers built and started successfully"
@@ -108,7 +108,7 @@ verify_deployment() {
     sleep 10
     
     # Check if the main application container is running
-    if docker-compose -f $COMPOSE_FILE -p $PROJECT_NAME ps $APP_SERVICE | grep -q "Up"; then
+    if docker compose -f $COMPOSE_FILE -p $PROJECT_NAME ps $APP_SERVICE | grep -q "Up"; then
         print_status "Application container is running"
         
         # Try to connect to the health endpoint (if available)
@@ -120,7 +120,7 @@ verify_deployment() {
     else
         print_error "Application container failed to start"
         print_status "Container logs:"
-        docker-compose -f $COMPOSE_FILE -p $PROJECT_NAME logs $APP_SERVICE --tail=50
+        docker compose -f $COMPOSE_FILE -p $PROJECT_NAME logs $APP_SERVICE --tail=50
         exit 1
     fi
 }
@@ -128,14 +128,14 @@ verify_deployment() {
 # Function to show container status
 show_status() {
     print_status "Current container status:"
-    docker-compose -f $COMPOSE_FILE -p $PROJECT_NAME ps
+    docker compose -f $COMPOSE_FILE -p $PROJECT_NAME ps
     
     print_status "\nApplication is available at:"
     echo "  🌐 http://localhost:8080"
     echo ""
     
     print_status "To view logs, run:"
-    echo "  docker-compose -f $COMPOSE_FILE -p $PROJECT_NAME logs -f $APP_SERVICE"
+    echo "  docker compose -f $COMPOSE_FILE -p $PROJECT_NAME logs -f $APP_SERVICE"
 }
 
 # Main deployment flow

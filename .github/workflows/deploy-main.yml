@@ -117,7 +117,7 @@ jobs:
           sleep 30
           
           # Check if containers are running
-          docker-compose -p hamalog ps
+          docker compose -p hamalog ps
           
           # Try to connect to the application (basic connectivity test)
           max_attempts=10
@@ -135,7 +135,7 @@ jobs:
             if [ $attempt -eq $max_attempts ]; then
               echo "❌ Application health check failed after $max_attempts attempts"
               echo "📋 Application logs:"
-              docker-compose -p hamalog logs hamalog-app --tail=100
+              docker compose -p hamalog logs hamalog-app --tail=100
               exit 1
             fi
             

@@ -1,4 +1,40 @@
 FROM openjdk:21-jdk
+
+# Set working directory
 WORKDIR /app
+
+# Copy the JAR file
 COPY build/libs/*.jar app.jar
-ENTRYPOINT ["java", "-jar", "app.jar"]
+
+# Declare environment variables for documentation and validation
+ENV SPRING_PROFILES_ACTIVE=prod
+ENV JWT_SECRET=""
+ENV JWT_EXPIRY=3600000
+ENV SPRING_DATASOURCE_URL=""
+ENV SPRING_DATASOURCE_USERNAME=""
+ENV SPRING_DATASOURCE_PASSWORD=""
+ENV SPRING_DATA_REDIS_HOST=localhost
+ENV SPRING_DATA_REDIS_PORT=6379
+ENV KAKAO_CLIENT_ID=""
+ENV KAKAO_CLIENT_SECRET=""
+
+# Expose the port the application runs on
+EXPOSE 8080
+
+# Health check to ensure the application is running properly
+HEALTHCHECK --interval=30s --timeout=10s --start-period=40s --retries=3 \
+    CMD curl -f http://localhost:8080/actuator/health || exit 1
+
+# Run the application with environment variable validation
+ENTRYPOINT ["sh", "-c", "\
+    echo 'Starting Hamalog application...' && \
+    echo 'Active Profile: ${SPRING_PROFILES_ACTIVE}' && \
+    if [ -z \"$JWT_SECRET\" ]; then \
+        echo 'WARNING: JWT_SECRET environment variable is not set. Using fallback value.' && \
+        echo 'For production deployment, please set JWT_SECRET environment variable.'; \
+    else \
+        echo 'JWT_SECRET environment variable is properly configured.'; \
+    fi && \
+    java -Djava.security.egd=file:/dev/./urandom \
+         -Dspring.profiles.active=${SPRING_PROFILES_ACTIVE} \
+         -jar app.jar"]

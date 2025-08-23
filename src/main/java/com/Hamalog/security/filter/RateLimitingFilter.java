@@ -41,8 +41,9 @@ public class RateLimitingFilter extends OncePerRequestFilter {
     );
 
     private static final Set<String> PROTECTED_ENDPOINTS = Set.of(
-        "/api/medication",
-        "/api/side-effect"
+        "/medication-record",
+        "/medication-schedule", 
+        "/side-effect"
     );
 
     @Override

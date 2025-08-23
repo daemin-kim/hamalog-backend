@@ -61,8 +61,8 @@ public class JwtAuthenticationFilter extends OncePerRequestFilter {
                     // Add authenticated user to MDC
                     MDC.put("security.authenticatedUser", loginId);
                     
-                    log.info("[SECURITY] Authentication successful - user={} method={} uri={} clientIp={}", 
-                        loginId, method, requestUri, clientIp);
+                    log.info("[SECURITY] Authentication successful - user={} method={} uri={} clientIp={} userAgent={}", 
+                        loginId, method, requestUri, clientIp, userAgent != null ? userAgent.substring(0, Math.min(userAgent.length(), 50)) : "unknown");
                 } else {
                     log.warn("[SECURITY] JWT token validation failed - method={} uri={} clientIp={} reason=invalid_token", 
                         method, requestUri, clientIp);

@@ -17,18 +17,21 @@ import java.util.Map;
 public class JwtTokenProvider {
 
     private static final Logger log = LoggerFactory.getLogger(JwtTokenProvider.class);
+    
+    // 하드코딩된 JWT 시크릿 키 (256비트 Base64 인코딩)
+    private static final String HARDCODED_JWT_SECRET = "xcrVqYlPMcLeEoEX+h8vjxZ97lS6AETwQJXJSLJ/h8g=";
+    
+    // 하드코딩된 JWT 만료 시간 (1시간)
+    private static final long HARDCODED_JWT_EXPIRY = 3600000L;
 
     private SecretKey secretKey;
     private final String secret;
     private final long validityInMilliseconds;
     private final TokenBlacklistService tokenBlacklistService;
 
-    public JwtTokenProvider(
-            TokenBlacklistService tokenBlacklistService,
-            @Value("${jwt.secret}") String secret,
-            @Value("${jwt.expiry:3600000}") long validityInMilliseconds) {
-        this.secret = secret;
-        this.validityInMilliseconds = validityInMilliseconds;
+    public JwtTokenProvider(TokenBlacklistService tokenBlacklistService) {
+        this.secret = HARDCODED_JWT_SECRET;
+        this.validityInMilliseconds = HARDCODED_JWT_EXPIRY;
         this.tokenBlacklistService = tokenBlacklistService;
     }
 

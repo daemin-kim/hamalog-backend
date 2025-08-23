@@ -34,7 +34,6 @@ public class SecurityConfig {
     private final KakaoOAuth2UserService kakaoOAuth2UserService;
     private final JwtTokenProvider jwtTokenProvider;
     private final OAuth2AuthenticationSuccessHandler oAuth2AuthenticationSuccessHandler;
-    private final CorsConfigurationSource corsConfigurationSource;
     private final RateLimitingFilter rateLimitingFilter;
     private final RequestSizeMonitoringFilter requestSizeMonitoringFilter;
 
@@ -43,7 +42,6 @@ public class SecurityConfig {
             KakaoOAuth2UserService kakaoOAuth2UserService,
             JwtTokenProvider jwtTokenProvider,
             OAuth2AuthenticationSuccessHandler oAuth2AuthenticationSuccessHandler,
-            CorsConfigurationSource corsConfigurationSource,
             @Autowired(required = false) RateLimitingFilter rateLimitingFilter,
             RequestSizeMonitoringFilter requestSizeMonitoringFilter
     ) {
@@ -51,16 +49,18 @@ public class SecurityConfig {
         this.kakaoOAuth2UserService = kakaoOAuth2UserService;
         this.jwtTokenProvider = jwtTokenProvider;
         this.oAuth2AuthenticationSuccessHandler = oAuth2AuthenticationSuccessHandler;
-        this.corsConfigurationSource = corsConfigurationSource;
         this.rateLimitingFilter = rateLimitingFilter;
         this.requestSizeMonitoringFilter = requestSizeMonitoringFilter;
     }
 
     @Bean
-    public SecurityFilterChain securityFilterChain(HttpSecurity http) throws Exception {
+    public SecurityFilterChain securityFilterChain(
+            HttpSecurity http,
+            @Value("${hamalog.cors.allowed-origins:http://localhost:3000}") String allowedOriginsCsv
+    ) throws Exception {
         http
                 .csrf(csrf -> csrf.disable())
-                .cors(cors -> cors.configurationSource(corsConfigurationSource))
+                .cors(cors -> cors.configurationSource(corsConfigurationSource(allowedOriginsCsv)))
                 .headers(headers -> headers
                         .contentSecurityPolicy(csp -> csp.policyDirectives("default-src 'self'; script-src 'self' 'unsafe-inline'; style-src 'self' 'unsafe-inline'; img-src 'self' data:; font-src 'self'; connect-src 'self'"))
                         .frameOptions(frame -> frame.deny())

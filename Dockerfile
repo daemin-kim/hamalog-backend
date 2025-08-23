@@ -16,8 +16,9 @@ ENV SPRING_DATASOURCE_USERNAME=""
 ENV SPRING_DATASOURCE_PASSWORD=""
 ENV SPRING_DATA_REDIS_HOST=localhost
 ENV SPRING_DATA_REDIS_PORT=6379
-ENV KAKAO_CLIENT_ID=""
-ENV KAKAO_CLIENT_SECRET=""
+# KAKAO_CLIENT_ID and KAKAO_CLIENT_SECRET should be set at runtime
+# Do not declare them with empty values as it prevents OAuth2EmptyVariableHandler from working
+# Set them via: docker run -e KAKAO_CLIENT_ID=your_id -e KAKAO_CLIENT_SECRET=your_secret
 
 # Expose the port the application runs on
 EXPOSE 8080

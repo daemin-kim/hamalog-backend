@@ -64,6 +64,10 @@ Hamalog는 사용자가 복약 일정을 추적하고, 부작용을 모니터링
 - **보안 헤더**: CSP, 프레임 옵션, 리퍼러 정책
 - **입력 검증**: 포괄적인 요청 검증
 - **권한 검사**: 소유권 검증이 포함된 엔드포인트 수준 보안
+- **속도 제한**: Redis 기반 API 호출 및 인증 시도 제한
+- **요청 크기 모니터링**: DoS 공격 방지를 위한 요청 크기 제한
+- **토큰 블랙리스트**: 안전한 로그아웃을 위한 JWT 토큰 무효화
+- **구조화된 로깅**: 보안 이벤트 추적 및 모니터링
 
 ## 🛠 기술 스택
 
@@ -73,15 +77,19 @@ Hamalog는 사용자가 복약 일정을 추적하고, 부작용을 모니터링
 - **Spring Security** - 포괄적인 보안 프레임워크
 - **Spring Data JPA** - 데이터베이스 추상화 레이어
 - **Spring OAuth2 Client** - OAuth2 연동
+- **Spring Data Redis** - Redis 연동 및 캐싱
 
-### 데이터베이스
+### 데이터베이스 & 캐싱
 - **MySQL 8.0** - 주요 운영 데이터베이스
 - **H2 Database** - 개발/테스트용 인메모리 데이터베이스
+- **Redis 7** - 캐싱, 세션 관리, 토큰 블랙리스트, 속도 제한
 
 ### 보안 및 인증
 - **JWT (jjwt 0.12.6)** - JSON Web Token 구현
 - **BCrypt** - 비밀번호 암호화
 - **OAuth2** - 소셜 로그인 연동
+- **Bucket4j** - Redis 기반 속도 제한
+- **Logstash Encoder** - 구조화된 보안 로깅
 
 ### 문서화 및 테스트
 - **SpringDoc OpenAPI 2.0.2** - API 문서 자동 생성
@@ -171,14 +179,20 @@ FLUSH PRIVILEGES;
 | 데이터베이스 이름 | `DB_NAME` | `hamalog` | 데이터베이스 이름 |
 | 데이터베이스 사용자명 | `DB_USERNAME` | `user` | 데이터베이스 사용자명 |
 | 데이터베이스 비밀번호 | `DB_PASSWORD` | `password` | 데이터베이스 비밀번호 |
+| Redis 호스트 | `SPRING_DATA_REDIS_HOST` | `localhost` | Redis 서버 호스트 |
+| Redis 포트 | `SPRING_DATA_REDIS_PORT` | `6379` | Redis 서버 포트 |
 | JWT 비밀키 | `JWT_SECRET` | (개발용 기본값) | JWT 서명 비밀키 |
 | JWT 만료시간 | `JWT_EXPIRY` | `3600000` | 토큰 만료시간 (밀리초) |
 | 카카오 클라이언트 ID | `KAKAO_CLIENT_ID` | (더미값) | 카카오 OAuth2 클라이언트 ID |
 | 카카오 클라이언트 시크릿 | `KAKAO_CLIENT_SECRET` | (더미값) | 카카오 OAuth2 클라이언트 시크릿 |
+| 프론트엔드 URL | `FRONTEND_URL` | `http://localhost:3000` | OAuth2 리디렉션용 프론트엔드 URL |
 
 ### 파일 업로드 설정
 - **업로드 디렉터리**: `/data/hamalog/images` (`hamalog.upload.image-dir`로 설정 가능)
+- **최대 파일 크기**: 50MB (`spring.servlet.multipart.max-file-size`)
+- **최대 요청 크기**: 50MB (`spring.servlet.multipart.max-request-size`)
 - **지원 형식**: 복약 일정용 이미지
+- **DoS 보호**: HTTP 요청 헤더 크기 64KB 제한, 연결 시간 초과 20초
 
 ## 📚 API 문서
 
@@ -353,39 +367,16 @@ docker build -t hamalog .
 
 #### 3. Docker Compose로 실행
 ```bash
-# docker-compose.yml 생성
-version: '3.8'
-services:
-  mysql:
-    image: mysql:8.0
-    environment:
-      MYSQL_DATABASE: hamalog
-      MYSQL_USER: user
-      MYSQL_PASSWORD: password
-      MYSQL_ROOT_PASSWORD: rootpassword
-    ports:
-      - "3306:3306"
-    volumes:
-      - mysql_data:/var/lib/mysql
-
-  app:
-    build: .
-    ports:
-      - "8080:8080"
-    environment:
-      DB_HOST: mysql
-      DB_USERNAME: user
-      DB_PASSWORD: password
-      JWT_SECRET: your-production-secret
-    depends_on:
-      - mysql
-
-volumes:
-  mysql_data:
-
-# 서비스 시작
+# 기존 docker-compose.yml 사용
 docker-compose up -d
 ```
+
+실제 `docker-compose.yml` 구성:
+- **hamalog-app**: 메인 애플리케이션 서비스
+- **redis**: Redis 7-alpine (캐싱, 토큰 블랙리스트, 속도 제한)
+- **mysql-hamalog**: MySQL 8.0 데이터베이스
+- **Volumes**: mysql-data, redis-data, hamalog-uploads
+- **Health checks**: 자동 상태 확인 및 재시작 정책
 
 ### 운영 환경 배포
 
@@ -405,11 +396,27 @@ export KAKAO_CLIENT_SECRET=your-production-client-secret
 ```
 
 #### CI/CD 파이프라인
-프로젝트에는 자동 배포를 위한 GitHub Actions 워크플로우가 포함되어 있습니다:
-- **빌드**: Java 21을 사용한 Gradle 빌드
-- **테스트**: 자동화된 테스트 실행
-- **Docker**: GitHub Container Registry에 빌드 및 푸시
-- **배포**: 셀프 호스팅 러너에 자동 배포
+프로젝트에는 포괄적인 자동 배포를 위한 GitHub Actions 워크플로우가 포함되어 있습니다:
+
+**빌드 및 테스트 단계:**
+- Java 21 설정 및 Gradle 캐싱
+- Gradle wrapper 검증 및 권한 설정
+- 전체 애플리케이션 빌드 및 테스트 실행
+
+**Docker 및 레지스트리:**
+- Docker Buildx 설정 및 GitHub Container Registry 로그인
+- 멀티 태그 Docker 이미지 빌드 (latest, branch, SHA)
+- GitHub Actions 캐시를 이용한 효율적인 빌드
+
+**배포 및 검증:**
+- 운영 환경 변수 주입 (GitHub Secrets)
+- Docker Compose 기반 서비스 배포
+- 자동 헬스 체크 및 연결성 테스트 (최대 10회 재시도)
+- 배포 후 로그 검증 및 정리
+
+**유지보수:**
+- 오래된 Docker 이미지 자동 정리
+- 배포 성공/실패 알림
 
 ### 헬스 체크
 - **애플리케이션**: `GET /actuator/health` (Spring Boot Actuator 활성화 시)

@@ -1,11 +1,17 @@
 package com.Hamalog.service.auth;
 
 import com.Hamalog.domain.member.Member;
+import com.Hamalog.domain.medication.MedicationRecord;
+import com.Hamalog.domain.medication.MedicationSchedule;
+import com.Hamalog.domain.sideEffect.SideEffectRecord;
 import com.Hamalog.dto.auth.request.SignupRequest;
 import com.Hamalog.dto.auth.response.LoginResponse;
 import com.Hamalog.exception.CustomException;
 import com.Hamalog.exception.ErrorCode;
 import com.Hamalog.repository.member.MemberRepository;
+import com.Hamalog.repository.medication.MedicationRecordRepository;
+import com.Hamalog.repository.medication.MedicationScheduleRepository;
+import com.Hamalog.repository.sideEffect.SideEffectRecordRepository;
 import com.Hamalog.security.jwt.JwtTokenProvider;
 import com.Hamalog.security.jwt.TokenBlacklistService;
 import lombok.RequiredArgsConstructor;
@@ -24,6 +30,9 @@ import java.time.LocalDateTime;
 public class AuthService {
 
     private final MemberRepository memberRepository;
+    private final MedicationScheduleRepository medicationScheduleRepository;
+    private final MedicationRecordRepository medicationRecordRepository;
+    private final SideEffectRecordRepository sideEffectRecordRepository;
     private final PasswordEncoder passwordEncoder;
     private final JwtTokenProvider jwtTokenProvider;
     private final TokenBlacklistService tokenBlacklistService;
@@ -50,6 +59,43 @@ public class AuthService {
         if (isValidTokenFormat(token)) {
             tokenBlacklistService.blacklistToken(token);
         }
+    }
+
+    @Transactional
+    public void deleteMember(String loginId, String token) {
+        // Find the member to delete
+        Member member = memberRepository.findByLoginId(loginId)
+                .orElseThrow(() -> new CustomException(ErrorCode.MEMBER_NOT_FOUND));
+
+        // Delete related data in proper sequence to avoid foreign key constraints
+        deleteMemberRelatedData(member.getMemberId());
+        
+        // Delete the member
+        memberRepository.delete(member);
+        
+        // Invalidate JWT token if provided
+        if (isValidTokenFormat(token)) {
+            tokenBlacklistService.blacklistToken(token);
+        }
+    }
+
+    private void deleteMemberRelatedData(Long memberId) {
+        // 1. Delete side effect records
+        sideEffectRecordRepository.findAll().stream()
+                .filter(record -> record.getMember().getMemberId().equals(memberId))
+                .forEach(sideEffectRecordRepository::delete);
+
+        // 2. Delete medication records (must be deleted before medication schedules)
+        medicationScheduleRepository.findAllByMember_MemberId(memberId)
+                .forEach(schedule -> {
+                    medicationRecordRepository.findAllByMedicationSchedule_MedicationScheduleId(
+                            schedule.getMedicationScheduleId())
+                            .forEach(medicationRecordRepository::delete);
+                });
+
+        // 3. Delete medication schedules
+        medicationScheduleRepository.findAllByMember_MemberId(memberId)
+                .forEach(medicationScheduleRepository::delete);
     }
 
     private void validateMemberRegistration(SignupRequest request) {

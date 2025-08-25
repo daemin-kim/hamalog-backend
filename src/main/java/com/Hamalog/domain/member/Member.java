@@ -1,6 +1,9 @@
 package com.Hamalog.domain.member;
 
 import jakarta.persistence.*;
+import jakarta.validation.constraints.Email;
+import jakarta.validation.constraints.Pattern;
+import jakarta.validation.constraints.Size;
 import lombok.*;
 
 import java.time.LocalDate;
@@ -19,17 +22,26 @@ public class Member {
     @Column(name = "member_id")
     private Long memberId;
 
-    @Column(name = "login_id", length = 20, nullable = false, unique = true)
+    @Column(name = "login_id", length = 100, nullable = false, unique = true)
+    @Email(message = "{member.loginId.email}")
     private String loginId;
 
-    @Column(nullable = false)
+    @Column(nullable = false, length = 30)
+    @Size(max = 30, message = "{member.password.size}")
     private String password;
 
-    @Column(length = 6, nullable = false)
+    @Column(length = 15, nullable = false)
+    @Size(max = 15, message = "{member.name.size}")
     private String name;
 
-    @Column(name = "phone_number", length = 13, nullable = false)
+    @Column(name = "phone_number", length = 10, nullable = false)
+    @Pattern(regexp = "^010\\d{7}$", message = "{member.phoneNumber.pattern}")
     private String phoneNumber;
+
+    @Column(name = "nickname", length = 10, nullable = false)
+    @Pattern(regexp = "^[가-힣a-zA-Z]{1,10}$", message = "{member.nickname.pattern}")
+    @Size(max = 10, message = "{member.nickname.size}")
+    private String nickName;
 
     @Column(name = "birthday", nullable = false)
     private LocalDate birth;

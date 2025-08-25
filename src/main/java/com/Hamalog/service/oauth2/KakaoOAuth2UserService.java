@@ -51,18 +51,23 @@ public class KakaoOAuth2UserService extends DefaultOAuth2UserService {
         String nickname = safeAsString(profile.get("nickname")).orElse(null);
 
 
-        String loginId = "kakao_" + kakaoId;
+        String loginId = "kakao_" + kakaoId + "@oauth2.internal";
         Optional<Member> optionalMember = memberRepository.findByLoginId(loginId);
         if (optionalMember.isEmpty()) {
-            String name = (nickname != null && !nickname.isBlank()) ? nickname : "OAuth2_User_" + kakaoId;
-            // Use null values instead of fake defaults to indicate incomplete profile
-            String phoneNumber = null;
-            LocalDate birth = null;
+            String name = (nickname != null && !nickname.isBlank()) ? 
+                    (nickname.length() > 15 ? nickname.substring(0, 15) : nickname) : 
+                    "OAuth2_" + kakaoId.toString().substring(0, Math.min(kakaoId.toString().length(), 8));
+            // Use placeholder phone number for OAuth2 users to meet validation requirements
+            String phoneNumber = "0101234567";
+            LocalDate birth = LocalDate.of(2000, 1, 1); // Default birth date for OAuth2 users
 
+            String nickName = (nickname != null && !nickname.isBlank()) ? nickname : "카카오유저";
+            
             Member member = Member.builder()
                     .loginId(loginId)
                     .password("{oauth2}") // Mark as OAuth2 account, not regular password
                     .name(name)
+                    .nickName(nickName)
                     .phoneNumber(phoneNumber)
                     .birth(birth)
                     .createdAt(LocalDateTime.now())

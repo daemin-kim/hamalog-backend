@@ -63,6 +63,7 @@ public class AuthService {
                 .loginId(request.loginId())
                 .password(passwordEncoder.encode(request.password()))
                 .name(request.name())
+                .nickName(request.nickName())
                 .phoneNumber(request.phoneNumber())
                 .birth(request.birth())
                 .createdAt(LocalDateTime.now())

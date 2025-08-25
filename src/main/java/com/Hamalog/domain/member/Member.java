@@ -26,8 +26,7 @@ public class Member {
     @Email(message = "{member.loginId.email}")
     private String loginId;
 
-    @Column(nullable = false, length = 30)
-    @Size(max = 30, message = "{member.password.size}")
+    @Column(nullable = false, length = 60)
     private String password;
 
     @Column(length = 15, nullable = false)

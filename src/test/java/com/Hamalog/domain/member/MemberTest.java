@@ -384,12 +384,13 @@ class MemberTest {
     }
 
     @Test
-    @DisplayName("비밀번호가 30자를 초과하는 경우 검증 실패")
-    void createMember_TooLongPassword_ValidationFails() {
-        // Given
+    @DisplayName("암호화된 비밀번호(BCrypt 해시)로 Member 생성 성공")
+    void createMember_EncryptedPassword_Success() {
+        // Given - BCrypt hash of "testpassword" (60 characters)
+        String bcryptHash = "$2a$10$N9qo8uLOickgx2ZMRZoMyeIjZAgcfl7p92ldGxad68LJZdL17lhWy";
         Member member = Member.builder()
                 .loginId("user@example.com")
-                .password("password1234567890abcdefghij30over")
+                .password(bcryptHash)
                 .name("홍길동")
                 .nickName("길동이")
                 .phoneNumber("0101234567")
@@ -401,8 +402,8 @@ class MemberTest {
         Set<ConstraintViolation<Member>> violations = validator.validate(member);
 
         // Then
-        assertThat(violations).hasSize(1);
-        assertThat(violations.iterator().next().getMessage())
-                .isEqualTo("비밀번호는 최대 30자까지 입력할 수 있습니다.");
+        assertThat(violations).isEmpty();
+        assertThat(member.getPassword()).isEqualTo(bcryptHash);
+        assertThat(member.getPassword().length()).isEqualTo(60);
     }
 }

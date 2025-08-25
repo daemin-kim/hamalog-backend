@@ -81,7 +81,8 @@ public class SecurityConfig {
                                 "/auth/login", "/auth/signup",
                                 "/v3/api-docs/**", "/swagger-ui.html", "/swagger-ui/**",
                                 "/error",
-                                "/oauth2/**", "/login/oauth2/**", "/oauth2/authorization/**"
+                                "/oauth2/**", "/login/oauth2/**", "/oauth2/authorization/**",
+                                "/api/auth/kakao/callback"
                         ).permitAll()
                         .requestMatchers(HttpMethod.GET, "/test").permitAll()
                         .anyRequest().authenticated()

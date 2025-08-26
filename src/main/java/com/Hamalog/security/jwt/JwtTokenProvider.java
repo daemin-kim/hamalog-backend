@@ -18,10 +18,8 @@ public class JwtTokenProvider {
 
     private static final Logger log = LoggerFactory.getLogger(JwtTokenProvider.class);
     
-    // 하드코딩된 JWT 시크릿 키 (256비트 Base64 인코딩)
     private static final String HARDCODED_JWT_SECRET = "xcrVqYlPMcLeEoEX+h8vjxZ97lS6AETwQJXJSLJ/h8g=";
     
-    // 하드코딩된 JWT 만료 시간 (1시간)
     private static final long HARDCODED_JWT_EXPIRY = 3600000L;
 
     private SecretKey secretKey;

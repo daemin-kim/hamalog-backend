@@ -2,6 +2,7 @@ package com.Hamalog.security.oauth2;
 
 import com.Hamalog.security.jwt.JwtTokenProvider;
 import jakarta.servlet.ServletException;
+import jakarta.servlet.http.Cookie;
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.servlet.http.HttpServletResponse;
 import org.springframework.beans.factory.annotation.Value;
@@ -46,12 +47,11 @@ public class OAuth2AuthenticationSuccessHandler implements AuthenticationSuccess
 
         String token = jwtTokenProvider.createToken(loginId);
 
-        // Use secure HTTP-only cookie instead of URL parameter for token delivery
-        jakarta.servlet.http.Cookie tokenCookie = new jakarta.servlet.http.Cookie("auth_token", token);
+        Cookie tokenCookie = new Cookie("auth_token", token);
         tokenCookie.setHttpOnly(true);
-        tokenCookie.setSecure(true); // Use HTTPS in production
+        tokenCookie.setSecure(true);
         tokenCookie.setPath("/");
-        tokenCookie.setMaxAge(3600); // 1 hour
+        tokenCookie.setMaxAge(3600);
         tokenCookie.setAttribute("SameSite", "Strict");
         response.addCookie(tokenCookie);
 

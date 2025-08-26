@@ -27,10 +27,8 @@ public class OAuth2EmptyVariableHandler implements EnvironmentPostProcessor {
     public void postProcessEnvironment(ConfigurableEnvironment environment, SpringApplication application) {
         Map<String, Object> customProperties = new HashMap<>();
 
-        // Handle KAKAO_CLIENT_ID
         String kakaoClientId = environment.getProperty("KAKAO_CLIENT_ID");
         if (kakaoClientId == null || kakaoClientId.trim().isEmpty()) {
-            // Check active profiles to determine appropriate fallback
             String[] activeProfiles = environment.getActiveProfiles();
             boolean isProduction = java.util.Arrays.asList(activeProfiles).contains("prod");
             
@@ -45,7 +43,6 @@ public class OAuth2EmptyVariableHandler implements EnvironmentPostProcessor {
             log.info("[DEBUG_LOG] KAKAO_CLIENT_ID found: {}", kakaoClientId);
         }
 
-        // Handle KAKAO_CLIENT_SECRET
         String kakaoClientSecret = environment.getProperty("KAKAO_CLIENT_SECRET");
         if (kakaoClientSecret == null || kakaoClientSecret.trim().isEmpty()) {
             String[] activeProfiles = environment.getActiveProfiles();
@@ -62,7 +59,6 @@ public class OAuth2EmptyVariableHandler implements EnvironmentPostProcessor {
             log.info("[DEBUG_LOG] KAKAO_CLIENT_SECRET found: ***MASKED***");
         }
 
-        // Handle KAKAO_REDIRECT_URI
         String kakaoRedirectUri = environment.getProperty("KAKAO_REDIRECT_URI");
         if (kakaoRedirectUri == null || kakaoRedirectUri.trim().isEmpty()) {
             String[] activeProfiles = environment.getActiveProfiles();
@@ -79,7 +75,6 @@ public class OAuth2EmptyVariableHandler implements EnvironmentPostProcessor {
             log.info("[DEBUG_LOG] KAKAO_REDIRECT_URI found: {}", kakaoRedirectUri);
         }
 
-        // Add the custom properties to the environment with high precedence
         if (!customProperties.isEmpty()) {
             MapPropertySource propertySource = new MapPropertySource("oauth2EmptyVariableHandler", customProperties);
             environment.getPropertySources().addFirst(propertySource);

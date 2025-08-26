@@ -63,29 +63,23 @@ public class AuthService {
 
     @Transactional
     public void deleteMember(String loginId, String token) {
-        // Find the member to delete
         Member member = memberRepository.findByLoginId(loginId)
                 .orElseThrow(() -> new CustomException(ErrorCode.MEMBER_NOT_FOUND));
 
-        // Delete related data in proper sequence to avoid foreign key constraints
         deleteMemberRelatedData(member.getMemberId());
         
-        // Delete the member
         memberRepository.delete(member);
         
-        // Invalidate JWT token if provided
         if (isValidTokenFormat(token)) {
             tokenBlacklistService.blacklistToken(token);
         }
     }
 
     private void deleteMemberRelatedData(Long memberId) {
-        // 1. Delete side effect records
         sideEffectRecordRepository.findAll().stream()
                 .filter(record -> record.getMember().getMemberId().equals(memberId))
                 .forEach(sideEffectRecordRepository::delete);
 
-        // 2. Delete medication records (must be deleted before medication schedules)
         medicationScheduleRepository.findAllByMember_MemberId(memberId)
                 .forEach(schedule -> {
                     medicationRecordRepository.findAllByMedicationSchedule_MedicationScheduleId(
@@ -93,7 +87,6 @@ public class AuthService {
                             .forEach(medicationRecordRepository::delete);
                 });
 
-        // 3. Delete medication schedules
         medicationScheduleRepository.findAllByMember_MemberId(memberId)
                 .forEach(medicationScheduleRepository::delete);
     }

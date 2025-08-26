@@ -16,6 +16,8 @@ import org.slf4j.MDC;
 import org.springframework.security.core.Authentication;
 import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.stereotype.Component;
+import org.springframework.web.bind.annotation.PathVariable;
+import org.springframework.web.bind.annotation.RequestParam;
 
 import java.lang.reflect.Parameter;
 
@@ -106,8 +108,8 @@ public class ResourceOwnershipAspect {
      * @PathVariable 어노테이션의 value를 가져옵니다.
      */
     private String getPathVariableName(Parameter parameter) {
-        org.springframework.web.bind.annotation.PathVariable pathVariable = 
-            parameter.getAnnotation(org.springframework.web.bind.annotation.PathVariable.class);
+        PathVariable pathVariable =
+            parameter.getAnnotation(PathVariable.class);
         return pathVariable != null ? pathVariable.value() : null;
     }
     
@@ -115,8 +117,8 @@ public class ResourceOwnershipAspect {
      * @RequestParam 어노테이션의 value를 가져옵니다.
      */
     private String getRequestParamName(Parameter parameter) {
-        org.springframework.web.bind.annotation.RequestParam requestParam = 
-            parameter.getAnnotation(org.springframework.web.bind.annotation.RequestParam.class);
+        RequestParam requestParam =
+            parameter.getAnnotation(RequestParam.class);
         return requestParam != null ? requestParam.value() : null;
     }
     

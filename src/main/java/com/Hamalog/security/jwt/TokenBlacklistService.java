@@ -28,7 +28,6 @@ public class TokenBlacklistService {
         this.jwtTokenProvider = jwtTokenProvider;
     }
     
-    // In-memory storage with expiration times to prevent memory leaks
     private final Map<String, Long> blacklistedTokensWithExpiry = new ConcurrentHashMap<>();
     
     private static final String BLACKLIST_PREFIX = "jwt_blacklist:";
@@ -77,13 +76,11 @@ public class TokenBlacklistService {
                 }
             }
             
-            // Check in-memory storage and validate expiry
             Long expiryTime = blacklistedTokensWithExpiry.get(token);
             if (expiryTime != null) {
                 if (System.currentTimeMillis() < expiryTime) {
                     return true;
                 } else {
-                    // Token expired, remove it
                     blacklistedTokensWithExpiry.remove(token);
                 }
             }
@@ -91,13 +88,11 @@ public class TokenBlacklistService {
             
         } catch (Exception e) {
             log.error("Error checking token blacklist status, checking memory storage", e);
-            // Check in-memory storage and validate expiry
             Long expiryTime = blacklistedTokensWithExpiry.get(token);
             if (expiryTime != null) {
                 if (System.currentTimeMillis() < expiryTime) {
                     return true;
                 } else {
-                    // Token expired, remove it
                     blacklistedTokensWithExpiry.remove(token);
                 }
             }
@@ -126,13 +121,11 @@ public class TokenBlacklistService {
     }
     
     public int getBlacklistSize() {
-        // Clean up expired tokens before counting
         cleanupExpiredTokens();
         int memorySize = blacklistedTokensWithExpiry.size();
         
         try {
             if (redisTemplate != null) {
-                // Use SCAN instead of KEYS to avoid loading all keys into memory
                 int redisSize = 0;
                 ScanOptions scanOptions = ScanOptions.scanOptions()
                     .match(BLACKLIST_PREFIX + "*")
@@ -187,7 +180,6 @@ public class TokenBlacklistService {
         } catch (Exception e) {
             log.warn("Failed to calculate token expiry time", e);
         }
-        // Default to 24 hours from now if we can't determine expiry
         return System.currentTimeMillis() + TimeUnit.HOURS.toMillis(24);
     }
     
@@ -215,7 +207,7 @@ public class TokenBlacklistService {
     /**
      * Scheduled cleanup of expired tokens (runs every 30 minutes)
      */
-    @Scheduled(fixedRate = 30 * 60 * 1000) // 30 minutes
+    @Scheduled(fixedRate = 30 * 60 * 1000)
     public void scheduledCleanup() {
         log.debug("Starting scheduled cleanup of expired tokens");
         cleanupExpiredTokens();
@@ -224,7 +216,6 @@ public class TokenBlacklistService {
     public void clearBlacklist() {
         try {
             if (redisTemplate != null) {
-                // Use SCAN instead of KEYS to avoid loading all keys into memory
                 ScanOptions scanOptions = ScanOptions.scanOptions()
                     .match(BLACKLIST_PREFIX + "*")
                     .count(1000)

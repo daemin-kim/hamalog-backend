@@ -33,7 +33,6 @@ public class RateLimitingFilter extends OncePerRequestFilter {
     private final RateLimitingService rateLimitingService;
     private final ObjectMapper objectMapper;
 
-    // Rate limited endpoints
     private static final Set<String> AUTH_ENDPOINTS = Set.of(
         "/auth/login",
         "/auth/signup",
@@ -53,7 +52,6 @@ public class RateLimitingFilter extends OncePerRequestFilter {
         String requestURI = request.getRequestURI();
         String clientIp = getClientIpAddress(request);
         
-        // Check if this endpoint needs rate limiting
         boolean isAuthEndpoint = AUTH_ENDPOINTS.contains(requestURI);
         boolean isProtectedEndpoint = PROTECTED_ENDPOINTS.stream()
             .anyMatch(requestURI::startsWith);
@@ -63,10 +61,8 @@ public class RateLimitingFilter extends OncePerRequestFilter {
             return;
         }
 
-        // Create rate limit key (IP-based for now, can be enhanced with user-based)
         String rateLimitKey = RateLimitingService.createIpKey(clientIp);
         
-        // Check rate limit
         boolean allowed;
         if (isAuthEndpoint) {
             allowed = rateLimitingService.tryConsumeAuthRequest(rateLimitKey);
@@ -79,7 +75,6 @@ public class RateLimitingFilter extends OncePerRequestFilter {
             return;
         }
         
-        // Add rate limit headers to response
         addRateLimitHeaders(response, rateLimitKey, isAuthEndpoint);
         
         filterChain.doFilter(request, response);
@@ -154,7 +149,6 @@ public class RateLimitingFilter extends OncePerRequestFilter {
         for (String headerName : headerNames) {
             String ip = request.getHeader(headerName);
             if (ip != null && !ip.isEmpty() && !"unknown".equalsIgnoreCase(ip)) {
-                // X-Forwarded-For can contain multiple IPs, take the first one
                 if (ip.contains(",")) {
                     ip = ip.split(",")[0].trim();
                 }
@@ -167,7 +161,6 @@ public class RateLimitingFilter extends OncePerRequestFilter {
 
     @Override
     protected boolean shouldNotFilter(HttpServletRequest request) {
-        // Skip filtering for static resources
         String requestURI = request.getRequestURI();
         return requestURI.startsWith("/static/") || 
                requestURI.startsWith("/css/") || 

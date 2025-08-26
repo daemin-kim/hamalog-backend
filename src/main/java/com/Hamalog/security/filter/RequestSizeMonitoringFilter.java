@@ -25,7 +25,6 @@ import java.util.Set;
 @Component
 public class RequestSizeMonitoringFilter extends OncePerRequestFilter {
 
-    // Configuration values (with defaults)
     @Value("${hamalog.security.request.max-size-mb:10}")
     private long maxRequestSizeMB;
 
@@ -35,13 +34,11 @@ public class RequestSizeMonitoringFilter extends OncePerRequestFilter {
     @Value("${hamalog.security.request.monitoring-enabled:true}")
     private boolean monitoringEnabled;
 
-    // Endpoints that should have stricter limits
     private static final Set<String> STRICT_ENDPOINTS = Set.of(
         "/auth/login",
         "/auth/signup"
     );
 
-    // Endpoints excluded from monitoring
     private static final Set<String> EXCLUDED_ENDPOINTS = Set.of(
         "/actuator/health",
         "/favicon.ico"
@@ -59,14 +56,12 @@ public class RequestSizeMonitoringFilter extends OncePerRequestFilter {
         String requestURI = request.getRequestURI();
         String method = request.getMethod();
         
-        // Monitor request size
         long contentLength = request.getContentLengthLong();
         
         if (contentLength > 0) {
             monitorRequestSize(requestURI, method, contentLength, getClientIpAddress(request));
         }
         
-        // Monitor headers size
         monitorHeadersSize(request);
         
         filterChain.doFilter(request, response);
@@ -79,9 +74,8 @@ public class RequestSizeMonitoringFilter extends OncePerRequestFilter {
         long contentSizeMB = contentLength / (1024 * 1024);
         boolean isStrictEndpoint = STRICT_ENDPOINTS.contains(uri);
         
-        // Authentication endpoints should have smaller limits
         long effectiveMaxSize = isStrictEndpoint ? 1 : maxRequestSizeMB;
-        long effectiveWarnSize = isStrictEndpoint ? 0 : warnRequestSizeMB; // 0MB = always warn for auth endpoints
+        long effectiveWarnSize = isStrictEndpoint ? 0 : warnRequestSizeMB;
         
         if (contentSizeMB > effectiveMaxSize) {
             log.error("Large request detected - URI: {}, Method: {}, Size: {}MB, Client IP: {}, " +
@@ -113,17 +107,17 @@ public class RequestSizeMonitoringFilter extends OncePerRequestFilter {
                     while (headerValues.hasMoreElements()) {
                         String headerValue = headerValues.nextElement();
                         totalHeadersSize += headerName.length() + 
-                                          (headerValue != null ? headerValue.length() : 0) + 4; // +4 for ": " and CRLF
+                                          (headerValue != null ? headerValue.length() : 0) + 4;
                     }
                 }
             }
             
             long headersSizeKB = totalHeadersSize / 1024;
             
-            if (headersSizeKB > 32) { // 32KB warning threshold
+            if (headersSizeKB > 32) {
                 log.warn("Large headers detected - URI: {}, Headers size: {}KB, Client IP: {}", 
                         request.getRequestURI(), headersSizeKB, getClientIpAddress(request));
-            } else if (headersSizeKB > 16) { // 16KB info threshold
+            } else if (headersSizeKB > 16) {
                 log.info("Moderate headers size - URI: {}, Headers size: {}KB, Client IP: {}", 
                         request.getRequestURI(), headersSizeKB, getClientIpAddress(request));
             }
@@ -147,7 +141,6 @@ public class RequestSizeMonitoringFilter extends OncePerRequestFilter {
         for (String headerName : headerNames) {
             String ip = request.getHeader(headerName);
             if (StringUtils.hasText(ip) && !"unknown".equalsIgnoreCase(ip)) {
-                // X-Forwarded-For can contain multiple IPs, take the first one
                 if (ip.contains(",")) {
                     ip = ip.split(",")[0].trim();
                 }
@@ -162,7 +155,6 @@ public class RequestSizeMonitoringFilter extends OncePerRequestFilter {
     protected boolean shouldNotFilter(HttpServletRequest request) {
         String requestURI = request.getRequestURI();
         
-        // Skip monitoring for excluded endpoints
         return EXCLUDED_ENDPOINTS.contains(requestURI) ||
                requestURI.startsWith("/static/") ||
                requestURI.startsWith("/css/") ||

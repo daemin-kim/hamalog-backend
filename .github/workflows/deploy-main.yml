@@ -136,13 +136,17 @@ jobs:
           export GITHUB_REPOSITORY="${{ github.repository }}"
           export GITHUB_SHA="${{ github.sha }}"
           export JWT_SECRET="${{ secrets.JWT_SECRET }}"
-          export JWT_EXPIRY="${{ secrets.JWT_EXPIRY || '3600000' }}"
+          export JWT_EXPIRY="${{ secrets.JWT_EXPIRY }}"
+          if [ -z "$JWT_EXPIRY" ]; then export JWT_EXPIRY="3600000"; fi
           export KAKAO_CLIENT_ID="${{ secrets.KAKAO_CLIENT_ID }}"
           export KAKAO_CLIENT_SECRET="${{ secrets.KAKAO_CLIENT_SECRET }}"
           export MYSQL_ROOT_PASSWORD="${{ secrets.MYSQL_ROOT_PASSWORD }}"
-          export DB_NAME="${{ secrets.DB_NAME || 'Hamalog' }}"
-          export DB_USERNAME="${{ secrets.DB_USERNAME || 'hamalog_user' }}"
-          export DB_PASSWORD="${{ secrets.DB_PASSWORD || 'hamalog_password' }}"
+          export DB_NAME="${{ secrets.DB_NAME }}"
+          if [ -z "$DB_NAME" ]; then export DB_NAME="Hamalog"; fi
+          export DB_USERNAME="${{ secrets.DB_USERNAME }}"
+          if [ -z "$DB_USERNAME" ]; then export DB_USERNAME="hamalog_user"; fi
+          export DB_PASSWORD="${{ secrets.DB_PASSWORD }}"
+          if [ -z "$DB_PASSWORD" ]; then export DB_PASSWORD="hamalog_password"; fi
           
           # Debug environment variables (without secrets)
           echo "🔍 Environment variables check:"

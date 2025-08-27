@@ -67,9 +67,7 @@ jobs:
         with:
           images: ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}
           tags: |
-            type=ref,event=branch
-            type=ref,event=pr
-            type=sha,prefix={{branch}}-
+            type=sha
             type=raw,value=latest,enable={{is_default_branch}}
             
       - name: Build and test application
@@ -95,6 +93,10 @@ jobs:
           # Make deploy script executable (redundant but safe)
           chmod +x ./deploy.sh
           
+          # Verify Docker login status
+          echo "🔍 Verifying Docker registry access..."
+          docker info | grep -A5 "Registry Mirrors" || true
+          
           # Set environment variables for production deployment
           export SPRING_PROFILES_ACTIVE=prod
           export GITHUB_REPOSITORY="${{ github.repository }}"
@@ -107,6 +109,24 @@ jobs:
           export DB_NAME="${{ secrets.DB_NAME || 'Hamalog' }}"
           export DB_USERNAME="${{ secrets.DB_USERNAME || 'hamalog_user' }}"
           export DB_PASSWORD="${{ secrets.DB_PASSWORD || 'hamalog_password' }}"
+          
+          # Debug environment variables (without secrets)
+          echo "🔍 Environment variables check:"
+          echo "  - GITHUB_REPOSITORY: ${GITHUB_REPOSITORY}"
+          echo "  - GITHUB_SHA: ${GITHUB_SHA}"
+          echo "  - Expected image: ghcr.io/${GITHUB_REPOSITORY}:${GITHUB_SHA}"
+          
+          # Verify the image was pushed successfully
+          echo "🔍 Verifying image availability in registry..."
+          docker manifest inspect ghcr.io/${{ github.repository }}:${{ github.sha }} || {
+            echo "❌ Image not found in registry. This might be due to:"
+            echo "  1. Build/push step failed"
+            echo "  2. Registry authentication issues"
+            echo "  3. Tag mismatch between build and deploy steps"
+            echo "🔍 Checking recently pushed images:"
+            curl -s -H "Authorization: Bearer ${{ secrets.GITHUB_TOKEN }}" \
+              "https://ghcr.io/v2/${{ github.repository }}/tags/list" || true
+          }
           
           # Run the deployment script
           ./deploy.sh

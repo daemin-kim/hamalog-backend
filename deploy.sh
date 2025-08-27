@@ -129,13 +129,40 @@ fi
 
 # Step 3: Pull the latest images
 echo "⬇️  Pulling latest images..."
+echo "🔍 Target image: ${IMAGE_NAME}:${IMAGE_TAG}"
+
+# Check if the specific image exists in the registry first
+echo "🔍 Checking if image exists in registry..."
+docker manifest inspect "${IMAGE_NAME}:${IMAGE_TAG}" > /dev/null 2>&1 || {
+    echo "❌ Image ${IMAGE_NAME}:${IMAGE_TAG} not found in registry"
+    echo "🔍 Available images in registry (checking latest):"
+    docker search "${IMAGE_NAME}" 2>/dev/null || true
+    
+    # Try to pull the latest tag as fallback
+    echo "🔄 Attempting to use 'latest' tag as fallback..."
+    IMAGE_TAG="latest"
+    echo "📝 Updated target image: ${IMAGE_NAME}:${IMAGE_TAG}"
+    
+    # Recreate docker-compose file with updated tag
+    sed -i "s|image: ${IMAGE_NAME}:.*|image: ${IMAGE_NAME}:${IMAGE_TAG}|" ${COMPOSE_FILE}
+}
+
 docker compose -f ${COMPOSE_FILE} -p ${PROJECT_NAME} pull || {
     echo "❌ Failed to pull images. Checking if images exist locally..."
-    docker images "${IMAGE_NAME}:${IMAGE_TAG}" || {
+    
+    # List all images with this repository name
+    echo "🔍 Local images for repository ${IMAGE_NAME}:"
+    docker images "${IMAGE_NAME}" 2>/dev/null || echo "No local images found for ${IMAGE_NAME}"
+    
+    # Check if specific tag exists locally
+    if docker images "${IMAGE_NAME}:${IMAGE_TAG}" --format "{{.Repository}}:{{.Tag}}" | grep -q "${IMAGE_NAME}:${IMAGE_TAG}"; then
+        echo "ℹ️  Using local image ${IMAGE_NAME}:${IMAGE_TAG}"
+    else
         echo "❌ Image ${IMAGE_NAME}:${IMAGE_TAG} not found locally either"
+        echo "🔍 Listing all available local images:"
+        docker images | head -20
         exit 1
-    }
-    echo "ℹ️  Using local image"
+    fi
 }
 
 # Step 4: Start the application

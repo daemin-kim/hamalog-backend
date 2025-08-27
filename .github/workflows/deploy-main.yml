@@ -187,7 +187,7 @@ jobs:
             curl -s -I "https://ghcr.io/v2/" && echo "✅ Registry accessible" || echo "❌ Registry access failed"
             
             echo "⚠️  Deploy script will attempt multiple tag formats and fallbacks"
-          }
+          fi
           
           # Run the deployment script
           ./deploy.sh

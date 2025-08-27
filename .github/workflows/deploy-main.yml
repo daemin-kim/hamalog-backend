@@ -75,6 +75,13 @@ jobs:
           echo "🔨 Building and testing the application..."
           ./gradlew clean build
           
+      - name: Debug Docker metadata
+        run: |
+          echo "🔍 Docker metadata debugging:"
+          echo "  - Generated tags: ${{ steps.meta.outputs.tags }}"
+          echo "  - Generated labels: ${{ steps.meta.outputs.labels }}"
+          echo "  - Expected SHA tag: ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}:${{ github.sha }}"
+          
       - name: Build and push Docker image
         uses: docker/build-push-action@v5
         with:
@@ -85,6 +92,33 @@ jobs:
           labels: ${{ steps.meta.outputs.labels }}
           cache-from: type=gha
           cache-to: type=gha,mode=max
+          
+      - name: Verify pushed image
+        run: |
+          echo "🔍 Verifying pushed image tags..."
+          echo "Expected SHA-based tag: ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}:${{ github.sha }}"
+          
+          # Try to inspect the SHA-based tag directly
+          if docker manifest inspect "${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}:${{ github.sha }}"; then
+            echo "✅ SHA-based tag found in registry"
+          else
+            echo "❌ SHA-based tag not found, checking what was actually pushed..."
+            echo "🔍 Checking all pushed tags:"
+            
+            # Extract all tags that were pushed
+            PUSHED_TAGS="${{ steps.meta.outputs.tags }}"
+            echo "Pushed tags: $PUSHED_TAGS"
+            
+            # Try each tag individually
+            for tag in $PUSHED_TAGS; do
+              echo "Checking tag: $tag"
+              if docker manifest inspect "$tag" > /dev/null 2>&1; then
+                echo "✅ Found: $tag"
+              else
+                echo "❌ Not found: $tag"
+              fi
+            done
+          fi
           
       - name: Deploy to production server
         run: |
@@ -118,14 +152,36 @@ jobs:
           
           # Verify the image was pushed successfully
           echo "🔍 Verifying image availability in registry..."
-          docker manifest inspect ghcr.io/${{ github.repository }}:${{ github.sha }} || {
-            echo "❌ Image not found in registry. This might be due to:"
+          echo "Primary check: ghcr.io/${{ github.repository }}:${{ github.sha }}"
+          
+          if docker manifest inspect ghcr.io/${{ github.repository }}:${{ github.sha }}; then
+            echo "✅ Primary SHA-based image found in registry"
+          else
+            echo "❌ Primary SHA-based image not found in registry"
+            echo "🔍 This might be due to:"
             echo "  1. Build/push step failed"
-            echo "  2. Registry authentication issues"
+            echo "  2. Registry authentication issues" 
             echo "  3. Tag mismatch between build and deploy steps"
-            echo "🔍 Checking recently pushed images:"
+            
+            echo "🔍 Checking alternative tag formats..."
+            # Try with sha- prefix
+            if docker manifest inspect "ghcr.io/${{ github.repository }}:sha-${{ github.sha }}" > /dev/null 2>&1; then
+              echo "✅ Found alternative format: ghcr.io/${{ github.repository }}:sha-${{ github.sha }}"
+            else
+              echo "❌ Alternative format not found either"
+            fi
+            
+            echo "🔍 Checking available tags in registry:"
             curl -s -H "Authorization: Bearer ${{ secrets.GITHUB_TOKEN }}" \
-              "https://ghcr.io/v2/${{ github.repository }}/tags/list" || true
+              "https://ghcr.io/v2/${{ github.repository }}/tags/list" | jq -r '.tags[]? // empty' | head -10 || {
+              echo "Failed to fetch registry tags, trying alternative method..."
+              docker search ghcr.io/${{ github.repository }} || true
+            }
+            
+            echo "🔍 Registry connectivity test:"
+            curl -s -I "https://ghcr.io/v2/" && echo "✅ Registry accessible" || echo "❌ Registry access failed"
+            
+            echo "⚠️  Deploy script will attempt multiple tag formats and fallbacks"
           }
           
           # Run the deployment script

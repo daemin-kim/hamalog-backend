@@ -62,8 +62,10 @@ services:
       - KAKAO_CLIENT_ID=\${KAKAO_CLIENT_ID:-dummy-client-id}
       - KAKAO_CLIENT_SECRET=\${KAKAO_CLIENT_SECRET:-dummy-client-secret}
     depends_on:
-      - mysql-hamalog
-      - redis
+      mysql-hamalog:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
     volumes:
       - hamalog-uploads:/data/hamalog/images
     restart: unless-stopped
@@ -133,19 +135,42 @@ echo "🔍 Target image: ${IMAGE_NAME}:${IMAGE_TAG}"
 
 # Check if the specific image exists in the registry first
 echo "🔍 Checking if image exists in registry..."
-docker manifest inspect "${IMAGE_NAME}:${IMAGE_TAG}" > /dev/null 2>&1 || {
-    echo "❌ Image ${IMAGE_NAME}:${IMAGE_TAG} not found in registry"
-    echo "🔍 Available images in registry (checking latest):"
-    docker search "${IMAGE_NAME}" 2>/dev/null || true
+echo "Primary target: ${IMAGE_NAME}:${IMAGE_TAG}"
+
+# Try the primary SHA-based tag first
+if docker manifest inspect "${IMAGE_NAME}:${IMAGE_TAG}" > /dev/null 2>&1; then
+    echo "✅ Found primary SHA-based tag: ${IMAGE_NAME}:${IMAGE_TAG}"
+else
+    echo "❌ Primary SHA-based tag not found: ${IMAGE_NAME}:${IMAGE_TAG}"
     
-    # Try to pull the latest tag as fallback
-    echo "🔄 Attempting to use 'latest' tag as fallback..."
-    IMAGE_TAG="latest"
-    echo "📝 Updated target image: ${IMAGE_NAME}:${IMAGE_TAG}"
+    # Check if there are any recent tags that might match
+    echo "🔍 Checking for alternative tags..."
     
-    # Recreate docker-compose file with updated tag
-    sed -i "s|image: ${IMAGE_NAME}:.*|image: ${IMAGE_NAME}:${IMAGE_TAG}|" ${COMPOSE_FILE}
-}
+    # Try with sha- prefix (in case metadata-action adds prefix)
+    ALT_TAG="sha-${IMAGE_TAG}"
+    echo "Trying alternative tag: ${IMAGE_NAME}:${ALT_TAG}"
+    if docker manifest inspect "${IMAGE_NAME}:${ALT_TAG}" > /dev/null 2>&1; then
+        echo "✅ Found alternative SHA tag: ${IMAGE_NAME}:${ALT_TAG}"
+        IMAGE_TAG="${ALT_TAG}"
+        sed -i "s|image: ${IMAGE_NAME}:.*|image: ${IMAGE_NAME}:${IMAGE_TAG}|" ${COMPOSE_FILE}
+    else
+        echo "❌ Alternative SHA tag not found either"
+        
+        # Try latest as final fallback
+        echo "🔄 Attempting to use 'latest' tag as final fallback..."
+        if docker manifest inspect "${IMAGE_NAME}:latest" > /dev/null 2>&1; then
+            IMAGE_TAG="latest"
+            echo "✅ Using latest tag: ${IMAGE_NAME}:${IMAGE_TAG}"
+            sed -i "s|image: ${IMAGE_NAME}:.*|image: ${IMAGE_NAME}:${IMAGE_TAG}|" ${COMPOSE_FILE}
+        else
+            echo "❌ Even 'latest' tag not found. This indicates a serious build/push issue."
+            echo "🔍 Checking registry connectivity..."
+            curl -s "https://ghcr.io/v2/" > /dev/null && echo "✅ Registry is accessible" || echo "❌ Registry access failed"
+        fi
+    fi
+fi
+
+echo "📝 Final target image: ${IMAGE_NAME}:${IMAGE_TAG}"
 
 docker compose -f ${COMPOSE_FILE} -p ${PROJECT_NAME} pull || {
     echo "❌ Failed to pull images. Checking if images exist locally..."
@@ -171,21 +196,45 @@ docker compose -f ${COMPOSE_FILE} -p ${PROJECT_NAME} up -d
 
 # Step 5: Wait for services to be healthy
 echo "⏳ Waiting for services to be ready..."
-max_wait=180  # 3 minutes
+max_wait=300  # 5 minutes (increased for database initialization)
 wait_time=0
 
+echo "🔍 Checking service dependencies first..."
+echo "  - MySQL healthcheck interval: 30s"
+echo "  - Redis healthcheck interval: 30s" 
+echo "  - Application healthcheck interval: 30s"
+echo "  - Expected total startup time: ~2-3 minutes"
+
 while [ $wait_time -lt $max_wait ]; do
-    if docker compose -f ${COMPOSE_FILE} -p ${PROJECT_NAME} ps --filter "health=healthy" | grep -q hamalog-app; then
+    # Check individual service health status
+    mysql_healthy=$(docker compose -f ${COMPOSE_FILE} -p ${PROJECT_NAME} ps mysql-hamalog --format "{{.Health}}" 2>/dev/null || echo "starting")
+    redis_healthy=$(docker compose -f ${COMPOSE_FILE} -p ${PROJECT_NAME} ps redis --format "{{.Health}}" 2>/dev/null || echo "starting")
+    app_healthy=$(docker compose -f ${COMPOSE_FILE} -p ${PROJECT_NAME} ps hamalog-app --format "{{.Health}}" 2>/dev/null || echo "starting")
+    
+    echo "⏳ Service health status (${wait_time}s/${max_wait}s):"
+    echo "  - MySQL: ${mysql_healthy}"
+    echo "  - Redis: ${redis_healthy}"
+    echo "  - Application: ${app_healthy}"
+    
+    if [ "$app_healthy" = "healthy" ]; then
         echo "✅ Application is healthy and ready!"
         break
     fi
     
-    echo "⏳ Services still starting... (${wait_time}s/${max_wait}s)"
-    sleep 10
-    wait_time=$((wait_time + 10))
+    # Show more details if taking too long
+    if [ $wait_time -gt 120 ]; then
+        echo "🔍 Detailed service status:"
+        docker compose -f ${COMPOSE_FILE} -p ${PROJECT_NAME} ps
+        
+        # Show app logs if it's been trying for a while
+        if [ $wait_time -gt 180 ]; then
+            echo "📋 Recent application logs:"
+            docker compose -f ${COMPOSE_FILE} -p ${PROJECT_NAME} logs hamalog-app --tail=20
+        fi
+    fi
     
-    # Show service status
-    docker compose -f ${COMPOSE_FILE} -p ${PROJECT_NAME} ps
+    sleep 15
+    wait_time=$((wait_time + 15))
 done
 
 if [ $wait_time -ge $max_wait ]; then

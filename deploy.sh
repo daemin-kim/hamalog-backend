@@ -8,7 +8,7 @@ set -euo pipefail  # Exit on any error, undefined variable, or pipe failure
 # Configuration
 PROJECT_NAME="hamalog"
 REGISTRY="ghcr.io"
-IMAGE_NAME="${REGISTRY}/${GITHUB_REPOSITORY:-hamalog}"
+IMAGE_NAME="${REGISTRY}/${GITHUB_REPOSITORY:-daemin-kim/hamalog-backend}"
 IMAGE_TAG="${GITHUB_SHA:-latest}"
 COMPOSE_FILE="docker-compose.prod.yml"
 
@@ -36,8 +36,6 @@ trap cleanup EXIT
 # Step 1: Create production docker-compose file
 echo "📝 Creating production docker-compose configuration..."
 cat > ${COMPOSE_FILE} << EOF
-version: '3.8'
-
 services:
   hamalog-app:
     image: ${IMAGE_NAME}:${IMAGE_TAG}

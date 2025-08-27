@@ -97,6 +97,8 @@ jobs:
           
           # Set environment variables for production deployment
           export SPRING_PROFILES_ACTIVE=prod
+          export GITHUB_REPOSITORY="${{ github.repository }}"
+          export GITHUB_SHA="${{ github.sha }}"
           export JWT_SECRET="${{ secrets.JWT_SECRET }}"
           export JWT_EXPIRY="${{ secrets.JWT_EXPIRY || '3600000' }}"
           export KAKAO_CLIENT_ID="${{ secrets.KAKAO_CLIENT_ID }}"

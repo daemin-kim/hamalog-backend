@@ -177,10 +177,11 @@ jobs:
             
             echo "🔍 Checking available tags in registry:"
             curl -s -H "Authorization: Bearer ${{ secrets.GITHUB_TOKEN }}" \
-              "https://ghcr.io/v2/${{ github.repository }}/tags/list" | jq -r '.tags[]? // empty' | head -10 || {
+              "https://ghcr.io/v2/${{ github.repository }}/tags/list" | jq -r '.tags[]? // empty' | head -10
+            if [ $? -ne 0 ]; then
               echo "Failed to fetch registry tags, trying alternative method..."
               docker search ghcr.io/${{ github.repository }} || true
-            }
+            fi
             
             echo "🔍 Registry connectivity test:"
             curl -s -I "https://ghcr.io/v2/" && echo "✅ Registry accessible" || echo "❌ Registry access failed"

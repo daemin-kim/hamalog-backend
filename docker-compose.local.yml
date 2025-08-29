@@ -1,0 +1,82 @@
+# Local Development Docker Compose Configuration
+# This provides the same containerized environment as deployment
+# Usage: docker-compose -f docker-compose.local.yml up
+
+services:
+  hamalog-app:
+    build: .
+    ports:
+      - "8080:8080"
+    environment:
+      # Use production profile to match deployment environment exactly
+      - SPRING_PROFILES_ACTIVE=prod
+      
+      # Database Configuration (same as deployment)
+      - SPRING_DATASOURCE_URL=jdbc:mysql://mysql-hamalog:3306/Hamalog
+      - SPRING_DATASOURCE_USERNAME=hamalog_user
+      - SPRING_DATASOURCE_PASSWORD=hamalog_password
+      
+      # Redis Configuration (same as deployment)
+      - SPRING_DATA_REDIS_HOST=redis
+      - SPRING_DATA_REDIS_PORT=6379
+      
+      # JWT Configuration (using same fallback as deployment)
+      - JWT_SECRET=EzUuJwKK4vLnvk5r7yAgdNP/sa1dL87febZhlayPGjI=
+      - JWT_EXPIRY=3600000
+      
+      # OAuth2 Configuration (using dummy values for local development)
+      - KAKAO_CLIENT_ID=dummy-client-id-for-local-dev
+      - KAKAO_CLIENT_SECRET=dummy-client-secret-for-local-dev
+      
+      # Local development specific settings
+      - FRONTEND_URL=http://localhost:3000
+      - LOG_DIR=/app/logs
+    depends_on:
+      mysql-hamalog:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+    volumes:
+      - hamalog-uploads:/data/hamalog/images
+      - hamalog-logs:/app/logs
+    restart: unless-stopped
+
+  redis:
+    image: redis:7-alpine
+    ports:
+      - "6379:6379"
+    command: redis-server --appendonly yes
+    volumes:
+      - redis-data:/data
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 10s
+      timeout: 5s
+      retries: 3
+      start_period: 10s
+
+  mysql-hamalog:
+    image: mysql:8.0
+    ports:
+      - "3306:3306"
+    environment:
+      - MYSQL_ROOT_PASSWORD=root_password
+      - MYSQL_DATABASE=Hamalog
+      - MYSQL_USER=hamalog_user
+      - MYSQL_PASSWORD=hamalog_password
+    volumes:
+      - mysql-data:/var/lib/mysql
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD", "mysqladmin", "ping", "-h", "localhost", "-u", "root", "-proot_password"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+      start_period: 30s
+
+volumes:
+  mysql-data:
+  redis-data:
+  hamalog-uploads:
+  hamalog-logs:

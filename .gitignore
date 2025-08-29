@@ -37,3 +37,16 @@ out/
 
 ### VS Code ###
 .vscode/
+
+### Temporary Files ###
+logs/
+*.log
+*.tmp
+*.temp
+*.cache
+*~
+*.bak
+
+### Docker ###
+.env
+docker-compose.override.yml

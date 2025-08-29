@@ -4,7 +4,7 @@ services:
     ports:
       - "8080:8080"
     environment:
-      # Spring Profile Configuration (use prod profile for production settings)
+      # Spring Profile Configuration (use prod profile to match deployment environment)
       - SPRING_PROFILES_ACTIVE=prod
       
       # Database Configuration (MySQL for production)

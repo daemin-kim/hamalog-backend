@@ -58,7 +58,7 @@ public class KakaoOAuth2UserService extends DefaultOAuth2UserService {
                     (nickname.length() > 15 ? nickname.substring(0, 15) : nickname) : 
                     "OAuth2_" + kakaoId.toString().substring(0, Math.min(kakaoId.toString().length(), 8));
             // Use placeholder phone number for OAuth2 users to meet validation requirements
-            String phoneNumber = "0101234567";
+            String phoneNumber = "01012345678";
             LocalDate birth = LocalDate.of(2000, 1, 1); // Default birth date for OAuth2 users
 
             String nickName = (nickname != null && !nickname.isBlank()) ? nickname : "카카오유저";

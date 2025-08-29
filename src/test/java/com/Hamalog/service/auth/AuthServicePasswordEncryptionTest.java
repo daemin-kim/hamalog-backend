@@ -67,7 +67,7 @@ class AuthServicePasswordEncryptionTest {
                 "plaintext123",
                 "테스트유저",
                 "테스터",
-                "0101234567",
+                "01012345678",
                 LocalDate.of(1990, 1, 1)
         );
     }

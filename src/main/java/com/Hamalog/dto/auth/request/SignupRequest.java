@@ -18,8 +18,8 @@ public record SignupRequest(
         @Schema(description = "닉네임 (한글/영어 1~10자)", example = "홍길동", requiredMode = Schema.RequiredMode.REQUIRED)
         @NotBlank @Pattern(regexp = "^[가-힣a-zA-Z]{1,10}$", message = "{member.nickname.pattern}") @Size(max = 10, message = "{member.nickname.size}") String nickName,
         
-        @Schema(description = "전화번호 (010으로 시작하는 10자리 숫자)", example = "0101234567", requiredMode = Schema.RequiredMode.REQUIRED, pattern = "^010\\d{7}$")
-        @NotBlank @Pattern(regexp = "^010\\d{7}$", message = "{member.phoneNumber.pattern}") String phoneNumber,
+        @Schema(description = "전화번호 (010으로 시작하는 11자리 숫자)", example = "01012345678", requiredMode = Schema.RequiredMode.REQUIRED, pattern = "^010\\d{8}$")
+        @NotBlank @Pattern(regexp = "^010\\d{8}$", message = "{member.phoneNumber.pattern}") String phoneNumber,
         
         @Schema(description = "생년월일", example = "1990-01-01", requiredMode = Schema.RequiredMode.REQUIRED, type = "string", format = "date")
         @NotNull LocalDate birth

@@ -268,7 +268,7 @@ public class OAuth2Controller {
                     (nickname.length() > 15 ? nickname.substring(0, 15) : nickname) : 
                     "OAuth2_" + kakaoId.toString().substring(0, Math.min(kakaoId.toString().length(), 8));
             
-            String phoneNumber = "0101234567"; // Placeholder as in KakaoOAuth2UserService
+            String phoneNumber = "01012345678"; // Placeholder as in KakaoOAuth2UserService
             LocalDate birth = LocalDate.of(2000, 1, 1); // Default birth date
             String nickName = (nickname != null && !nickname.isBlank()) ? nickname : "카카오유저";
             

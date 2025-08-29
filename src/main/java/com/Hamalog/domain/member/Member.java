@@ -33,8 +33,8 @@ public class Member {
     @Size(max = 15, message = "{member.name.size}")
     private String name;
 
-    @Column(name = "phone_number", length = 10, nullable = false)
-    @Pattern(regexp = "^010\\d{7}$", message = "{member.phoneNumber.pattern}")
+    @Column(name = "phone_number", length = 11, nullable = false)
+    @Pattern(regexp = "^010\\d{8}$", message = "{member.phoneNumber.pattern}")
     private String phoneNumber;
 
     @Column(name = "nickname", length = 10, nullable = false)

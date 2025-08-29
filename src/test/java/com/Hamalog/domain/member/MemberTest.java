@@ -34,7 +34,7 @@ class MemberTest {
                 .password("password123")
                 .name("홍길동")
                 .nickName("길동이")
-                .phoneNumber("0101234567")
+                .phoneNumber("01012345678")
                 .birth(LocalDate.of(1990, 1, 1))
                 .createdAt(LocalDateTime.now())
                 .build();
@@ -56,7 +56,7 @@ class MemberTest {
                 .password("password123")
                 .name("홍길동")
                 .nickName("nickname")
-                .phoneNumber("0101234567")
+                .phoneNumber("01012345678")
                 .birth(LocalDate.of(1990, 1, 1))
                 .createdAt(LocalDateTime.now())
                 .build();
@@ -78,7 +78,7 @@ class MemberTest {
                 .password("password123")
                 .name("홍길동")
                 .nickName("아주아주아주긴닉네임입니다")
-                .phoneNumber("0101234567")
+                .phoneNumber("01012345678")
                 .birth(LocalDate.of(1990, 1, 1))
                 .createdAt(LocalDateTime.now())
                 .build();
@@ -99,7 +99,7 @@ class MemberTest {
                 .password("password123")
                 .name("홍길동")
                 .nickName("한글닉네임최대열자")
-                .phoneNumber("0101234567")
+                .phoneNumber("01012345678")
                 .birth(LocalDate.of(1990, 1, 1))
                 .createdAt(LocalDateTime.now())
                 .build();
@@ -121,7 +121,7 @@ class MemberTest {
                 .password("password123")
                 .name("홍길동")
                 .nickName("홍길동Kim")
-                .phoneNumber("0101234567")
+                .phoneNumber("01012345678")
                 .birth(LocalDate.of(1990, 1, 1))
                 .createdAt(LocalDateTime.now())
                 .build();
@@ -143,7 +143,7 @@ class MemberTest {
                 .password("password123")
                 .name("홍길동")
                 .nickName("홍길동123")
-                .phoneNumber("0101234567")
+                .phoneNumber("01012345678")
                 .birth(LocalDate.of(1990, 1, 1))
                 .createdAt(LocalDateTime.now())
                 .build();
@@ -166,7 +166,7 @@ class MemberTest {
                 .password("password123")
                 .name("홍길동")
                 .nickName("홍길동@")
-                .phoneNumber("0101234567")
+                .phoneNumber("01012345678")
                 .birth(LocalDate.of(1990, 1, 1))
                 .createdAt(LocalDateTime.now())
                 .build();
@@ -189,7 +189,7 @@ class MemberTest {
                 .password("password123")
                 .name("홍길동")
                 .nickName("길동이")
-                .phoneNumber("0101234567")
+                .phoneNumber("01012345678")
                 .birth(LocalDate.of(1990, 1, 1))
                 .createdAt(LocalDateTime.now())
                 .build();
@@ -211,7 +211,7 @@ class MemberTest {
                 .password("password123")
                 .name("홍길동")
                 .nickName("길동이")
-                .phoneNumber("0101234567")
+                .phoneNumber("01012345678")
                 .birth(LocalDate.of(1990, 1, 1))
                 .createdAt(LocalDateTime.now())
                 .build();
@@ -234,7 +234,7 @@ class MemberTest {
                 .password("password123")
                 .name("홍길동")
                 .nickName("길동이")
-                .phoneNumber("0101234567")
+                .phoneNumber("01012345678")
                 .birth(LocalDate.of(1990, 1, 1))
                 .createdAt(LocalDateTime.now())
                 .build();
@@ -244,7 +244,7 @@ class MemberTest {
 
         // Then
         assertThat(violations).isEmpty();
-        assertThat(member.getPhoneNumber()).isEqualTo("0101234567");
+        assertThat(member.getPhoneNumber()).isEqualTo("01012345678");
     }
 
     @Test
@@ -256,7 +256,7 @@ class MemberTest {
                 .password("password123")
                 .name("홍길동")
                 .nickName("길동이")
-                .phoneNumber("0201234567")
+                .phoneNumber("02012345678")
                 .birth(LocalDate.of(1990, 1, 1))
                 .createdAt(LocalDateTime.now())
                 .build();
@@ -267,11 +267,11 @@ class MemberTest {
         // Then
         assertThat(violations).hasSize(1);
         assertThat(violations.iterator().next().getMessage())
-                .isEqualTo("전화번호는 010으로 시작하는 10자리 숫자를 입력해주세요.");
+                .isEqualTo("전화번호는 010으로 시작하는 11자리 숫자를 입력해주세요.");
     }
 
     @Test
-    @DisplayName("10자리가 아닌 휴대폰 번호로 Member 생성 실패")
+    @DisplayName("11자리가 아닌 휴대폰 번호로 Member 생성 실패")
     void createMember_InvalidPhoneNumberLength_ValidationFails() {
         // Given
         Member member = Member.builder()
@@ -290,7 +290,7 @@ class MemberTest {
         // Then
         assertThat(violations).hasSize(1);
         assertThat(violations.iterator().next().getMessage())
-                .isEqualTo("전화번호는 010으로 시작하는 10자리 숫자를 입력해주세요.");
+                .isEqualTo("전화번호는 010으로 시작하는 11자리 숫자를 입력해주세요.");
     }
 
     @Test
@@ -313,7 +313,7 @@ class MemberTest {
         // Then
         assertThat(violations).hasSize(1);
         assertThat(violations.iterator().next().getMessage())
-                .isEqualTo("전화번호는 010으로 시작하는 10자리 숫자를 입력해주세요.");
+                .isEqualTo("전화번호는 010으로 시작하는 11자리 숫자를 입력해주세요.");
     }
 
     @Test
@@ -325,7 +325,7 @@ class MemberTest {
                 .password("password123")
                 .name("이름최대길이테스트열다섯자")
                 .nickName("길동이")
-                .phoneNumber("0101234567")
+                .phoneNumber("01012345678")
                 .birth(LocalDate.of(1990, 1, 1))
                 .createdAt(LocalDateTime.now())
                 .build();
@@ -347,7 +347,7 @@ class MemberTest {
                 .password("password123")
                 .name("이름최대길이테스트열다섯자초과길어짐")
                 .nickName("길동이")
-                .phoneNumber("0101234567")
+                .phoneNumber("01012345678")
                 .birth(LocalDate.of(1990, 1, 1))
                 .createdAt(LocalDateTime.now())
                 .build();
@@ -370,7 +370,7 @@ class MemberTest {
                 .password("password1234567890abcdefghij30")
                 .name("홍길동")
                 .nickName("길동이")
-                .phoneNumber("0101234567")
+                .phoneNumber("01012345678")
                 .birth(LocalDate.of(1990, 1, 1))
                 .createdAt(LocalDateTime.now())
                 .build();
@@ -393,7 +393,7 @@ class MemberTest {
                 .password(bcryptHash)
                 .name("홍길동")
                 .nickName("길동이")
-                .phoneNumber("0101234567")
+                .phoneNumber("01012345678")
                 .birth(LocalDate.of(1990, 1, 1))
                 .createdAt(LocalDateTime.now())
                 .build();

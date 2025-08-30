@@ -37,7 +37,7 @@ public class ApiLoggingAspect {
         MDC.put("api.method", methodName);
         MDC.put("api.user", user);
         
-        log.info("[API_REQUEST] method={} requestId={} user={} params={}", methodName, requestId, user, params);
+        log.info("🚀 API Call: {} | User: {} | Params: {}", methodName, user, params);
 
         try {
             Object result = joinPoint.proceed();
@@ -47,8 +47,9 @@ public class ApiLoggingAspect {
             MDC.put("api.duration", String.valueOf(elapsed));
             MDC.put("api.status", "success");
             
-            log.info("[API_RESPONSE] method={} requestId={} user={} duration={}ms result={}",
-                    methodName, requestId, user, elapsed, shorten(result));
+            String performanceEmoji = getPerformanceEmoji(elapsed);
+            log.info("✨ API Success: {} | User: {} | Time: {}ms {} | Result: {}",
+                    methodName, user, elapsed, performanceEmoji, shorten(result));
             return result;
         } catch (Exception e) {
             long elapsed = System.currentTimeMillis() - startTime;
@@ -58,8 +59,8 @@ public class ApiLoggingAspect {
             MDC.put("api.status", "error");
             MDC.put("api.errorType", e.getClass().getSimpleName());
             
-            log.error("[API_ERROR] method={} requestId={} user={} duration={}ms errorType={} error={}",
-                    methodName, requestId, user, elapsed, e.getClass().getSimpleName(), e.getMessage(), e);
+            log.error("💥 API Error: {} | User: {} | Time: {}ms | Type: {} | Message: {}",
+                    methodName, user, elapsed, e.getClass().getSimpleName(), e.getMessage(), e);
             throw e;
         } finally {
             // Clean up MDC context
@@ -106,5 +107,13 @@ public class ApiLoggingAspect {
         if (obj == null) return "null";
         String s = obj.toString();
         return s.length() > 200 ? s.substring(0, 200) + "..." : s;
+    }
+
+    private String getPerformanceEmoji(long elapsed) {
+        if (elapsed < 100) return "⚡"; // Very fast
+        if (elapsed < 500) return "🟢"; // Fast
+        if (elapsed < 1000) return "🟡"; // Moderate
+        if (elapsed < 3000) return "🟠"; // Slow
+        return "🔴"; // Very slow
     }
 }

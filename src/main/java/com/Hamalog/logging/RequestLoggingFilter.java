@@ -46,15 +46,19 @@ public class RequestLoggingFilter extends OncePerRequestFilter {
         String referer = safeHeader(request, "Referer");
 
         try {
-            log.info("[REQ] method={} path={} user={} ip={} ua={} referer={}", request.getMethod(), request.getRequestURI(), user, ip, shorten(ua), shorten(referer));
+            log.info("🌐 {} {} | User: {} | IP: {} | UA: {} | Ref: {}", 
+                    request.getMethod(), request.getRequestURI(), user, ip, shorten(ua), shorten(referer));
             filterChain.doFilter(request, response);
         } catch (Exception ex) {
-            log.error("[ERR] method={} path={} user={} status=500 message={}", request.getMethod(), request.getRequestURI(), user, ex.toString(), ex);
+            log.error("❌ {} {} | User: {} | Status: 500 | Error: {}", 
+                    request.getMethod(), request.getRequestURI(), user, ex.toString(), ex);
             throw ex;
         } finally {
             long took = System.currentTimeMillis() - start;
             int status = response.getStatus();
-            log.info("[RES] method={} path={} user={} status={} time={}ms", request.getMethod(), request.getRequestURI(), user, status, took);
+            String statusEmoji = getStatusEmoji(status);
+            log.info("✅ {} {} | User: {} | Status: {} {} | Time: {}ms", 
+                    request.getMethod(), request.getRequestURI(), user, status, statusEmoji, took);
             MDC.remove("method");
             MDC.remove("path");
             if (putRequestId) {
@@ -90,5 +94,13 @@ public class RequestLoggingFilter extends OncePerRequestFilter {
     private String shorten(String s) {
         if (s == null) return "";
         return s.length() > 200 ? s.substring(0, 200) + "..." : s;
+    }
+
+    private String getStatusEmoji(int status) {
+        if (status >= 200 && status < 300) return "🟢"; // Success
+        if (status >= 300 && status < 400) return "🔄"; // Redirect
+        if (status >= 400 && status < 500) return "🟡"; // Client Error
+        if (status >= 500) return "🔴"; // Server Error
+        return "⚪"; // Unknown
     }
 }

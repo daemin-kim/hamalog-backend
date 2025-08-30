@@ -14,7 +14,9 @@
     <springProfile name="!prod">
         <appender name="CONSOLE" class="ch.qos.logback.core.ConsoleAppender">
             <encoder>
-                <pattern>%d{yyyy-MM-dd HH:mm:ss.SSS} [%thread] %-5level [%X{requestId:-}] %logger{36} - %msg%n</pattern>
+                <!-- Improved readability with shorter logger names and better formatting -->
+                <pattern>%d{HH:mm:ss.SSS} [%15.15t] %-5level [%X{requestId:-}] %logger{20} - %m%n</pattern>
+                <charset>UTF-8</charset>
             </encoder>
         </appender>
     </springProfile>
@@ -133,13 +135,13 @@
 
     <!-- Logger Configurations -->
     
-    <!-- Access Logging (RequestLoggingFilter) -->
+    <!-- Access Logging (RequestLoggingFilter) - Shortened name for readability -->
     <logger name="com.Hamalog.logging.RequestLoggingFilter" level="INFO" additivity="false">
         <appender-ref ref="CONSOLE"/>
         <appender-ref ref="ASYNC_ACCESS_FILE"/>
     </logger>
 
-    <!-- API Logging (ApiLoggingAspect) -->
+    <!-- API Logging (ApiLoggingAspect) - Shortened name for readability -->
     <logger name="com.Hamalog.aop.ApiLoggingAspect" level="INFO" additivity="false">
         <appender-ref ref="CONSOLE"/>
         <appender-ref ref="ASYNC_APPLICATION_FILE"/>

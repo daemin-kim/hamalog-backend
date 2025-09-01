@@ -104,6 +104,22 @@
         </encoder>
     </appender>
 
+    <!-- Database Query Log File Appender (JSON Format) -->
+    <appender name="DATABASE_FILE" class="ch.qos.logback.core.rolling.RollingFileAppender">
+        <file>${LOG_DIR}/${APP_NAME}-database.log</file>
+        <rollingPolicy class="ch.qos.logback.core.rolling.SizeAndTimeBasedRollingPolicy">
+            <fileNamePattern>${LOG_DIR}/${APP_NAME}-database.%d{yyyy-MM-dd}.%i.log.gz</fileNamePattern>
+            <maxFileSize>150MB</maxFileSize>
+            <maxHistory>30</maxHistory>
+            <totalSizeCap>5GB</totalSizeCap>
+        </rollingPolicy>
+        <encoder class="net.logstash.logback.encoder.LogstashEncoder">
+            <includeContext>true</includeContext>
+            <includeMdc>true</includeMdc>
+            <customFields>{"service":"hamalog","log_type":"database","category":"query"}</customFields>
+        </encoder>
+    </appender>
+
     <!-- Async Appender for better performance -->
     <appender name="ASYNC_APPLICATION_FILE" class="ch.qos.logback.classic.AsyncAppender">
         <appender-ref ref="APPLICATION_FILE"/>
@@ -131,6 +147,13 @@
         <queueSize>256</queueSize>
         <discardingThreshold>0</discardingThreshold>
         <includeCallerData>true</includeCallerData>
+    </appender>
+
+    <appender name="ASYNC_DATABASE_FILE" class="ch.qos.logback.classic.AsyncAppender">
+        <appender-ref ref="DATABASE_FILE"/>
+        <queueSize>512</queueSize>
+        <discardingThreshold>0</discardingThreshold>
+        <includeCallerData>false</includeCallerData>
     </appender>
 
     <!-- Logger Configurations -->
@@ -173,47 +196,61 @@
     <springProfile name="!prod">
         <logger name="org.hibernate.SQL" level="DEBUG" additivity="false">
             <appender-ref ref="CONSOLE"/>
-            <appender-ref ref="ASYNC_APPLICATION_FILE"/>
+            <appender-ref ref="ASYNC_DATABASE_FILE"/>
         </logger>
         
         <logger name="org.hibernate.type.descriptor.sql" level="TRACE" additivity="false">
             <appender-ref ref="CONSOLE"/>
-            <appender-ref ref="ASYNC_APPLICATION_FILE"/>
+            <appender-ref ref="ASYNC_DATABASE_FILE"/>
+        </logger>
+        
+        <!-- Query execution time logging for development -->
+        <logger name="org.hibernate.stat" level="DEBUG" additivity="false">
+            <appender-ref ref="CONSOLE"/>
+            <appender-ref ref="ASYNC_DATABASE_FILE"/>
         </logger>
     </springProfile>
     
     <springProfile name="prod">
-        <logger name="org.hibernate.SQL" level="WARN" additivity="false">
+        <logger name="org.hibernate.SQL" level="INFO" additivity="false">
             <appender-ref ref="CONSOLE"/>
-            <appender-ref ref="ASYNC_APPLICATION_FILE"/>
+            <appender-ref ref="ASYNC_DATABASE_FILE"/>
         </logger>
         
-        <logger name="org.hibernate.type.descriptor.sql" level="WARN" additivity="false">
+        <logger name="org.hibernate.type.descriptor.sql" level="INFO" additivity="false">
             <appender-ref ref="CONSOLE"/>
-            <appender-ref ref="ASYNC_APPLICATION_FILE"/>
+            <appender-ref ref="ASYNC_DATABASE_FILE"/>
+        </logger>
+        
+        <!-- Query execution time logging for production monitoring -->
+        <logger name="org.hibernate.stat" level="INFO" additivity="false">
+            <appender-ref ref="CONSOLE"/>
+            <appender-ref ref="ASYNC_DATABASE_FILE"/>
         </logger>
     </springProfile>
 
-    <!-- Performance and Database Performance Monitoring -->
-    <logger name="org.hibernate.stat" level="INFO" additivity="false">
-        <appender-ref ref="CONSOLE"/>
-        <appender-ref ref="ASYNC_APPLICATION_FILE"/>
-    </logger>
-    
+    <!-- Database Performance and Error Monitoring -->
     <logger name="org.hibernate.engine.jdbc.spi.SqlExceptionHelper" level="ERROR" additivity="false">
         <appender-ref ref="CONSOLE"/>
         <appender-ref ref="ASYNC_ERROR_FILE"/>
+        <appender-ref ref="ASYNC_DATABASE_FILE"/>
     </logger>
 
     <!-- Connection Pool Monitoring -->
     <logger name="com.zaxxer.hikari.HikariConfig" level="INFO" additivity="false">
         <appender-ref ref="CONSOLE"/>
-        <appender-ref ref="ASYNC_APPLICATION_FILE"/>
+        <appender-ref ref="ASYNC_DATABASE_FILE"/>
     </logger>
     
     <logger name="com.zaxxer.hikari.HikariDataSource" level="INFO" additivity="false">
         <appender-ref ref="CONSOLE"/>
-        <appender-ref ref="ASYNC_APPLICATION_FILE"/>
+        <appender-ref ref="ASYNC_DATABASE_FILE"/>
+    </logger>
+    
+    <!-- Connection Pool Performance Monitoring -->
+    <logger name="com.zaxxer.hikari.pool.HikariPool" level="INFO" additivity="false">
+        <appender-ref ref="CONSOLE"/>
+        <appender-ref ref="ASYNC_DATABASE_FILE"/>
     </logger>
 
     <!-- Redis Logging -->

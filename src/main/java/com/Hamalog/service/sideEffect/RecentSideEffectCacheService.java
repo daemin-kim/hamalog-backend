@@ -8,10 +8,6 @@ import org.springframework.stereotype.Service;
 import java.util.Collections;
 import java.util.List;
 
-/**
- * Redis를 사용하여 최근 부작용 목록을 캐싱하는 서비스
- * 사용자별로 최대 5개의 최근 부작용 이름을 저장합니다.
- */
 @Slf4j
 @Service
 @ConditionalOnProperty(name = "spring.data.redis.host")
@@ -25,12 +21,6 @@ public class RecentSideEffectCacheService {
         this.redisTemplate = redisTemplate;
     }
 
-    /**
-     * 사용자의 최근 부작용 목록을 Redis에서 조회합니다.
-     *
-     * @param memberId 사용자 ID
-     * @return 최근 부작용 이름 목록 (최대 5개)
-     */
     public List<String> getRecentSideEffects(Long memberId) {
         try {
             String key = getCacheKey(memberId);
@@ -50,13 +40,6 @@ public class RecentSideEffectCacheService {
         }
     }
 
-    /**
-     * 새로운 부작용을 Redis 캐시에 추가합니다.
-     * 리스트의 앞쪽에 추가하고 최대 5개까지만 유지합니다.
-     *
-     * @param memberId 사용자 ID
-     * @param sideEffectName 부작용 이름
-     */
     public void addRecentSideEffect(Long memberId, String sideEffectName) {
         try {
             String key = getCacheKey(memberId);
@@ -70,7 +53,6 @@ public class RecentSideEffectCacheService {
             // 최대 5개까지만 유지 (오래된 항목 제거)
             redisTemplate.opsForList().trim(key, 0, MAX_RECENT_ITEMS - 1);
             
-            // TTL 설정 (30일 후 만료)
             redisTemplate.expire(key, java.time.Duration.ofDays(30));
             
         } catch (Exception e) {
@@ -80,12 +62,6 @@ public class RecentSideEffectCacheService {
         }
     }
 
-    /**
-     * 사용자의 최근 부작용 캐시를 초기화합니다.
-     *
-     * @param memberId 사용자 ID
-     * @param sideEffectNames 초기화할 부작용 이름 목록
-     */
     public void refreshRecentSideEffects(Long memberId, List<String> sideEffectNames) {
         try {
             String key = getCacheKey(memberId);
@@ -110,12 +86,6 @@ public class RecentSideEffectCacheService {
         }
     }
 
-    /**
-     * Redis에서 사용할 캐시 키를 생성합니다.
-     *
-     * @param memberId 사용자 ID
-     * @return Redis 캐시 키
-     */
     private String getCacheKey(Long memberId) {
         return CACHE_KEY_PREFIX + memberId;
     }

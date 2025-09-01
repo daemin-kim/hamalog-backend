@@ -18,12 +18,6 @@ import java.io.IOException;
 import java.util.Map;
 import java.util.Set;
 
-/**
- * 속도 제한 필터
- * 
- * 특정 엔드포인트에 대한 요청 속도를 제한합니다.
- * 인증 엔드포인트에 대해 더 엄격한 제한을 적용합니다.
- */
 @Slf4j
 @Component
 @RequiredArgsConstructor
@@ -80,9 +74,6 @@ public class RateLimitingFilter extends OncePerRequestFilter {
         filterChain.doFilter(request, response);
     }
 
-    /**
-     * 속도 제한 초과 시 응답을 처리합니다.
-     */
     private void handleRateLimitExceeded(HttpServletResponse response, String clientIp, 
                                        String requestURI, boolean isAuthEndpoint) throws IOException {
         
@@ -105,9 +96,6 @@ public class RateLimitingFilter extends OncePerRequestFilter {
         response.getWriter().write(objectMapper.writeValueAsString(errorResponse));
     }
 
-    /**
-     * 응답에 속도 제한 관련 헤더를 추가합니다.
-     */
     private void addRateLimitHeaders(HttpServletResponse response, String rateLimitKey, 
                                    boolean isAuthEndpoint) {
         try {
@@ -126,10 +114,6 @@ public class RateLimitingFilter extends OncePerRequestFilter {
         }
     }
 
-    /**
-     * 클라이언트 IP 주소를 추출합니다.
-     * 프록시나 로드 밸런서를 고려하여 실제 클라이언트 IP를 찾습니다.
-     */
     private String getClientIpAddress(HttpServletRequest request) {
         String[] headerNames = {
             "X-Forwarded-For",

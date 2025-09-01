@@ -15,12 +15,6 @@ import org.springframework.web.filter.OncePerRequestFilter;
 import java.io.IOException;
 import java.util.Set;
 
-/**
- * 요청 크기 모니터링 필터
- * 
- * 요청 크기를 모니터링하고 로깅하여 DoS 공격을 탐지합니다.
- * Spring Boot의 기본 제한과 함께 동작하여 추가적인 모니터링을 제공합니다.
- */
 @Slf4j
 @Component
 public class RequestSizeMonitoringFilter extends OncePerRequestFilter {
@@ -67,9 +61,6 @@ public class RequestSizeMonitoringFilter extends OncePerRequestFilter {
         filterChain.doFilter(request, response);
     }
 
-    /**
-     * 요청 크기를 모니터링하고 경고를 로깅합니다.
-     */
     private void monitorRequestSize(String uri, String method, long contentLength, String clientIp) {
         long contentSizeMB = contentLength / (1024 * 1024);
         boolean isStrictEndpoint = STRICT_ENDPOINTS.contains(uri);
@@ -91,9 +82,6 @@ public class RequestSizeMonitoringFilter extends OncePerRequestFilter {
         }
     }
 
-    /**
-     * HTTP 헤더 크기를 모니터링합니다.
-     */
     private void monitorHeadersSize(HttpServletRequest request) {
         try {
             long totalHeadersSize = 0;
@@ -127,9 +115,6 @@ public class RequestSizeMonitoringFilter extends OncePerRequestFilter {
         }
     }
 
-    /**
-     * 클라이언트 IP 주소를 추출합니다.
-     */
     private String getClientIpAddress(HttpServletRequest request) {
         String[] headerNames = {
             "X-Forwarded-For",
@@ -162,16 +147,10 @@ public class RequestSizeMonitoringFilter extends OncePerRequestFilter {
                requestURI.startsWith("/images/");
     }
 
-    /**
-     * 현재 요청 크기 제한 설정을 반환합니다 (모니터링 목적).
-     */
     public RequestSizeLimits getCurrentLimits() {
         return new RequestSizeLimits(maxRequestSizeMB, warnRequestSizeMB, monitoringEnabled);
     }
 
-    /**
-     * 요청 크기 제한 정보를 담는 레코드
-     */
     public record RequestSizeLimits(
         long maxRequestSizeMB,
         long warnRequestSizeMB,

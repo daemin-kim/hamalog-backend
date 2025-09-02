@@ -39,7 +39,7 @@ dependencies {
 	testImplementation 'org.springframework.boot:spring-boot-starter-test'
 	testImplementation 'org.springframework.security:spring-security-test'
 	testRuntimeOnly 'org.junit.platform:junit-platform-launcher'
-	implementation 'org.springdoc:springdoc-openapi-starter-webmvc-ui:2.0.2'
+	implementation 'org.springdoc:springdoc-openapi-starter-webmvc-ui:2.7.0'
 	implementation 'io.jsonwebtoken:jjwt-api:0.12.6'
 	runtimeOnly 'io.jsonwebtoken:jjwt-impl:0.12.6'
 	runtimeOnly 'io.jsonwebtoken:jjwt-jackson:0.12.6'
@@ -47,9 +47,7 @@ dependencies {
 	implementation 'net.logstash.logback:logstash-logback-encoder:7.4'
 	// Redis support for rate limiting and token blacklist
 	implementation 'org.springframework.boot:spring-boot-starter-data-redis'
-	// Rate limiting support
-	implementation 'com.github.vladimir-bukhtoyarov:bucket4j-core:7.6.0'
-	implementation 'com.github.vladimir-bukhtoyarov:bucket4j-redis:7.6.0'
+	// Rate limiting support - using custom Redis implementation
 }
 
 tasks.named('test') {

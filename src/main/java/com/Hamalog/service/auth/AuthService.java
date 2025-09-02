@@ -76,19 +76,22 @@ public class AuthService {
     }
 
     private void deleteMemberRelatedData(Long memberId) {
-        sideEffectRecordRepository.findAll().stream()
-                .filter(record -> record.getMember().getMemberId().equals(memberId))
-                .forEach(sideEffectRecordRepository::delete);
+        // Delete side effect records for this member (efficient batch delete)
+        sideEffectRecordRepository.deleteByMemberId(memberId);
 
-        medicationScheduleRepository.findAllByMember_MemberId(memberId)
-                .forEach(schedule -> {
-                    medicationRecordRepository.findAllByMedicationSchedule_MedicationScheduleId(
-                            schedule.getMedicationScheduleId())
-                            .forEach(medicationRecordRepository::delete);
-                });
+        // Get medication schedule IDs for this member first
+        var medicationScheduleIds = medicationScheduleRepository.findAllByMember_MemberId(memberId)
+                .stream()
+                .map(schedule -> schedule.getMedicationScheduleId())
+                .toList();
 
-        medicationScheduleRepository.findAllByMember_MemberId(memberId)
-                .forEach(medicationScheduleRepository::delete);
+        // Delete medication records for these schedules in batch
+        if (!medicationScheduleIds.isEmpty()) {
+            medicationRecordRepository.deleteByScheduleIds(medicationScheduleIds);
+        }
+
+        // Delete medication schedules for this member (efficient batch delete)
+        medicationScheduleRepository.deleteByMemberId(memberId);
     }
 
     private void validateMemberRegistration(SignupRequest request) {

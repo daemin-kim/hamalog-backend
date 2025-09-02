@@ -3,6 +3,7 @@ package com.Hamalog.repository.medication;
 import com.Hamalog.domain.medication.MedicationRecord;
 import org.springframework.data.jpa.repository.EntityGraph;
 import org.springframework.data.jpa.repository.JpaRepository;
+import org.springframework.data.jpa.repository.Modifying;
 import org.springframework.data.jpa.repository.Query;
 import org.springframework.data.repository.query.Param;
 
@@ -32,4 +33,9 @@ public interface MedicationRecordRepository extends JpaRepository<MedicationReco
            "JOIN FETCH mr.medicationTime mt " +
            "WHERE ms.medicationScheduleId = :scheduleId")
     List<MedicationRecord> findAllByScheduleIdWithJoinFetch(@Param("scheduleId") Long scheduleId);
+    
+    // Efficient batch delete for member deletion (by schedule IDs)
+    @Modifying
+    @Query("DELETE FROM MedicationRecord mr WHERE mr.medicationSchedule.medicationScheduleId IN :scheduleIds")
+    void deleteByScheduleIds(@Param("scheduleIds") List<Long> scheduleIds);
 }

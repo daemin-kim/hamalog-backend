@@ -18,6 +18,9 @@ import org.springframework.transaction.annotation.Transactional;
 
 import java.time.LocalDateTime;
 import java.util.List;
+import java.util.Map;
+import java.util.function.Function;
+import java.util.stream.Collectors;
 
 @Service
 @Transactional(readOnly = true)
@@ -79,12 +82,26 @@ public class SideEffectService {
         
         SideEffectRecord savedRecord = sideEffectRecordRepository.save(sideEffectRecord);
         
+        // N+1 문제 해결: SideEffect 일괄 조회
+        List<Long> sideEffectIds = request.sideEffects().stream()
+                .map(item -> item.sideEffectId())
+                .toList();
+        
+        // IN 쿼리로 모든 SideEffect를 한 번에 조회
+        List<SideEffect> sideEffects = sideEffectRepository.findAllById(sideEffectIds);
+        
+        // ID를 키로 하는 Map으로 변환하여 빠른 조회 가능
+        Map<Long, SideEffect> sideEffectMap = sideEffects.stream()
+                .collect(Collectors.toMap(SideEffect::getSideEffectId, Function.identity()));
+        
         // SideEffect와의 연결 관계 생성 및 캐시 업데이트를 위한 side effect 이름 수집
         List<String> newSideEffectNames = request.sideEffects().stream()
                 .map(item -> {
-                    // SideEffect 존재 여부 확인
-                    SideEffect sideEffect = sideEffectRepository.findById(item.sideEffectId())
-                            .orElseThrow(() -> new IllegalArgumentException("SideEffect not found with id: " + item.sideEffectId()));
+                    // Map에서 SideEffect 조회 (N+1 문제 해결됨)
+                    SideEffect sideEffect = sideEffectMap.get(item.sideEffectId());
+                    if (sideEffect == null) {
+                        throw new IllegalArgumentException("SideEffect not found with id: " + item.sideEffectId());
+                    }
                     
                     // SideEffectSideEffectRecord 생성
                     SideEffectSideEffectRecord linkRecord = SideEffectSideEffectRecord.builder()

@@ -23,6 +23,7 @@ import org.mockito.junit.jupiter.MockitoExtension;
 import org.springframework.security.authentication.AuthenticationManager;
 import org.springframework.security.crypto.password.PasswordEncoder;
 
+import java.lang.reflect.Field;
 import java.time.LocalDate;
 import java.time.LocalDateTime;
 import java.util.Arrays;
@@ -87,29 +88,30 @@ class AuthServiceAccountDeletionTest {
                 member, "Test Medicine", "Test Hospital", LocalDate.now(),
                 "Test memo", LocalDate.now(), 7, 2, AlarmType.SOUND
         );
+        
+        // Set medication schedule ID using reflection for testing
+        try {
+            Field idField = MedicationSchedule.class.getDeclaredField("medicationScheduleId");
+            idField.setAccessible(true);
+            idField.set(schedule, 1L);
+        } catch (Exception e) {
+            throw new RuntimeException("Failed to set medication schedule ID", e);
+        }
 
-        SideEffectRecord sideEffectRecord = SideEffectRecord.builder()
-                .member(member)
-                .createdAt(LocalDateTime.now())
-                .build();
-
-        List<SideEffectRecord> sideEffectRecords = Arrays.asList(sideEffectRecord);
         List<MedicationSchedule> schedules = Arrays.asList(schedule);
-        List<MedicationRecord> records = Arrays.asList();
 
         given(memberRepository.findByLoginId(loginId)).willReturn(Optional.of(member));
-        given(sideEffectRecordRepository.findAll()).willReturn(sideEffectRecords);
         given(medicationScheduleRepository.findAllByMember_MemberId(memberId)).willReturn(schedules);
-        given(medicationRecordRepository.findAllByMedicationSchedule_MedicationScheduleId(any()))
-                .willReturn(records);
 
         // When
         authService.deleteMember(loginId, token);
 
         // Then
         verify(memberRepository).findByLoginId(loginId);
-        verify(sideEffectRecordRepository).delete(sideEffectRecord);
-        verify(medicationScheduleRepository).delete(schedule);
+        verify(sideEffectRecordRepository).deleteByMemberId(memberId);
+        verify(medicationScheduleRepository).findAllByMember_MemberId(memberId);
+        verify(medicationRecordRepository).deleteByScheduleIds(Arrays.asList(1L));
+        verify(medicationScheduleRepository).deleteByMemberId(memberId);
         verify(memberRepository).delete(member);
         verify(tokenBlacklistService).blacklistToken(token);
     }
@@ -153,7 +155,6 @@ class AuthServiceAccountDeletionTest {
                 .build();
 
         given(memberRepository.findByLoginId(loginId)).willReturn(Optional.of(member));
-        given(sideEffectRecordRepository.findAll()).willReturn(Arrays.asList());
         given(medicationScheduleRepository.findAllByMember_MemberId(memberId)).willReturn(Arrays.asList());
 
         // When
@@ -161,6 +162,9 @@ class AuthServiceAccountDeletionTest {
 
         // Then
         verify(memberRepository).findByLoginId(loginId);
+        verify(sideEffectRecordRepository).deleteByMemberId(memberId);
+        verify(medicationScheduleRepository).findAllByMember_MemberId(memberId);
+        verify(medicationScheduleRepository).deleteByMemberId(memberId);
         verify(memberRepository).delete(member);
         verify(tokenBlacklistService, never()).blacklistToken(any());
     }

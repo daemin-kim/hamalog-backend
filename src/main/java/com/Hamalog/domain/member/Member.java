@@ -1,5 +1,7 @@
 package com.Hamalog.domain.member;
 
+import com.Hamalog.security.encryption.EncryptedLocalDateConverter;
+import com.Hamalog.security.encryption.EncryptedStringConverter;
 import jakarta.persistence.*;
 import jakarta.validation.constraints.Email;
 import jakarta.validation.constraints.Pattern;
@@ -33,8 +35,9 @@ public class Member {
     @Size(max = 15, message = "{member.name.size}")
     private String name;
 
-    @Column(name = "phone_number", length = 11, nullable = false)
+    @Column(name = "phone_number", length = 255, nullable = false)
     @Pattern(regexp = "^010\\d{8}$", message = "{member.phoneNumber.pattern}")
+    @Convert(converter = EncryptedStringConverter.class)
     private String phoneNumber;
 
     @Column(name = "nickname", length = 10, nullable = false)
@@ -42,7 +45,8 @@ public class Member {
     @Size(max = 10, message = "{member.nickname.size}")
     private String nickName;
 
-    @Column(name = "birthday", nullable = false)
+    @Column(name = "birthday", nullable = false, length = 255)
+    @Convert(converter = EncryptedLocalDateConverter.class)
     private LocalDate birth;
 
     @Column(name = "created_at", nullable = false)

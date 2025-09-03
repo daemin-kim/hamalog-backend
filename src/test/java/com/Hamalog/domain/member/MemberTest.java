@@ -154,7 +154,7 @@ class MemberTest {
         // Then
         assertThat(violations).hasSize(1);
         assertThat(violations.iterator().next().getMessage())
-                .isEqualTo("닉네임은 한글과 영어만 사용할 수 있습니다.");
+                .isEqualTo("Nickname can only contain Korean and English characters.");
     }
 
     @Test
@@ -177,7 +177,7 @@ class MemberTest {
         // Then
         assertThat(violations).hasSize(1);
         assertThat(violations.iterator().next().getMessage())
-                .isEqualTo("닉네임은 한글과 영어만 사용할 수 있습니다.");
+                .isEqualTo("Nickname can only contain Korean and English characters.");
     }
 
     @Test
@@ -222,7 +222,7 @@ class MemberTest {
         // Then
         assertThat(violations).hasSize(1);
         assertThat(violations.iterator().next().getMessage())
-                .isEqualTo("올바른 이메일 형식을 입력해주세요.");
+                .isEqualTo("Please enter a valid email format.");
     }
 
     @Test
@@ -267,7 +267,7 @@ class MemberTest {
         // Then
         assertThat(violations).hasSize(1);
         assertThat(violations.iterator().next().getMessage())
-                .isEqualTo("전화번호는 010으로 시작하는 11자리 숫자를 입력해주세요.");
+                .isEqualTo("Phone number must be 11 digits starting with 010.");
     }
 
     @Test
@@ -290,7 +290,7 @@ class MemberTest {
         // Then
         assertThat(violations).hasSize(1);
         assertThat(violations.iterator().next().getMessage())
-                .isEqualTo("전화번호는 010으로 시작하는 11자리 숫자를 입력해주세요.");
+                .isEqualTo("Phone number must be 11 digits starting with 010.");
     }
 
     @Test
@@ -313,7 +313,7 @@ class MemberTest {
         // Then
         assertThat(violations).hasSize(1);
         assertThat(violations.iterator().next().getMessage())
-                .isEqualTo("전화번호는 010으로 시작하는 11자리 숫자를 입력해주세요.");
+                .isEqualTo("Phone number must be 11 digits starting with 010.");
     }
 
     @Test
@@ -358,7 +358,7 @@ class MemberTest {
         // Then
         assertThat(violations).hasSize(1);
         assertThat(violations.iterator().next().getMessage())
-                .isEqualTo("사용자 이름은 최대 15자까지 입력할 수 있습니다.");
+                .isEqualTo("User name can be up to 15 characters.");
     }
 
     @Test

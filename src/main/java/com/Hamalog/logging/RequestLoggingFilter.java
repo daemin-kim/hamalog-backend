@@ -46,19 +46,19 @@ public class RequestLoggingFilter extends OncePerRequestFilter {
         String referer = safeHeader(request, "Referer");
 
         try {
-            log.info("🌐 {} {} | User: {} | IP: {} | UA: {} | Ref: {}", 
+            log.info("REQ {} {} | User: {} | IP: {} | UA: {} | Ref: {}", 
                     request.getMethod(), request.getRequestURI(), user, ip, shorten(ua), shorten(referer));
             filterChain.doFilter(request, response);
         } catch (Exception ex) {
-            log.error("❌ {} {} | User: {} | Status: 500 | Error: {}", 
+            log.error("ERR {} {} | User: {} | Status: 500 | Error: {}", 
                     request.getMethod(), request.getRequestURI(), user, ex.toString(), ex);
             throw ex;
         } finally {
             long took = System.currentTimeMillis() - start;
             int status = response.getStatus();
-            String statusEmoji = getStatusEmoji(status);
-            log.info("✅ {} {} | User: {} | Status: {} {} | Time: {}ms", 
-                    request.getMethod(), request.getRequestURI(), user, status, statusEmoji, took);
+            String statusText = getStatusText(status);
+            log.info("RES {} {} | User: {} | Status: {} {} | Time: {}ms", 
+                    request.getMethod(), request.getRequestURI(), user, status, statusText, took);
             MDC.remove("method");
             MDC.remove("path");
             if (putRequestId) {
@@ -96,11 +96,11 @@ public class RequestLoggingFilter extends OncePerRequestFilter {
         return s.length() > 200 ? s.substring(0, 200) + "..." : s;
     }
 
-    private String getStatusEmoji(int status) {
-        if (status >= 200 && status < 300) return "🟢"; // Success
-        if (status >= 300 && status < 400) return "🔄"; // Redirect
-        if (status >= 400 && status < 500) return "🟡"; // Client Error
-        if (status >= 500) return "🔴"; // Server Error
-        return "⚪"; // Unknown
+    private String getStatusText(int status) {
+        if (status >= 200 && status < 300) return "SUCCESS"; // Success
+        if (status >= 300 && status < 400) return "REDIRECT"; // Redirect
+        if (status >= 400 && status < 500) return "CLIENT_ERROR"; // Client Error
+        if (status >= 500) return "SERVER_ERROR"; // Server Error
+        return "UNKNOWN"; // Unknown
     }
 }

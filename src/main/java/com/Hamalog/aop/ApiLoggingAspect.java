@@ -37,7 +37,7 @@ public class ApiLoggingAspect {
         MDC.put("api.method", methodName);
         MDC.put("api.user", user);
         
-        log.info("🚀 API Call: {} | User: {} | Params: {}", methodName, user, params);
+        log.info("API Call: {} | User: {} | Params: {}", methodName, user, params);
 
         try {
             Object result = joinPoint.proceed();
@@ -47,9 +47,9 @@ public class ApiLoggingAspect {
             MDC.put("api.duration", String.valueOf(elapsed));
             MDC.put("api.status", "success");
             
-            String performanceEmoji = getPerformanceEmoji(elapsed);
-            log.info("✨ API Success: {} | User: {} | Time: {}ms {} | Result: {}",
-                    methodName, user, elapsed, performanceEmoji, shorten(result));
+            String performanceText = getPerformanceText(elapsed);
+            log.info("API Success: {} | User: {} | Time: {}ms {} | Result: {}",
+                    methodName, user, elapsed, performanceText, shorten(result));
             return result;
         } catch (Exception e) {
             long elapsed = System.currentTimeMillis() - startTime;
@@ -59,7 +59,7 @@ public class ApiLoggingAspect {
             MDC.put("api.status", "error");
             MDC.put("api.errorType", e.getClass().getSimpleName());
             
-            log.error("💥 API Error: {} | User: {} | Time: {}ms | Type: {} | Message: {}",
+            log.error("API Error: {} | User: {} | Time: {}ms | Type: {} | Message: {}",
                     methodName, user, elapsed, e.getClass().getSimpleName(), e.getMessage(), e);
             throw e;
         } finally {
@@ -109,11 +109,11 @@ public class ApiLoggingAspect {
         return s.length() > 200 ? s.substring(0, 200) + "..." : s;
     }
 
-    private String getPerformanceEmoji(long elapsed) {
-        if (elapsed < 100) return "⚡"; // Very fast
-        if (elapsed < 500) return "🟢"; // Fast
-        if (elapsed < 1000) return "🟡"; // Moderate
-        if (elapsed < 3000) return "🟠"; // Slow
-        return "🔴"; // Very slow
+    private String getPerformanceText(long elapsed) {
+        if (elapsed < 100) return "VERY_FAST"; // Very fast
+        if (elapsed < 500) return "FAST"; // Fast
+        if (elapsed < 1000) return "MODERATE"; // Moderate
+        if (elapsed < 3000) return "SLOW"; // Slow
+        return "VERY_SLOW"; // Very slow
     }
 }

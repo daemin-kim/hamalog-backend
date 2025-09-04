@@ -412,7 +412,24 @@ docker-compose up -d
 
 ### 운영 환경 배포
 
-#### 환경 변수 (필수)
+#### 방법 1: .env.prod 파일 사용 (권장)
+프로젝트 루트에 제공된 `.env.prod` 파일을 사용하여 환경 변수를 설정하세요:
+
+```bash
+# 환경 변수 로드
+source .env.prod
+
+# 배포 스크립트 실행
+./deploy.sh
+```
+
+`.env.prod` 파일에는 다음이 포함되어 있습니다:
+- 데이터베이스 설정
+- JWT 구성
+- **Kakao OAuth2 설정** (REST API 키 포함)
+- 기타 운영 환경 변수
+
+#### 방법 2: 수동 환경 변수 설정
 ```bash
 # 보안 (중요)
 export JWT_SECRET=$(openssl rand -base64 32)
@@ -422,9 +439,18 @@ export DB_HOST=your-prod-db-host
 export DB_USERNAME=your-prod-db-user
 export DB_PASSWORD=your-prod-db-password
 
-# OAuth2 (카카오 로그인 사용 시)
-export KAKAO_CLIENT_ID=your-production-client-id
-export KAKAO_CLIENT_SECRET=your-production-client-secret
+# OAuth2 (카카오 로그인) - REST API 키 사용
+export KAKAO_CLIENT_ID=86f21dfff5d2e9e3e1f76167df979268
+export KAKAO_CLIENT_SECRET=86f21dfff5d2e9e3e1f76167df979268
+
+# 선택사항: 커스텀 리디렉션 URI (기본값: http://112.72.248.195:8080/api/auth/kakao/callback)
+# export KAKAO_REDIRECT_URI=http://112.72.248.195:8080/api/auth/kakao/callback
+```
+
+#### 배포 실행
+```bash
+# 환경 변수 설정 후 배포 스크립트 실행
+./deploy.sh
 ```
 
 #### CI/CD 파이프라인

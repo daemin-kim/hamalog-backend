@@ -65,8 +65,8 @@ public class OAuth2EmptyVariableHandler implements EnvironmentPostProcessor {
             boolean isProduction = java.util.Arrays.asList(activeProfiles).contains("prod");
             
             String fallbackRedirectUri = isProduction ? 
-                "https://your-domain.com/login/oauth2/code/kakao" : 
-                "http://localhost:8080/login/oauth2/code/kakao";
+                "http://112.72.248.195:8080/api/auth/kakao/callback" : 
+                "http://localhost:8080/api/auth/kakao/callback";
             
             customProperties.put("hamalog.oauth2.kakao.redirect-uri", fallbackRedirectUri);
             log.info("[DEBUG_LOG] KAKAO_REDIRECT_URI is null/empty, using fallback: {}", fallbackRedirectUri);

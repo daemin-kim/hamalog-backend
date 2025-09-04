@@ -344,3 +344,7 @@
         - 회원가입 요청에 nickName 필드 추가, loginId 이메일 형식 필수.
         - 응답 구조 간소화: 중첩 객체 대신 ID 필드 사용.
     - **상태 코드 정규화:** 201(생성), 204(삭제), 403(권한없음) 추가.
+- **2025/9/4**: **현재 프로젝트 버전에 맞춘 API 명세 동기화**
+    - **구현 검증**: 모든 컨트롤러와 DTO 구조가 문서화된 API 명세와 일치함을 확인.
+    - **엔드포인트 검증**: 인증(AuthController), OAuth2(OAuth2Controller), 복약 스케줄(MedicationScheduleController), 복약 기록(MedicationRecordController), 부작용(SideEffectController) 모든 API 엔드포인트가 정확히 문서화됨.
+    - **보안 검증**: 모든 보호된 엔드포인트에 JWT 토큰 기반 인증 및 사용자 권한 검증이 올바르게 구현됨.

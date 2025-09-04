@@ -1,6 +1,6 @@
-# Local Development Docker Compose Configuration
-# This provides the same containerized environment as deployment
-# Usage: docker-compose -f docker-compose.local.yml up
+# 로컬 개발용 Docker Compose 설정
+# 배포와 동일한 컨테이너화된 환경을 제공
+# 사용법: docker-compose -f docker-compose.local.yml up
 
 services:
   hamalog-app:
@@ -8,27 +8,27 @@ services:
     ports:
       - "8080:8080"
     environment:
-      # Use production profile to match deployment environment exactly
+      # 배포 환경과 정확히 일치하도록 프로덕션 프로필 사용
       - SPRING_PROFILES_ACTIVE=prod
       
-      # Database Configuration (same as deployment)
+      # 데이터베이스 설정 (배포와 동일)
       - SPRING_DATASOURCE_URL=jdbc:mysql://mysql-hamalog:3306/Hamalog
       - SPRING_DATASOURCE_USERNAME=hamalog_user
       - SPRING_DATASOURCE_PASSWORD=hamalog_password
       
-      # Redis Configuration (same as deployment)
+      # Redis 설정 (배포와 동일)
       - SPRING_DATA_REDIS_HOST=redis
       - SPRING_DATA_REDIS_PORT=6379
       
-      # JWT Configuration (using same fallback as deployment)
+      # JWT 설정 (배포와 동일한 기본값 사용)
       - JWT_SECRET=EzUuJwKK4vLnvk5r7yAgdNP/sa1dL87febZhlayPGjI=
       - JWT_EXPIRY=3600000
       
-      # OAuth2 Configuration (using dummy values for local development)
+      # OAuth2 설정 (로컬 개발용 더미 값 사용)
       - KAKAO_CLIENT_ID=dummy-client-id-for-local-dev
       - KAKAO_CLIENT_SECRET=dummy-client-secret-for-local-dev
       
-      # Local development specific settings
+      # 로컬 개발 전용 설정
       - FRONTEND_URL=http://localhost:3000
       - LOG_DIR=/app/logs
     depends_on:

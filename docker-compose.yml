@@ -4,24 +4,24 @@ services:
     ports:
       - "8080:8080"
     environment:
-      # Spring Profile Configuration (use prod profile to match deployment environment)
+      # Spring 프로필 설정 (배포 환경에 맞춰 prod 프로필 사용)
       - SPRING_PROFILES_ACTIVE=prod
       
-      # Database Configuration (MySQL for production)
-      # Driver is automatically detected based on URL
+      # 데이터베이스 설정 (프로덕션용 MySQL)
+      # 드라이버는 URL을 기반으로 자동 감지됨
       - SPRING_DATASOURCE_URL=jdbc:mysql://mysql-hamalog:3306/${DB_NAME:-Hamalog}
       - SPRING_DATASOURCE_USERNAME=${SPRING_DATASOURCE_USERNAME:-hamalog_user}
       - SPRING_DATASOURCE_PASSWORD=${SPRING_DATASOURCE_PASSWORD:-hamalog_password}
       
-      # Redis Configuration
+      # Redis 설정
       - SPRING_DATA_REDIS_HOST=redis
       - SPRING_DATA_REDIS_PORT=6379
       
-      # JWT Configuration (should be set via environment variables in production)
+      # JWT 설정 (프로덕션에서는 환경 변수로 설정해야 함)
       - JWT_SECRET=${JWT_SECRET:-EzUuJwKK4vLnvk5r7yAgdNP/sa1dL87febZhlayPGjI=}
       - JWT_EXPIRY=${JWT_EXPIRY:-3600000}
       
-      # OAuth2 Configuration (should be set via environment variables in production)
+      # OAuth2 설정 (프로덕션에서는 환경 변수로 설정해야 함)
       - KAKAO_CLIENT_ID=${KAKAO_CLIENT_ID:-dummy-client-id}
       - KAKAO_CLIENT_SECRET=${KAKAO_CLIENT_SECRET:-dummy-client-secret}
     depends_on:

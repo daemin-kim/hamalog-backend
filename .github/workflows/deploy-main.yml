@@ -1,39 +1,39 @@
-name: Deploy to Production on Main Push
+name: 메인 브랜치 푸시 시 프로덕션 배포
 
-# Trigger this workflow when code is pushed to the main branch
+# 메인 브랜치에 코드가 푸시될 때 이 워크플로우를 실행
 on:
   push:
     branches:
       - main
-  # Allow manual triggering from GitHub UI
+  # GitHub UI에서 수동 트리거 허용
   workflow_dispatch:
 
-# Set environment variables that can be used across all jobs
+# 모든 작업에서 사용할 수 있는 환경 변수 설정
 env:
   REGISTRY: ghcr.io
   IMAGE_NAME: ${{ github.repository }}
 
 jobs:
   deploy:
-    name: Deploy Hamalog Application
+    name: Hamalog 애플리케이션 배포
     runs-on: ubuntu-latest
     
-    # Required permissions for the workflow
+    # 워크플로우에 필요한 권한
     permissions:
       contents: read
       packages: write
     
     steps:
-      - name: Checkout repository
+      - name: 저장소 체크아웃
         uses: actions/checkout@v4
         
-      - name: Set up Java 21
+      - name: Java 21 설정
         uses: actions/setup-java@v4
         with:
           java-version: '21'
           distribution: 'temurin'
           
-      - name: Cache Gradle packages
+      - name: Gradle 패키지 캐시
         uses: actions/cache@v4
         with:
           path: |
@@ -43,209 +43,172 @@ jobs:
           restore-keys: |
             ${{ runner.os }}-gradle-
             
-      - name: Make gradlew executable
+      - name: gradlew 실행 권한 부여
         run: chmod +x ./gradlew
         
-      - name: Validate Gradle wrapper
-        uses: gradle/wrapper-validation-action@v3
-        continue-on-error: true
-        timeout-minutes: 5
-        
-      - name: Set up Docker Buildx
-        uses: docker/setup-buildx-action@v3
-        
-      - name: Log in to Container Registry
+      - name: 애플리케이션 빌드 및 테스트
+        run: |
+          echo "🔨 애플리케이션을 빌드하고 테스트하는 중..."
+          ./gradlew clean build
+          
+      - name: 컨테이너 레지스트리 로그인
         uses: docker/login-action@v3
         with:
           registry: ${{ env.REGISTRY }}
           username: ${{ github.actor }}
           password: ${{ secrets.GITHUB_TOKEN }}
           
-      - name: Extract metadata for Docker
-        id: meta
-        uses: docker/metadata-action@v5
-        with:
-          images: ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}
-          tags: |
-            type=sha
-            type=raw,value=latest,enable={{is_default_branch}}
-            
-      - name: Build and test application
-        run: |
-          echo "🔨 Building and testing the application..."
-          ./gradlew clean build
-          
-      - name: Debug Docker metadata
-        run: |
-          echo "🔍 Docker metadata debugging:"
-          echo "  - Generated tags: ${{ steps.meta.outputs.tags }}"
-          echo "  - Generated labels: ${{ steps.meta.outputs.labels }}"
-          echo "  - Expected SHA tag: ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}:${{ github.sha }}"
-          
-      - name: Build and push Docker image
+      - name: Docker 이미지 빌드 및 푸시
         uses: docker/build-push-action@v5
         with:
           context: .
           file: ./Dockerfile
           push: true
-          tags: ${{ steps.meta.outputs.tags }}
-          labels: ${{ steps.meta.outputs.labels }}
+          tags: ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}:latest
           cache-from: type=gha
           cache-to: type=gha,mode=max
           
-      - name: Verify pushed image
+      - name: 프로덕션 서버에 배포
         run: |
-          echo "🔍 Verifying pushed image tags..."
-          echo "Expected SHA-based tag: ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}:${{ github.sha }}"
+          echo "🚀 배포 프로세스를 시작하는 중..."
           
-          # Try to inspect the SHA-based tag directly
-          if docker manifest inspect "${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}:${{ github.sha }}"; then
-            echo "✅ SHA-based tag found in registry"
-          else
-            echo "❌ SHA-based tag not found, checking what was actually pushed..."
-            echo "🔍 Checking all pushed tags:"
-            
-            # Extract all tags that were pushed
-            PUSHED_TAGS="${{ steps.meta.outputs.tags }}"
-            echo "Pushed tags: $PUSHED_TAGS"
-            
-            # Try each tag individually
-            for tag in $PUSHED_TAGS; do
-              echo "Checking tag: $tag"
-              if docker manifest inspect "$tag" > /dev/null 2>&1; then
-                echo "✅ Found: $tag"
-              else
-                echo "❌ Not found: $tag"
-              fi
-            done
-          fi
-          
-      - name: Deploy to production server
-        run: |
-          echo "🚀 Starting deployment process..."
-          
-          # Make deploy script executable (redundant but safe)
-          chmod +x ./deploy.sh
-          
-          # Verify Docker login status
-          echo "🔍 Verifying Docker registry access..."
-          docker info | grep -A5 "Registry Mirrors" || true
-          
-          # Set environment variables for production deployment
+          # 프로덕션 배포용 환경 변수 설정 (docker-build.yml과 동기화)
           export SPRING_PROFILES_ACTIVE=prod
-          export GITHUB_REPOSITORY="${{ github.repository }}"
-          export GITHUB_SHA="${{ github.sha }}"
-          export JWT_SECRET="${{ secrets.JWT_SECRET }}"
-          export JWT_EXPIRY="${{ secrets.JWT_EXPIRY }}"
-          if [ -z "$JWT_EXPIRY" ]; then export JWT_EXPIRY="3600000"; fi
-          export KAKAO_CLIENT_ID="${{ secrets.KAKAO_CLIENT_ID }}"
-          export KAKAO_CLIENT_SECRET="${{ secrets.KAKAO_CLIENT_SECRET }}"
           export MYSQL_ROOT_PASSWORD="${{ secrets.MYSQL_ROOT_PASSWORD }}"
           export DB_NAME="${{ secrets.DB_NAME }}"
-          if [ -z "$DB_NAME" ]; then export DB_NAME="Hamalog"; fi
           export DB_USERNAME="${{ secrets.DB_USERNAME }}"
-          if [ -z "$DB_USERNAME" ]; then export DB_USERNAME="hamalog_user"; fi
           export DB_PASSWORD="${{ secrets.DB_PASSWORD }}"
-          if [ -z "$DB_PASSWORD" ]; then export DB_PASSWORD="hamalog_password"; fi
+          export JWT_SECRET="${{ secrets.JWT_SECRET }}"
+          export JWT_EXPIRY="${{ secrets.JWT_EXPIRY }}"
+          export KAKAO_CLIENT_ID="${{ secrets.KAKAO_CLIENT_ID }}"
+          export KAKAO_CLIENT_SECRET="${{ secrets.KAKAO_CLIENT_SECRET }}"
           
-          # Debug environment variables (without secrets)
-          echo "🔍 Environment variables check:"
-          echo "  - GITHUB_REPOSITORY: ${GITHUB_REPOSITORY}"
-          echo "  - GITHUB_SHA: ${GITHUB_SHA}"
-          echo "  - Expected image: ghcr.io/${GITHUB_REPOSITORY}:${GITHUB_SHA}"
+          # 시크릿이 비어있을 경우 기본값 설정 (docker-build.yml 접근 방식과 일치)
+          if [ -z "$MYSQL_ROOT_PASSWORD" ]; then export MYSQL_ROOT_PASSWORD="mypassword"; fi
+          if [ -z "$DB_NAME" ]; then export DB_NAME="Hamalog"; fi
+          if [ -z "$DB_USERNAME" ]; then export DB_USERNAME="user"; fi
+          if [ -z "$DB_PASSWORD" ]; then export DB_PASSWORD="password"; fi
+          if [ -z "$JWT_SECRET" ]; then export JWT_SECRET="xcrVqYlPMcLeEoEX+h8vjxZ97lS6AETwQJXJSLJ/h8g="; fi
+          if [ -z "$JWT_EXPIRY" ]; then export JWT_EXPIRY="3600000"; fi
           
-          # Verify the image was pushed successfully
-          echo "🔍 Verifying image availability in registry..."
-          echo "Primary check: ghcr.io/${{ github.repository }}:${{ github.sha }}"
+          # 동기화된 docker-compose 설정 생성
+          cat > docker-compose.prod.yml << EOF
+          services:
+            hamalog-app:
+              image: ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}:latest
+              ports:
+                - "8080:8080"
+              environment:
+                - SPRING_PROFILES_ACTIVE=prod
+                - SPRING_DATASOURCE_URL=jdbc:mysql://mysql-hamalog:3306/\${DB_NAME}
+                - SPRING_DATASOURCE_USERNAME=\${DB_USERNAME}
+                - SPRING_DATASOURCE_PASSWORD=\${DB_PASSWORD}
+                - SPRING_DATA_REDIS_HOST=redis
+                - SPRING_DATA_REDIS_PORT=6379
+                - JWT_SECRET=\${JWT_SECRET}
+                - JWT_EXPIRY=\${JWT_EXPIRY}
+                - KAKAO_CLIENT_ID=\${KAKAO_CLIENT_ID}
+                - KAKAO_CLIENT_SECRET=\${KAKAO_CLIENT_SECRET}
+              depends_on:
+                mysql-hamalog:
+                  condition: service_healthy
+                redis:
+                  condition: service_healthy
+              restart: unless-stopped
+
+            redis:
+              image: redis:7-alpine
+              ports:
+                - "6379:6379"
+              command: redis-server --appendonly yes
+              volumes:
+                - redis-data:/data
+              restart: unless-stopped
+              healthcheck:
+                test: ["CMD", "redis-cli", "ping"]
+                interval: 30s
+                timeout: 10s
+                retries: 3
+
+            mysql-hamalog:
+              image: mysql:8.0
+              ports:
+                - "3306:3306"
+              environment:
+                - MYSQL_ROOT_PASSWORD=\${MYSQL_ROOT_PASSWORD}
+                - MYSQL_DATABASE=\${DB_NAME}
+                - MYSQL_USER=\${DB_USERNAME}
+                - MYSQL_PASSWORD=\${DB_PASSWORD}
+              volumes:
+                - mysql-data:/var/lib/mysql
+              restart: unless-stopped
+              healthcheck:
+                test: ["CMD", "mysqladmin", "ping", "-h", "localhost", "-u", "root", "-p\${MYSQL_ROOT_PASSWORD}"]
+                interval: 30s
+                timeout: 10s
+                retries: 3
+
+          volumes:
+            mysql-data:
+            redis-data:
+          EOF
           
-          if docker manifest inspect ghcr.io/${{ github.repository }}:${{ github.sha }}; then
-            echo "✅ Primary SHA-based image found in registry"
-          else
-            echo "❌ Primary SHA-based image not found in registry"
-            echo "🔍 This might be due to:"
-            echo "  1. Build/push step failed"
-            echo "  2. Registry authentication issues" 
-            echo "  3. Tag mismatch between build and deploy steps"
-            
-            echo "🔍 Checking alternative tag formats..."
-            # Try with sha- prefix
-            if docker manifest inspect "ghcr.io/${{ github.repository }}:sha-${{ github.sha }}" > /dev/null 2>&1; then
-              echo "✅ Found alternative format: ghcr.io/${{ github.repository }}:sha-${{ github.sha }}"
-            else
-              echo "❌ Alternative format not found either"
-            fi
-            
-            echo "🔍 Checking available tags in registry:"
-            curl -s -H "Authorization: Bearer ${{ secrets.GITHUB_TOKEN }}" \
-              "https://ghcr.io/v2/${{ github.repository }}/tags/list" | jq -r '.tags[]? // empty' | head -10
-            if [ $? -ne 0 ]; then
-              echo "Failed to fetch registry tags, trying alternative method..."
-              docker search ghcr.io/${{ github.repository }} || true
-            fi
-            
-            echo "🔍 Registry connectivity test:"
-            curl -s -I "https://ghcr.io/v2/" && echo "✅ Registry accessible" || echo "❌ Registry access failed"
-            
-            echo "⚠️  Deploy script will attempt multiple tag formats and fallbacks"
-          fi
+          # 기존 컨테이너 중지
+          echo "🛑 기존 컨테이너를 중지하는 중..."
+          docker compose -p hamalog -f docker-compose.prod.yml down --remove-orphans || true
           
-          # Run the deployment script
-          ./deploy.sh
+          # 최신 이미지 가져오기
+          echo "⬇️ 최신 이미지를 가져오는 중..."
+          docker pull ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}:latest
           
-      - name: Post-deployment verification
+          # 서비스 시작
+          echo "🚀 서비스를 시작하는 중..."
+          docker compose -p hamalog -f docker-compose.prod.yml up -d
+          
+      - name: 배포 확인
         run: |
-          echo "✅ Verifying deployment..."
+          echo "✅ 배포를 확인하는 중..."
           
-          # Wait for application to fully start
+          # 애플리케이션 시작 대기
           sleep 30
           
-          # Check if containers are running
-          docker compose -p hamalog ps
+          # 컨테이너 상태 확인
+          docker compose -p hamalog -f docker-compose.prod.yml ps
           
-          # Try to connect to the application (basic connectivity test)
+          # 기본 상태 확인
           max_attempts=10
           attempt=1
           
           while [ $attempt -le $max_attempts ]; do
-            echo "Attempt $attempt: Testing application connectivity..."
+            echo "시도 $attempt: 애플리케이션 테스트 중..."
             
-            if curl -f -s -m 10 http://localhost:8080/ >/dev/null 2>&1 || \
-               curl -f -s -m 10 http://localhost:8080/actuator/health >/dev/null 2>&1; then
-              echo "✅ Application is responding successfully!"
+            if curl -f -s -m 10 http://localhost:8080/actuator/health >/dev/null 2>&1; then
+              echo "✅ 애플리케이션이 정상 상태입니다!"
               break
             fi
             
             if [ $attempt -eq $max_attempts ]; then
-              echo "❌ Application health check failed after $max_attempts attempts"
-              echo "📋 Application logs:"
-              docker compose -p hamalog logs hamalog-app --tail=100
+              echo "❌ 상태 확인 실패"
+              docker compose -p hamalog -f docker-compose.prod.yml logs hamalog-app --tail=50
               exit 1
             fi
             
-            echo "⏳ Waiting 10 seconds before next attempt..."
             sleep 10
             attempt=$((attempt + 1))
           done
           
-      - name: Cleanup old Docker images
+      - name: 정리 작업
         run: |
-          echo "🧹 Cleaning up old Docker images to save disk space..."
-          
-          # Remove dangling images
+          echo "🧹 정리 작업 중..."
+          rm -f docker-compose.prod.yml
           docker image prune -f || true
           
-          # Keep only the 3 most recent images of this repository
-          docker images ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }} --format "{{.ID}} {{.CreatedAt}}" | \
-            sort -k2 -r | tail -n +4 | awk '{print $1}' | xargs -r docker rmi || true
-            
-      - name: Send deployment notification
+      - name: 배포 알림
         if: always()
         run: |
           if [ "${{ job.status }}" = "success" ]; then
-            echo "🎉 Deployment completed successfully!"
-            echo "✅ Hamalog application is now running with the latest changes from main branch"
-            echo "🌐 Application URL: http://localhost:8080"
+            echo "🎉 배포가 성공적으로 완료되었습니다!"
+            echo "🌐 애플리케이션 URL: http://localhost:8080"
           else
-            echo "❌ Deployment failed!"
-            echo "🔍 Check the logs above for error details"
+            echo "❌ 배포에 실패했습니다!"
           fi

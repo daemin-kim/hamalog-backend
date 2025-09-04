@@ -1,31 +1,31 @@
 #!/bin/bash
 
-# Hamalog Production Deployment Script
-# This script handles the deployment of the Hamalog application using Docker Compose
+# Hamalog 프로덕션 배포 스크립트
+# 이 스크립트는 Docker Compose를 사용하여 Hamalog 애플리케이션 배포를 처리합니다
 
-set -euo pipefail  # Exit on any error, undefined variable, or pipe failure
+set -euo pipefail  # 오류, 정의되지 않은 변수, 파이프 실패 시 종료
 
-# Configuration
+# 설정
 PROJECT_NAME="hamalog"
 REGISTRY="ghcr.io"
 IMAGE_NAME="${REGISTRY}/${GITHUB_REPOSITORY:-daemin-kim/hamalog-backend}"
 IMAGE_TAG="${GITHUB_SHA:-latest}"
 COMPOSE_FILE="docker-compose.prod.yml"
 
-echo "🚀 Starting Hamalog deployment process..."
-echo "📋 Deployment Configuration:"
-echo "   - Registry: ${REGISTRY}"
-echo "   - Image: ${IMAGE_NAME}:${IMAGE_TAG}"
-echo "   - Project: ${PROJECT_NAME}"
+echo "🚀 Hamalog 배포 프로세스를 시작합니다..."
+echo "📋 배포 설정:"
+echo "   - 레지스트리: ${REGISTRY}"
+echo "   - 이미지: ${IMAGE_NAME}:${IMAGE_TAG}"
+echo "   - 프로젝트: ${PROJECT_NAME}"
 
-# Function to handle cleanup on script exit
+# 스크립트 종료 시 정리 작업을 처리하는 함수
 cleanup() {
     local exit_code=$?
     if [ $exit_code -ne 0 ]; then
-        echo "❌ Deployment failed with exit code: $exit_code"
-        echo "🔍 Checking container status..."
+        echo "❌ 배포가 실패했습니다. 종료 코드: $exit_code"
+        echo "🔍 컨테이너 상태를 확인하는 중..."
         docker compose -p ${PROJECT_NAME} ps || true
-        echo "📋 Recent logs:"
+        echo "📋 최근 로그:"
         docker compose -p ${PROJECT_NAME} logs --tail=50 || true
     fi
     exit $exit_code
@@ -33,8 +33,8 @@ cleanup() {
 
 trap cleanup EXIT
 
-# Step 1: Create production docker-compose file
-echo "📝 Creating production docker-compose configuration..."
+# 1단계: 프로덕션 docker-compose 파일 생성
+echo "📝 프로덕션 docker-compose 설정을 생성하는 중..."
 cat > ${COMPOSE_FILE} << EOF
 services:
   hamalog-app:
@@ -114,121 +114,121 @@ volumes:
   hamalog-uploads:
 EOF
 
-echo "✅ Production docker-compose configuration created"
+echo "✅ 프로덕션 docker-compose 설정이 생성되었습니다"
 
-# Step 2: Stop and remove existing containers
-echo "🛑 Stopping existing containers..."
+# 2단계: 기존 컨테이너 중지 및 제거
+echo "🛑 기존 컨테이너를 중지하는 중..."
 if docker compose -p ${PROJECT_NAME} ps -q | grep -q .; then
     docker compose -p ${PROJECT_NAME} down --remove-orphans || {
-        echo "⚠️  Failed to gracefully stop containers, forcing removal..."
+        echo "⚠️  컨테이너를 정상적으로 중지하지 못했습니다. 강제 제거 중..."
         docker compose -p ${PROJECT_NAME} kill || true
         docker compose -p ${PROJECT_NAME} rm -f || true
     }
-    echo "✅ Existing containers stopped and removed"
+    echo "✅ 기존 컨테이너가 중지되고 제거되었습니다"
 else
-    echo "ℹ️  No existing containers found"
+    echo "ℹ️  기존 컨테이너를 찾을 수 없습니다"
 fi
 
-# Step 3: Pull the latest images
-echo "⬇️  Pulling latest images..."
-echo "🔍 Target image: ${IMAGE_NAME}:${IMAGE_TAG}"
+# 3단계: 최신 이미지 가져오기
+echo "⬇️  최신 이미지를 가져오는 중..."
+echo "🔍 대상 이미지: ${IMAGE_NAME}:${IMAGE_TAG}"
 
-# Check if the specific image exists in the registry first
-echo "🔍 Checking if image exists in registry..."
-echo "Primary target: ${IMAGE_NAME}:${IMAGE_TAG}"
+# 레지스트리에 특정 이미지가 존재하는지 먼저 확인
+echo "🔍 레지스트리에서 이미지 존재 여부를 확인하는 중..."
+echo "주요 대상: ${IMAGE_NAME}:${IMAGE_TAG}"
 
-# Try the primary SHA-based tag first
+# 주요 SHA 기반 태그를 먼저 시도
 if docker manifest inspect "${IMAGE_NAME}:${IMAGE_TAG}" > /dev/null 2>&1; then
-    echo "✅ Found primary SHA-based tag: ${IMAGE_NAME}:${IMAGE_TAG}"
+    echo "✅ 주요 SHA 기반 태그를 찾았습니다: ${IMAGE_NAME}:${IMAGE_TAG}"
 else
-    echo "❌ Primary SHA-based tag not found: ${IMAGE_NAME}:${IMAGE_TAG}"
+    echo "❌ 주요 SHA 기반 태그를 찾을 수 없습니다: ${IMAGE_NAME}:${IMAGE_TAG}"
     
-    # Check if there are any recent tags that might match
-    echo "🔍 Checking for alternative tags..."
+    # 일치할 수 있는 최근 태그가 있는지 확인
+    echo "🔍 대체 태그를 확인하는 중..."
     
-    # Try with sha- prefix (in case metadata-action adds prefix)
+    # sha- 접두사로 시도 (metadata-action이 접두사를 추가하는 경우)
     ALT_TAG="sha-${IMAGE_TAG}"
-    echo "Trying alternative tag: ${IMAGE_NAME}:${ALT_TAG}"
+    echo "대체 태그 시도 중: ${IMAGE_NAME}:${ALT_TAG}"
     if docker manifest inspect "${IMAGE_NAME}:${ALT_TAG}" > /dev/null 2>&1; then
-        echo "✅ Found alternative SHA tag: ${IMAGE_NAME}:${ALT_TAG}"
+        echo "✅ 대체 SHA 태그를 찾았습니다: ${IMAGE_NAME}:${ALT_TAG}"
         IMAGE_TAG="${ALT_TAG}"
         sed -i "s|image: ${IMAGE_NAME}:.*|image: ${IMAGE_NAME}:${IMAGE_TAG}|" ${COMPOSE_FILE}
     else
-        echo "❌ Alternative SHA tag not found either"
+        echo "❌ 대체 SHA 태그도 찾을 수 없습니다"
         
-        # Try latest as final fallback
-        echo "🔄 Attempting to use 'latest' tag as final fallback..."
+        # 최종 대체 방안으로 latest 시도
+        echo "🔄 최종 대체 방안으로 'latest' 태그 사용을 시도하는 중..."
         if docker manifest inspect "${IMAGE_NAME}:latest" > /dev/null 2>&1; then
             IMAGE_TAG="latest"
-            echo "✅ Using latest tag: ${IMAGE_NAME}:${IMAGE_TAG}"
+            echo "✅ latest 태그를 사용합니다: ${IMAGE_NAME}:${IMAGE_TAG}"
             sed -i "s|image: ${IMAGE_NAME}:.*|image: ${IMAGE_NAME}:${IMAGE_TAG}|" ${COMPOSE_FILE}
         else
-            echo "❌ Even 'latest' tag not found. This indicates a serious build/push issue."
-            echo "🔍 Checking registry connectivity..."
-            curl -s "https://ghcr.io/v2/" > /dev/null && echo "✅ Registry is accessible" || echo "❌ Registry access failed"
+            echo "❌ 'latest' 태그도 찾을 수 없습니다. 심각한 빌드/푸시 문제를 나타냅니다."
+            echo "🔍 레지스트리 연결성을 확인하는 중..."
+            curl -s "https://ghcr.io/v2/" > /dev/null && echo "✅ 레지스트리에 접근 가능합니다" || echo "❌ 레지스트리 접근이 실패했습니다"
         fi
     fi
 fi
 
-echo "📝 Final target image: ${IMAGE_NAME}:${IMAGE_TAG}"
+echo "📝 최종 대상 이미지: ${IMAGE_NAME}:${IMAGE_TAG}"
 
 docker compose -f ${COMPOSE_FILE} -p ${PROJECT_NAME} pull || {
-    echo "❌ Failed to pull images. Checking if images exist locally..."
+    echo "❌ 이미지를 가져오는데 실패했습니다. 로컬에 이미지가 있는지 확인하는 중..."
     
-    # List all images with this repository name
-    echo "🔍 Local images for repository ${IMAGE_NAME}:"
-    docker images "${IMAGE_NAME}" 2>/dev/null || echo "No local images found for ${IMAGE_NAME}"
+    # 이 저장소 이름을 가진 모든 이미지 나열
+    echo "🔍 저장소 ${IMAGE_NAME}의 로컬 이미지:"
+    docker images "${IMAGE_NAME}" 2>/dev/null || echo "${IMAGE_NAME}에 대한 로컬 이미지를 찾을 수 없습니다"
     
-    # Check if specific tag exists locally
+    # 특정 태그가 로컬에 존재하는지 확인
     if docker images "${IMAGE_NAME}:${IMAGE_TAG}" --format "{{.Repository}}:{{.Tag}}" | grep -q "${IMAGE_NAME}:${IMAGE_TAG}"; then
-        echo "ℹ️  Using local image ${IMAGE_NAME}:${IMAGE_TAG}"
+        echo "ℹ️  로컬 이미지 ${IMAGE_NAME}:${IMAGE_TAG}를 사용합니다"
     else
-        echo "❌ Image ${IMAGE_NAME}:${IMAGE_TAG} not found locally either"
-        echo "🔍 Listing all available local images:"
+        echo "❌ 이미지 ${IMAGE_NAME}:${IMAGE_TAG}를 로컬에서도 찾을 수 없습니다"
+        echo "🔍 사용 가능한 모든 로컬 이미지 나열:"
         docker images | head -20
         exit 1
     fi
 }
 
-# Step 4: Start the application
-echo "🚀 Starting application services..."
+# 4단계: 애플리케이션 시작
+echo "🚀 애플리케이션 서비스를 시작하는 중..."
 docker compose -f ${COMPOSE_FILE} -p ${PROJECT_NAME} up -d
 
-# Step 5: Wait for services to be healthy
-echo "⏳ Waiting for services to be ready..."
+# 5단계: 서비스가 정상 상태가 될 때까지 대기
+echo "⏳ 서비스가 준비될 때까지 대기 중..."
 max_wait=300  # 5 minutes (increased for database initialization)
 wait_time=0
 
-echo "🔍 Checking service dependencies first..."
-echo "  - MySQL healthcheck interval: 30s"
-echo "  - Redis healthcheck interval: 30s" 
-echo "  - Application healthcheck interval: 30s"
-echo "  - Expected total startup time: ~2-3 minutes"
+echo "🔍 서비스 의존성을 먼저 확인하는 중..."
+echo "  - MySQL 상태 확인 간격: 30초"
+echo "  - Redis 상태 확인 간격: 30초" 
+echo "  - 애플리케이션 상태 확인 간격: 30초"
+echo "  - 예상 총 시작 시간: ~2-3분"
 
 while [ $wait_time -lt $max_wait ]; do
-    # Check individual service health status
+    # 개별 서비스 상태 확인
     mysql_healthy=$(docker compose -f ${COMPOSE_FILE} -p ${PROJECT_NAME} ps mysql-hamalog --format "{{.Health}}" 2>/dev/null || echo "starting")
     redis_healthy=$(docker compose -f ${COMPOSE_FILE} -p ${PROJECT_NAME} ps redis --format "{{.Health}}" 2>/dev/null || echo "starting")
     app_healthy=$(docker compose -f ${COMPOSE_FILE} -p ${PROJECT_NAME} ps hamalog-app --format "{{.Health}}" 2>/dev/null || echo "starting")
     
-    echo "⏳ Service health status (${wait_time}s/${max_wait}s):"
+    echo "⏳ 서비스 상태 (${wait_time}초/${max_wait}초):"
     echo "  - MySQL: ${mysql_healthy}"
     echo "  - Redis: ${redis_healthy}"
-    echo "  - Application: ${app_healthy}"
+    echo "  - 애플리케이션: ${app_healthy}"
     
     if [ "$app_healthy" = "healthy" ]; then
-        echo "✅ Application is healthy and ready!"
+        echo "✅ 애플리케이션이 정상 상태이며 준비되었습니다!"
         break
     fi
     
-    # Show more details if taking too long
+    # 너무 오래 걸리면 더 자세한 정보 표시
     if [ $wait_time -gt 120 ]; then
-        echo "🔍 Detailed service status:"
+        echo "🔍 자세한 서비스 상태:"
         docker compose -f ${COMPOSE_FILE} -p ${PROJECT_NAME} ps
         
-        # Show app logs if it's been trying for a while
+        # 너무 오래 시도하고 있으면 앱 로그 표시
         if [ $wait_time -gt 180 ]; then
-            echo "📋 Recent application logs:"
+            echo "📋 최근 애플리케이션 로그:"
             docker compose -f ${COMPOSE_FILE} -p ${PROJECT_NAME} logs hamalog-app --tail=20
         fi
     fi
@@ -238,23 +238,23 @@ while [ $wait_time -lt $max_wait ]; do
 done
 
 if [ $wait_time -ge $max_wait ]; then
-    echo "❌ Services did not become healthy within ${max_wait} seconds"
-    echo "📋 Final service status:"
+    echo "❌ 서비스가 ${max_wait}초 내에 정상 상태가 되지 않았습니다"
+    echo "📋 최종 서비스 상태:"
     docker compose -f ${COMPOSE_FILE} -p ${PROJECT_NAME} ps
-    echo "📋 Application logs:"
+    echo "📋 애플리케이션 로그:"
     docker compose -f ${COMPOSE_FILE} -p ${PROJECT_NAME} logs hamalog-app --tail=100
     exit 1
 fi
 
-# Step 6: Final verification
-echo "🔍 Final deployment verification..."
+# 6단계: 최종 확인
+echo "🔍 최종 배포 확인 중..."
 docker compose -f ${COMPOSE_FILE} -p ${PROJECT_NAME} ps
 
-echo "🎉 Deployment completed successfully!"
-echo "✅ Hamalog application is now running"
-echo "🌐 Application should be accessible at: http://localhost:8080"
-echo "📊 Health check endpoint: http://localhost:8080/actuator/health"
+echo "🎉 배포가 성공적으로 완료되었습니다!"
+echo "✅ Hamalog 애플리케이션이 현재 실행 중입니다"
+echo "🌐 애플리케이션 접근 주소: http://localhost:8080"
+echo "📊 상태 확인 엔드포인트: http://localhost:8080/actuator/health"
 
-# Cleanup temporary files
+# 임시 파일 정리
 rm -f ${COMPOSE_FILE}
-echo "🧹 Cleanup completed"
+echo "🧹 정리 작업이 완료되었습니다"

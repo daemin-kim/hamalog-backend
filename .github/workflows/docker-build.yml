@@ -39,7 +39,7 @@ jobs:
         with:
           context: .
           push: true
-          tags: ghcr.io/${{ github.repository }}/hamalog-app:latest
+          tags: ghcr.io/${{ github.repository }}:latest
           file: Dockerfile
 
       - name: 서버에 배포
@@ -58,10 +58,10 @@ jobs:
               --network hamalog-network `
               -v C:/redis-data:/data `
               redis:7-alpine redis-server --appendonly yes
-            Write-Output "Redis 컨테이너 생성됨"
+            Write-Output "Redis 컨테이너가 생성되었습니다"
             Start-Sleep -Seconds 5  # Redis 부팅 대기
           } else {
-            Write-Output "Redis 컨테이너 이미 존재함"
+            Write-Output "Redis 컨테이너가 이미 존재합니다"
           }
 
           # 3. MySQL 컨테이너가 없으면 실행
@@ -76,10 +76,10 @@ jobs:
               -p 3306:3306 `
               --network hamalog-network `
               mysql:8.0
-            Write-Output "MySQL 컨테이너 생성됨"
+            Write-Output "MySQL 컨테이너가 생성되었습니다"
             Start-Sleep -Seconds 20  # MySQL 부팅 대기
           } else {
-            Write-Output "MySQL 컨테이너 이미 존재함"
+            Write-Output "MySQL 컨테이너가 이미 존재합니다"
           }
 
           # 4. 기존 앱 컨테이너 정리
@@ -87,7 +87,7 @@ jobs:
           docker rm hamalog-container -ErrorAction SilentlyContinue
 
           # 5. 최신 Spring Boot 앱 이미지 pull
-          docker pull ghcr.io/daemin-kim/hamalog-backend/hamalog-app:latest
+          docker pull ghcr.io/daemin-kim/hamalog-backend:latest
 
           # 6. 앱 컨테이너 실행
           docker run -d `
@@ -103,7 +103,7 @@ jobs:
             -e JWT_EXPIRY=3600000 `
             -e KAKAO_CLIENT_ID=${{ secrets.KAKAO_CLIENT_ID }} `
             -e KAKAO_CLIENT_SECRET=${{ secrets.KAKAO_CLIENT_SECRET }} `
-            ghcr.io/daemin-kim/hamalog-backend/hamalog-app:latest
+            ghcr.io/daemin-kim/hamalog-backend:latest
 
           Start-Sleep -Seconds 10
           docker logs hamalog-container

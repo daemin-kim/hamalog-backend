@@ -75,6 +75,23 @@ public class OAuth2EmptyVariableHandler implements EnvironmentPostProcessor {
             log.info("[DEBUG_LOG] KAKAO_REDIRECT_URI found: {}", kakaoRedirectUri);
         }
 
+        // Handle FRONTEND_URL for OAuth2 success handler redirect
+        String frontendUrl = environment.getProperty("FRONTEND_URL");
+        if (frontendUrl == null || frontendUrl.trim().isEmpty()) {
+            String[] activeProfiles = environment.getActiveProfiles();
+            boolean isProduction = java.util.Arrays.asList(activeProfiles).contains("prod");
+            
+            String fallbackFrontendUrl = isProduction ? 
+                "http://112.72.248.195:3000" : 
+                "http://localhost:3000";
+            
+            customProperties.put("hamalog.oauth2.redirect-uri", fallbackFrontendUrl + "/oauth/kakao");
+            log.info("[DEBUG_LOG] FRONTEND_URL is null/empty, using fallback: {}/oauth/kakao", fallbackFrontendUrl);
+        } else {
+            customProperties.put("hamalog.oauth2.redirect-uri", frontendUrl + "/oauth/kakao");
+            log.info("[DEBUG_LOG] FRONTEND_URL found, setting OAuth2 redirect: {}/oauth/kakao", frontendUrl);
+        }
+
         if (!customProperties.isEmpty()) {
             MapPropertySource propertySource = new MapPropertySource("oauth2EmptyVariableHandler", customProperties);
             environment.getPropertySources().addFirst(propertySource);

@@ -29,7 +29,7 @@ public class OAuth2AuthenticationSuccessHandler implements AuthenticationSuccess
     private static final List<String> ALLOWED_REDIRECT_HOSTS = Arrays.asList(
         "localhost",
         "127.0.0.1",
-        "yourdomain.com"  // TODO: Replace with actual production domain
+        "112.72.248.195" // Production server IP
     );
 
     public OAuth2AuthenticationSuccessHandler(

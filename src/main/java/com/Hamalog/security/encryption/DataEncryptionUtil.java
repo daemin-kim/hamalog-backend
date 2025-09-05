@@ -27,21 +27,24 @@ public class DataEncryptionUtil {
 
     private SecretKey initializeSecretKey(String encryptionKey) {
         if (encryptionKey == null || encryptionKey.isBlank()) {
-            // Generate a new key for development/testing - in production, this should come from environment
-            try {
-                KeyGenerator keyGenerator = KeyGenerator.getInstance(ALGORITHM);
-                keyGenerator.init(256);
-                return keyGenerator.generateKey();
-            } catch (Exception e) {
-                throw new IllegalStateException("Failed to generate encryption key", e);
+            // Security Fix: Make encryption key mandatory to prevent data loss
+            throw new IllegalStateException(
+                "암호화 키는 반드시 설정되어야 합니다. " +
+                "hamalog.encryption.key 환경 변수에 256비트 Base64 인코딩된 키를 설정하세요. " +
+                "키 생성 방법: openssl rand -base64 32"
+            );
+        }
+        
+        try {
+            byte[] decodedKey = Base64.getDecoder().decode(encryptionKey);
+            if (decodedKey.length != 32) {
+                throw new IllegalStateException("암호화 키는 정확히 256비트(32바이트)여야 합니다.");
             }
-        } else {
-            try {
-                byte[] decodedKey = Base64.getDecoder().decode(encryptionKey);
-                return new SecretKeySpec(decodedKey, ALGORITHM);
-            } catch (Exception e) {
-                throw new IllegalStateException("Invalid encryption key format", e);
-            }
+            return new SecretKeySpec(decodedKey, ALGORITHM);
+        } catch (IllegalArgumentException e) {
+            throw new IllegalStateException("암호화 키는 유효한 Base64 형식이어야 합니다.", e);
+        } catch (Exception e) {
+            throw new IllegalStateException("암호화 키 초기화 중 오류가 발생했습니다.", e);
         }
     }
 

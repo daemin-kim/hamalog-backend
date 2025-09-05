@@ -49,7 +49,7 @@ public class ApiLoggingAspect {
             
             String performanceText = getPerformanceText(elapsed);
             log.info("API Success: {} | User: {} | Time: {}ms {} | Result: {}",
-                    methodName, user, elapsed, performanceText, shorten(result));
+                    methodName, user, elapsed, performanceText, sanitizeResult(result));
             return result;
         } catch (Exception e) {
             long elapsed = System.currentTimeMillis() - startTime;
@@ -115,5 +115,25 @@ public class ApiLoggingAspect {
         if (elapsed < 1000) return "MODERATE"; // Moderate
         if (elapsed < 3000) return "SLOW"; // Slow
         return "VERY_SLOW"; // Very slow
+    }
+    
+    /**
+     * Security Fix: Sanitize API response results to prevent sensitive data exposure in logs
+     */
+    private String sanitizeResult(Object result) {
+        if (result == null) return "null";
+        
+        // For security reasons, avoid logging detailed response content
+        // that might contain sensitive user data
+        String className = result.getClass().getSimpleName();
+        
+        // Check if result is a collection/list
+        if (result instanceof java.util.Collection) {
+            int size = ((java.util.Collection<?>) result).size();
+            return String.format("[Collection<%s> size=%d]", className, size);
+        }
+        
+        // For individual response objects, just log the type
+        return String.format("[%s response - details hidden for security]", className);
     }
 }

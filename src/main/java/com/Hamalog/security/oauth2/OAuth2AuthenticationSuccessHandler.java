@@ -12,21 +12,49 @@ import org.springframework.security.web.authentication.AuthenticationSuccessHand
 import org.springframework.stereotype.Component;
 
 import java.io.IOException;
+import java.net.MalformedURLException;
+import java.net.URL;
 import java.net.URLEncoder;
 import java.nio.charset.StandardCharsets;
+import java.util.Arrays;
+import java.util.List;
 
 @Component
 public class OAuth2AuthenticationSuccessHandler implements AuthenticationSuccessHandler {
 
     private final JwtTokenProvider jwtTokenProvider;
     private final String redirectBase;
+    
+    // Security Fix: Define allowed redirect domains to prevent open redirect attacks
+    private static final List<String> ALLOWED_REDIRECT_HOSTS = Arrays.asList(
+        "localhost",
+        "127.0.0.1",
+        "yourdomain.com"  // TODO: Replace with actual production domain
+    );
 
     public OAuth2AuthenticationSuccessHandler(
             JwtTokenProvider jwtTokenProvider,
             @Value("${hamalog.oauth2.redirect-uri:http://localhost:3000/oauth/kakao}") String redirectBase
     ) {
         this.jwtTokenProvider = jwtTokenProvider;
+        // Validate redirect URI on startup
+        if (!isValidRedirectUri(redirectBase)) {
+            throw new IllegalStateException("Invalid OAuth2 redirect URI configured: " + redirectBase);
+        }
         this.redirectBase = redirectBase;
+    }
+    
+    /**
+     * Security Fix: Validate redirect URI to prevent open redirect attacks
+     */
+    private boolean isValidRedirectUri(String uri) {
+        try {
+            URL url = new URL(uri);
+            String host = url.getHost();
+            return ALLOWED_REDIRECT_HOSTS.contains(host);
+        } catch (MalformedURLException e) {
+            return false;
+        }
     }
 
     @Override

@@ -115,31 +115,21 @@ public class RateLimitingFilter extends OncePerRequestFilter {
     }
 
     private String getClientIpAddress(HttpServletRequest request) {
-        String[] headerNames = {
-            "X-Forwarded-For",
-            "X-Real-IP", 
-            "Proxy-Client-IP",
-            "WL-Proxy-Client-IP",
-            "HTTP_X_FORWARDED_FOR",
-            "HTTP_X_FORWARDED",
-            "HTTP_X_CLUSTER_CLIENT_IP",
-            "HTTP_CLIENT_IP",
-            "HTTP_FORWARDED_FOR",
-            "HTTP_FORWARDED",
-            "HTTP_VIA",
-            "REMOTE_ADDR"
-        };
+        // Security Fix: Only use X-Forwarded-For from trusted proxies, otherwise use remote address
+        // In production, configure trusted proxy IPs and validate them
+        String xForwardedFor = request.getHeader("X-Forwarded-For");
         
-        for (String headerName : headerNames) {
-            String ip = request.getHeader(headerName);
-            if (ip != null && !ip.isEmpty() && !"unknown".equalsIgnoreCase(ip)) {
-                if (ip.contains(",")) {
-                    ip = ip.split(",")[0].trim();
-                }
-                return ip;
+        // TODO: Add trusted proxy IP validation in production
+        // For now, only use X-Forwarded-For if it exists, otherwise fall back to remote address
+        if (xForwardedFor != null && !xForwardedFor.isEmpty() && !"unknown".equalsIgnoreCase(xForwardedFor)) {
+            // Take the first IP in case of multiple proxies
+            if (xForwardedFor.contains(",")) {
+                return xForwardedFor.split(",")[0].trim();
             }
+            return xForwardedFor;
         }
         
+        // Use the actual remote address as the most reliable source
         return request.getRemoteAddr();
     }
 

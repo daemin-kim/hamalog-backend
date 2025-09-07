@@ -1,0 +1,278 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<configuration>
+    <!-- Property definitions for different environments -->
+    <springProfile name="!prod">
+        <property name="LOG_PATTERN" value="%d{yyyy-MM-dd HH:mm:ss.SSS} [%thread] %-5level [%X{requestId:-}] %logger{36} - %msg%n"/>
+        <property name="LOG_LEVEL_ROOT" value="INFO"/>
+        <property name="LOG_LEVEL_APP" value="DEBUG"/>
+    </springProfile>
+    
+    <springProfile name="prod">
+        <property name="LOG_LEVEL_ROOT" value="WARN"/>
+        <property name="LOG_LEVEL_APP" value="INFO"/>
+    </springProfile>
+
+    <!-- Console appender for development -->
+    <springProfile name="!prod">
+        <appender name="CONSOLE" class="ch.qos.logback.core.ConsoleAppender">
+            <encoder>
+                <pattern>${LOG_PATTERN}</pattern>
+                <charset>UTF-8</charset>
+            </encoder>
+        </appender>
+    </springProfile>
+
+    <!-- JSON Console appender for production -->
+    <springProfile name="prod">
+        <appender name="JSON_CONSOLE" class="ch.qos.logback.core.ConsoleAppender">
+            <encoder class="net.logstash.logback.encoder.LoggingEventCompositeJsonEncoder">
+                <providers>
+                    <timestamp>
+                        <timeZone>UTC</timeZone>
+                    </timestamp>
+                    <version/>
+                    <logLevel/>
+                    <message/>
+                    <mdc/>
+                    <loggerName/>
+                    <thread/>
+                    <pattern>
+                        <pattern>
+                            {
+                                "app_name": "hamalog",
+                                "app_version": "${APP_VERSION:-1.0.0}",
+                                "environment": "${SPRING_PROFILES_ACTIVE:-unknown}",
+                                "host": "${HOSTNAME:-unknown}",
+                                "instance_id": "${INSTANCE_ID:-unknown}"
+                            }
+                        </pattern>
+                    </pattern>
+                    <stackTrace/>
+                </providers>
+            </encoder>
+        </appender>
+    </springProfile>
+
+    <!-- File appender for all environments -->
+    <appender name="FILE" class="ch.qos.logback.core.rolling.RollingFileAppender">
+        <file>${LOG_DIR:-./logs}/hamalog.log</file>
+        <rollingPolicy class="ch.qos.logback.core.rolling.TimeBasedRollingPolicy">
+            <fileNamePattern>${LOG_DIR:-./logs}/hamalog.%d{yyyy-MM-dd}.%i.log</fileNamePattern>
+            <timeBasedFileNamingAndTriggeringPolicy class="ch.qos.logback.core.rolling.SizeAndTimeBasedFNATP">
+                <maxFileSize>100MB</maxFileSize>
+            </timeBasedFileNamingAndTriggeringPolicy>
+            <maxHistory>30</maxHistory>
+            <totalSizeCap>3GB</totalSizeCap>
+        </rollingPolicy>
+        
+        <springProfile name="!prod">
+            <encoder>
+                <pattern>${LOG_PATTERN}</pattern>
+                <charset>UTF-8</charset>
+            </encoder>
+        </springProfile>
+        
+        <springProfile name="prod">
+            <encoder class="net.logstash.logback.encoder.LoggingEventCompositeJsonEncoder">
+                <providers>
+                    <timestamp>
+                        <timeZone>UTC</timeZone>
+                    </timestamp>
+                    <version/>
+                    <logLevel/>
+                    <message/>
+                    <mdc/>
+                    <loggerName/>
+                    <thread/>
+                    <pattern>
+                        <pattern>
+                            {
+                                "app_name": "hamalog",
+                                "app_version": "${APP_VERSION:-1.0.0}",
+                                "environment": "${SPRING_PROFILES_ACTIVE:-unknown}",
+                                "host": "${HOSTNAME:-unknown}",
+                                "instance_id": "${INSTANCE_ID:-unknown}"
+                            }
+                        </pattern>
+                    </pattern>
+                    <stackTrace/>
+                </providers>
+            </encoder>
+        </springProfile>
+    </appender>
+
+    <!-- Separate appender for audit logs -->
+    <appender name="AUDIT_FILE" class="ch.qos.logback.core.rolling.RollingFileAppender">
+        <file>${LOG_DIR:-./logs}/audit.log</file>
+        <rollingPolicy class="ch.qos.logback.core.rolling.TimeBasedRollingPolicy">
+            <fileNamePattern>${LOG_DIR:-./logs}/audit.%d{yyyy-MM-dd}.%i.log</fileNamePattern>
+            <timeBasedFileNamingAndTriggeringPolicy class="ch.qos.logback.core.rolling.SizeAndTimeBasedFNATP">
+                <maxFileSize>100MB</maxFileSize>
+            </timeBasedFileNamingAndTriggeringPolicy>
+            <maxHistory>365</maxHistory>
+            <totalSizeCap>10GB</totalSizeCap>
+        </rollingPolicy>
+        
+        <encoder class="net.logstash.logback.encoder.LoggingEventCompositeJsonEncoder">
+            <providers>
+                <timestamp>
+                    <timeZone>UTC</timeZone>
+                </timestamp>
+                <version/>
+                <logLevel/>
+                <message/>
+                <mdc/>
+                <loggerName/>
+                <thread/>
+                <pattern>
+                    <pattern>
+                        {
+                            "log_type": "AUDIT",
+                            "app_name": "hamalog",
+                            "app_version": "${APP_VERSION:-1.0.0}",
+                            "environment": "${SPRING_PROFILES_ACTIVE:-unknown}",
+                            "host": "${HOSTNAME:-unknown}",
+                            "instance_id": "${INSTANCE_ID:-unknown}"
+                        }
+                    </pattern>
+                </pattern>
+                <stackTrace/>
+            </providers>
+        </encoder>
+    </appender>
+
+    <!-- Separate appender for security logs -->
+    <appender name="SECURITY_FILE" class="ch.qos.logback.core.rolling.RollingFileAppender">
+        <file>${LOG_DIR:-./logs}/security.log</file>
+        <rollingPolicy class="ch.qos.logback.core.rolling.TimeBasedRollingPolicy">
+            <fileNamePattern>${LOG_DIR:-./logs}/security.%d{yyyy-MM-dd}.%i.log</fileNamePattern>
+            <timeBasedFileNamingAndTriggeringPolicy class="ch.qos.logback.core.rolling.SizeAndTimeBasedFNATP">
+                <maxFileSize>100MB</maxFileSize>
+            </timeBasedFileNamingAndTriggeringPolicy>
+            <maxHistory>365</maxHistory>
+            <totalSizeCap>10GB</totalSizeCap>
+        </rollingPolicy>
+        
+        <encoder class="net.logstash.logback.encoder.LoggingEventCompositeJsonEncoder">
+            <providers>
+                <timestamp>
+                    <timeZone>UTC</timeZone>
+                </timestamp>
+                <version/>
+                <logLevel/>
+                <message/>
+                <mdc/>
+                <loggerName/>
+                <thread/>
+                <pattern>
+                    <pattern>
+                        {
+                            "log_type": "SECURITY",
+                            "app_name": "hamalog",
+                            "app_version": "${APP_VERSION:-1.0.0}",
+                            "environment": "${SPRING_PROFILES_ACTIVE:-unknown}",
+                            "host": "${HOSTNAME:-unknown}",
+                            "instance_id": "${INSTANCE_ID:-unknown}"
+                        }
+                    </pattern>
+                </pattern>
+                <stackTrace/>
+            </providers>
+        </encoder>
+    </appender>
+
+    <!-- Separate appender for performance logs -->
+    <appender name="PERFORMANCE_FILE" class="ch.qos.logback.core.rolling.RollingFileAppender">
+        <file>${LOG_DIR:-./logs}/performance.log</file>
+        <rollingPolicy class="ch.qos.logback.core.rolling.TimeBasedRollingPolicy">
+            <fileNamePattern>${LOG_DIR:-./logs}/performance.%d{yyyy-MM-dd}.%i.log</fileNamePattern>
+            <timeBasedFileNamingAndTriggeringPolicy class="ch.qos.logback.core.rolling.SizeAndTimeBasedFNATP">
+                <maxFileSize>50MB</maxFileSize>
+            </timeBasedFileNamingAndTriggeringPolicy>
+            <maxHistory>7</maxHistory>
+            <totalSizeCap>1GB</totalSizeCap>
+        </rollingPolicy>
+        
+        <encoder class="net.logstash.logback.encoder.LoggingEventCompositeJsonEncoder">
+            <providers>
+                <timestamp>
+                    <timeZone>UTC</timeZone>
+                </timestamp>
+                <version/>
+                <logLevel/>
+                <message/>
+                <mdc/>
+                <loggerName/>
+                <thread/>
+                <pattern>
+                    <pattern>
+                        {
+                            "log_type": "PERFORMANCE",
+                            "app_name": "hamalog",
+                            "app_version": "${APP_VERSION:-1.0.0}",
+                            "environment": "${SPRING_PROFILES_ACTIVE:-unknown}",
+                            "host": "${HOSTNAME:-unknown}",
+                            "instance_id": "${INSTANCE_ID:-unknown}"
+                        }
+                    </pattern>
+                </pattern>
+            </providers>
+        </encoder>
+    </appender>
+
+    <!-- Logger for audit events -->
+    <logger name="AUDIT" level="INFO" additivity="false">
+        <appender-ref ref="AUDIT_FILE"/>
+        <springProfile name="!prod">
+            <appender-ref ref="CONSOLE"/>
+        </springProfile>
+        <springProfile name="prod">
+            <appender-ref ref="JSON_CONSOLE"/>
+        </springProfile>
+    </logger>
+
+    <!-- Logger for security events -->
+    <logger name="SECURITY" level="INFO" additivity="false">
+        <appender-ref ref="SECURITY_FILE"/>
+        <springProfile name="!prod">
+            <appender-ref ref="CONSOLE"/>
+        </springProfile>
+        <springProfile name="prod">
+            <appender-ref ref="JSON_CONSOLE"/>
+        </springProfile>
+    </logger>
+
+    <!-- Logger for performance events -->
+    <logger name="PERFORMANCE" level="INFO" additivity="false">
+        <appender-ref ref="PERFORMANCE_FILE"/>
+        <springProfile name="!prod">
+            <appender-ref ref="CONSOLE"/>
+        </springProfile>
+        <springProfile name="prod">
+            <appender-ref ref="JSON_CONSOLE"/>
+        </springProfile>
+    </logger>
+
+    <!-- Application specific loggers -->
+    <logger name="com.Hamalog" level="${LOG_LEVEL_APP}"/>
+    <logger name="org.springframework.security" level="INFO"/>
+    <logger name="org.springframework.web" level="INFO"/>
+    <logger name="org.hibernate.SQL" level="DEBUG"/>
+    <logger name="org.hibernate.type.descriptor.sql.BasicBinder" level="TRACE"/>
+    
+    <!-- Third-party loggers -->
+    <logger name="org.apache.http" level="WARN"/>
+    <logger name="org.springframework.boot.autoconfigure" level="WARN"/>
+    <logger name="com.zaxxer.hikari" level="WARN"/>
+
+    <!-- Root logger -->
+    <root level="${LOG_LEVEL_ROOT}">
+        <appender-ref ref="FILE"/>
+        <springProfile name="!prod">
+            <appender-ref ref="CONSOLE"/>
+        </springProfile>
+        <springProfile name="prod">
+            <appender-ref ref="JSON_CONSOLE"/>
+        </springProfile>
+    </root>
+</configuration>

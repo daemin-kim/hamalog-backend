@@ -1,5 +1,8 @@
 package com.Hamalog.aop;
 
+import com.Hamalog.logging.StructuredLogger;
+import com.Hamalog.logging.events.AuditEvent;
+import com.Hamalog.logging.events.SecurityEvent;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import org.springframework.beans.factory.annotation.Autowired;
 import lombok.extern.slf4j.Slf4j;
@@ -36,6 +39,9 @@ public class BusinessAuditAspect {
 
     @Autowired(required = false)
     private ObjectMapper objectMapper;
+    
+    @Autowired
+    private StructuredLogger structuredLogger;
 
     // 생성 작업 감사
     @Pointcut("execution(public * com.Hamalog.service..create*(..))")
@@ -74,8 +80,19 @@ public class BusinessAuditAspect {
         // 입력 파라미터 로깅 (민감 정보 제외)
         String inputParams = getAuditSafeParameters(joinPoint);
         
-        log.info("BUSINESS_AUDIT_START: {} | Operation: {} | User: {} | IP: {} | Params: {}", 
-                methodName, operationType, userId, ipAddress, inputParams);
+        // Create audit event for operation start
+        AuditEvent startEvent = AuditEvent.builder()
+                .operation(operationType + "_START")
+                .entityType("BUSINESS_OPERATION")
+                .entityId(methodName)
+                .userId(userId)
+                .ipAddress(ipAddress)
+                .userAgent(sanitizeUserAgent(userAgent))
+                .status("STARTED")
+                .details("Parameters: " + inputParams)
+                .build();
+        
+        structuredLogger.audit(startEvent);
 
         try {
             Object result = joinPoint.proceed();
@@ -85,8 +102,19 @@ public class BusinessAuditAspect {
             MDC.put("audit.status", "SUCCESS");
             MDC.put("audit.result", resultSummary);
             
-            log.info("BUSINESS_AUDIT_SUCCESS: {} | Operation: {} | User: {} | IP: {} | Result: {}", 
-                    methodName, operationType, userId, ipAddress, resultSummary);
+            // Create audit event for successful operation
+            AuditEvent successEvent = AuditEvent.builder()
+                    .operation(operationType)
+                    .entityType("BUSINESS_OPERATION")
+                    .entityId(methodName)
+                    .userId(userId)
+                    .ipAddress(ipAddress)
+                    .userAgent(sanitizeUserAgent(userAgent))
+                    .status("SUCCESS")
+                    .details("Result: " + resultSummary)
+                    .build();
+            
+            structuredLogger.audit(successEvent);
             
             return result;
             
@@ -96,8 +124,19 @@ public class BusinessAuditAspect {
             MDC.put("audit.error", e.getClass().getSimpleName());
             MDC.put("audit.errorMessage", e.getMessage());
             
-            log.error("BUSINESS_AUDIT_FAILURE: {} | Operation: {} | User: {} | IP: {} | Error: {} | Message: {}", 
-                     methodName, operationType, userId, ipAddress, e.getClass().getSimpleName(), e.getMessage());
+            // Create audit event for failed operation
+            AuditEvent failureEvent = AuditEvent.builder()
+                    .operation(operationType)
+                    .entityType("BUSINESS_OPERATION")
+                    .entityId(methodName)
+                    .userId(userId)
+                    .ipAddress(ipAddress)
+                    .userAgent(sanitizeUserAgent(userAgent))
+                    .status("FAILURE")
+                    .details("Error: " + e.getClass().getSimpleName() + " - " + e.getMessage())
+                    .build();
+            
+            structuredLogger.audit(failureEvent);
             
             throw e;
             
@@ -112,14 +151,27 @@ public class BusinessAuditAspect {
         String userId = getCurrentUserId();
         String ipAddress = getClientIpAddress();
         HttpServletRequest request = getCurrentRequest();
+        String userAgent = request != null ? request.getHeader("User-Agent") : "unknown";
         
         MDC.put("audit.operation", "LOGIN_SUCCESS");
         MDC.put("audit.userId", userId);
         MDC.put("audit.ipAddress", ipAddress);
         MDC.put("audit.timestamp", LocalDateTime.now().format(DateTimeFormatter.ISO_LOCAL_DATE_TIME));
         
-        log.info("SECURITY_AUDIT: LOGIN_SUCCESS | User: {} | IP: {} | UserAgent: {}", 
-                userId, ipAddress, sanitizeUserAgent(request != null ? request.getHeader("User-Agent") : "unknown"));
+        // Create security event for successful login
+        SecurityEvent loginEvent = SecurityEvent.builder()
+                .eventType("AUTHENTICATION")
+                .userId(userId)
+                .ipAddress(ipAddress)
+                .userAgent(sanitizeUserAgent(userAgent))
+                .resource("LOGIN")
+                .action("AUTHENTICATE")
+                .result("SUCCESS")
+                .riskLevel("LOW")
+                .details("Successful user authentication")
+                .build();
+        
+        structuredLogger.security(loginEvent);
         
         clearAuditContext();
     }
@@ -130,6 +182,7 @@ public class BusinessAuditAspect {
         Object[] args = joinPoint.getArgs();
         String attemptedUser = extractAttemptedUsername(args);
         HttpServletRequest request = getCurrentRequest();
+        String userAgent = request != null ? request.getHeader("User-Agent") : "unknown";
         
         MDC.put("audit.operation", "LOGIN_FAILURE");
         MDC.put("audit.attemptedUser", attemptedUser);
@@ -137,9 +190,23 @@ public class BusinessAuditAspect {
         MDC.put("audit.timestamp", LocalDateTime.now().format(DateTimeFormatter.ISO_LOCAL_DATE_TIME));
         MDC.put("audit.error", ex.getClass().getSimpleName());
         
-        log.warn("SECURITY_AUDIT: LOGIN_FAILURE | AttemptedUser: {} | IP: {} | Error: {} | UserAgent: {}", 
-                attemptedUser, ipAddress, ex.getClass().getSimpleName(), 
-                sanitizeUserAgent(request != null ? request.getHeader("User-Agent") : "unknown"));
+        // Determine risk level based on exception type
+        String riskLevel = determineLoginFailureRiskLevel(ex, attemptedUser);
+        
+        // Create security event for failed login
+        SecurityEvent loginFailureEvent = SecurityEvent.builder()
+                .eventType("AUTHENTICATION_FAILURE")
+                .userId(attemptedUser)
+                .ipAddress(ipAddress)
+                .userAgent(sanitizeUserAgent(userAgent))
+                .resource("LOGIN")
+                .action("AUTHENTICATE")
+                .result("FAILURE")
+                .riskLevel(riskLevel)
+                .details("Login attempt failed: " + ex.getClass().getSimpleName() + " - " + ex.getMessage())
+                .build();
+        
+        structuredLogger.security(loginFailureEvent);
         
         clearAuditContext();
     }
@@ -327,6 +394,26 @@ public class BusinessAuditAspect {
             }
         }
         return "unknown";
+    }
+
+    /**
+     * Determine security risk level based on login failure context
+     */
+    private String determineLoginFailureRiskLevel(Exception ex, String attemptedUser) {
+        // High risk indicators
+        if (attemptedUser != null && (attemptedUser.equals("admin") || attemptedUser.equals("root") || 
+            attemptedUser.equals("administrator") || attemptedUser.contains("admin"))) {
+            return "HIGH";
+        }
+        
+        // Medium risk for authentication-related exceptions
+        String exceptionName = ex.getClass().getSimpleName().toLowerCase();
+        if (exceptionName.contains("badcredentials") || exceptionName.contains("authentication")) {
+            return "MEDIUM";
+        }
+        
+        // Low risk for other failures
+        return "LOW";
     }
 
     private void clearAuditContext() {

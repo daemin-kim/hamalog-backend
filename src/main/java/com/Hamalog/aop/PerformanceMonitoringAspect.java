@@ -1,5 +1,7 @@
 package com.Hamalog.aop;
 
+import com.Hamalog.logging.StructuredLogger;
+import com.Hamalog.logging.events.PerformanceEvent;
 import lombok.extern.slf4j.Slf4j;
 import org.aspectj.lang.ProceedingJoinPoint;
 import org.aspectj.lang.annotation.Around;
@@ -7,8 +9,11 @@ import org.aspectj.lang.annotation.Aspect;
 import org.aspectj.lang.annotation.Pointcut;
 import org.aspectj.lang.reflect.MethodSignature;
 import org.slf4j.MDC;
+import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty;
+import org.springframework.security.core.Authentication;
+import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.stereotype.Component;
 
 import java.util.concurrent.ConcurrentHashMap;
@@ -24,6 +29,9 @@ import java.util.concurrent.atomic.LongAdder;
 @Component
 @ConditionalOnProperty(name = "app.aop.performance.enabled", matchIfMissing = true)
 public class PerformanceMonitoringAspect {
+
+    @Autowired
+    private StructuredLogger structuredLogger;
 
     @Value("${app.monitoring.performance.slow-threshold:1000}")
     private long slowThreshold;
@@ -116,24 +124,26 @@ public class PerformanceMonitoringAspect {
             MDC.put("perf.successRate", String.valueOf(stats.getSuccessRate()));
         }
 
-        if (success) {
-            if (level.ordinal() >= PerformanceLevel.SLOW.ordinal()) {
-                log.warn("SLOW_PERFORMANCE: {} | {}ms | {} | Avg: {}ms | Calls: {} | Success: {}%", 
-                        methodKey, duration, level, 
-                        stats != null ? stats.getAverageDuration() : "N/A",
-                        stats != null ? stats.getTotalCalls() : "N/A",
-                        stats != null ? String.format("%.1f", stats.getSuccessRate()) : "N/A");
-            } else {
-                log.debug("PERFORMANCE: {} | {}ms | {} | Avg: {}ms", 
-                         methodKey, duration, level, 
-                         stats != null ? stats.getAverageDuration() : "N/A");
-            }
-        } else {
-            log.error("PERFORMANCE_ERROR: {} | {}ms | {} | Error: {} | Avg: {}ms | Success: {}%", 
-                     methodKey, duration, level, error.getClass().getSimpleName(),
-                     stats != null ? stats.getAverageDuration() : "N/A",
-                     stats != null ? String.format("%.1f", stats.getSuccessRate()) : "N/A");
-        }
+        // Get current user for performance tracking
+        String userId = getCurrentUserId();
+        
+        // Create performance event
+        PerformanceEvent performanceEvent = PerformanceEvent.builder()
+                .operation(methodKey)
+                .durationMs(duration)
+                .durationNanos(durationNanos)
+                .performanceLevel(level.name())
+                .success(success)
+                .errorType(error != null ? error.getClass().getSimpleName() : null)
+                .userId(userId)
+                .methodName(getMethodNameFromKey(methodKey))
+                .className(getClassNameFromKey(methodKey))
+                .memoryBefore(null) // Could be enhanced to track memory usage
+                .memoryAfter(null)  // Could be enhanced to track memory usage
+                .cpuTime(durationNanos) // Using nano time as CPU time approximation
+                .build();
+        
+        structuredLogger.performance(performanceEvent);
 
         // MDC 정리
         MDC.remove("perf.duration");
@@ -143,6 +153,41 @@ public class PerformanceMonitoringAspect {
         MDC.remove("perf.callCount");
         MDC.remove("perf.avgDuration");
         MDC.remove("perf.successRate");
+    }
+
+    /**
+     * Get current authenticated user ID
+     */
+    private String getCurrentUserId() {
+        try {
+            Authentication auth = SecurityContextHolder.getContext().getAuthentication();
+            if (auth == null || !auth.isAuthenticated()) {
+                return "anonymous";
+            }
+            return String.valueOf(auth.getName());
+        } catch (Exception e) {
+            return "unknown";
+        }
+    }
+
+    /**
+     * Extract method name from method key (ClassName.methodName)
+     */
+    private String getMethodNameFromKey(String methodKey) {
+        if (methodKey == null || !methodKey.contains(".")) {
+            return methodKey;
+        }
+        return methodKey.substring(methodKey.lastIndexOf('.') + 1);
+    }
+
+    /**
+     * Extract class name from method key (ClassName.methodName)
+     */
+    private String getClassNameFromKey(String methodKey) {
+        if (methodKey == null || !methodKey.contains(".")) {
+            return "Unknown";
+        }
+        return methodKey.substring(0, methodKey.lastIndexOf('.'));
     }
 
     /**

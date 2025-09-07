@@ -1,18 +1,30 @@
 package com.Hamalog.aop;
 
+import com.Hamalog.logging.StructuredLogger;
+import com.Hamalog.logging.events.ApiEvent;
 import lombok.extern.slf4j.Slf4j;
 import org.aspectj.lang.ProceedingJoinPoint;
 import org.aspectj.lang.annotation.*;
 import org.aspectj.lang.reflect.MethodSignature;
 import org.slf4j.MDC;
+import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.security.core.Authentication;
 import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.stereotype.Component;
+import org.springframework.web.context.request.RequestContextHolder;
+import org.springframework.web.context.request.ServletRequestAttributes;
+
+import jakarta.servlet.http.HttpServletRequest;
+import java.util.HashMap;
+import java.util.Map;
 
 @Slf4j
 @Aspect
 @Component
 public class ApiLoggingAspect {
+
+    @Autowired
+    private StructuredLogger structuredLogger;
 
     @Pointcut("execution(public * com.Hamalog.controller..*(..))")
     public void allControllerMethods() {}
@@ -33,11 +45,19 @@ public class ApiLoggingAspect {
         String params = getParameterInfo(signature, joinPoint.getArgs());
         String user = getAuthenticatedUser();
 
+        // Get HTTP context
+        HttpServletRequest request = getCurrentRequest();
+        String httpMethod = request != null ? request.getMethod() : "UNKNOWN";
+        String path = request != null ? request.getRequestURI() : "UNKNOWN";
+        String ipAddress = request != null ? getClientIpAddress(request) : "UNKNOWN";
+        String userAgent = request != null ? request.getHeader("User-Agent") : "UNKNOWN";
+
         // Add additional structured logging context
         MDC.put("api.method", methodName);
         MDC.put("api.user", user);
         
-        log.info("API Call: {} | User: {} | Params: {}", methodName, user, params);
+        // Create parameters map for structured logging
+        Map<String, Object> parametersMap = createParametersMap(signature, joinPoint.getArgs());
 
         try {
             Object result = joinPoint.proceed();
@@ -47,9 +67,22 @@ public class ApiLoggingAspect {
             MDC.put("api.duration", String.valueOf(elapsed));
             MDC.put("api.status", "success");
             
-            String performanceText = getPerformanceText(elapsed);
-            log.info("API Success: {} | User: {} | Time: {}ms {} | Result: {}",
-                    methodName, user, elapsed, performanceText, sanitizeResult(result));
+            // Create API event for successful request
+            ApiEvent apiEvent = ApiEvent.builder()
+                    .httpMethod(httpMethod)
+                    .path(path)
+                    .controller(signature.getDeclaringType().getSimpleName())
+                    .action(signature.getName())
+                    .userId(user)
+                    .ipAddress(ipAddress)
+                    .userAgent(userAgent)
+                    .durationMs(elapsed)
+                    .statusCode(200) // Assuming success is 200, could be enhanced to get actual status
+                    .parameters(parametersMap)
+                    .build();
+            
+            structuredLogger.api(apiEvent);
+            
             return result;
         } catch (Exception e) {
             long elapsed = System.currentTimeMillis() - startTime;
@@ -59,8 +92,22 @@ public class ApiLoggingAspect {
             MDC.put("api.status", "error");
             MDC.put("api.errorType", e.getClass().getSimpleName());
             
-            log.error("API Error: {} | User: {} | Time: {}ms | Type: {} | Message: {}",
-                    methodName, user, elapsed, e.getClass().getSimpleName(), e.getMessage(), e);
+            // Create API event for failed request
+            ApiEvent apiErrorEvent = ApiEvent.builder()
+                    .httpMethod(httpMethod)
+                    .path(path)
+                    .controller(signature.getDeclaringType().getSimpleName())
+                    .action(signature.getName())
+                    .userId(user)
+                    .ipAddress(ipAddress)
+                    .userAgent(userAgent)
+                    .durationMs(elapsed)
+                    .statusCode(500) // Assuming error is 500, could be enhanced
+                    .parameters(parametersMap)
+                    .build();
+            
+            structuredLogger.api(apiErrorEvent);
+            
             throw e;
         } finally {
             // Clean up MDC context
@@ -117,6 +164,63 @@ public class ApiLoggingAspect {
         return "VERY_SLOW"; // Very slow
     }
     
+    /**
+     * Get current HTTP request
+     */
+    private HttpServletRequest getCurrentRequest() {
+        try {
+            ServletRequestAttributes attributes = (ServletRequestAttributes) RequestContextHolder.currentRequestAttributes();
+            return attributes.getRequest();
+        } catch (Exception e) {
+            return null;
+        }
+    }
+
+    /**
+     * Get client IP address from request
+     */
+    private String getClientIpAddress(HttpServletRequest request) {
+        if (request == null) return "unknown";
+        
+        String xForwardedFor = request.getHeader("X-Forwarded-For");
+        if (xForwardedFor != null && !xForwardedFor.isEmpty() && !"unknown".equalsIgnoreCase(xForwardedFor)) {
+            return xForwardedFor.split(",")[0];
+        }
+        
+        String xRealIp = request.getHeader("X-Real-IP");
+        if (xRealIp != null && !xRealIp.isEmpty() && !"unknown".equalsIgnoreCase(xRealIp)) {
+            return xRealIp;
+        }
+        
+        return request.getRemoteAddr();
+    }
+
+    /**
+     * Create parameters map for structured logging
+     */
+    private Map<String, Object> createParametersMap(MethodSignature signature, Object[] args) {
+        Map<String, Object> parametersMap = new HashMap<>();
+        String[] paramNames = signature.getParameterNames();
+        
+        if (paramNames != null && args != null) {
+            for (int i = 0; i < Math.min(paramNames.length, args.length); i++) {
+                String name = paramNames[i];
+                Object value = args[i];
+                
+                if (isSensitive(name)) {
+                    parametersMap.put(name, "***");
+                } else if (value != null) {
+                    String stringValue = shorten(value);
+                    parametersMap.put(name, stringValue);
+                } else {
+                    parametersMap.put(name, null);
+                }
+            }
+        }
+        
+        return parametersMap;
+    }
+
     /**
      * Security Fix: Sanitize API response results to prevent sensitive data exposure in logs
      */

@@ -57,7 +57,7 @@ Spring Boot 3.4.5와 Java 21의 최신 기술을 기반으로 구축되어, 높�
 - **JWT 토큰 기반 인증**: 상태 비저장 보안 아키텍처
 - **카카오 OAuth2 연동**: 편리하고 안전한 소셜 로그인
 - **토큰 블랙리스트**: Redis 기반 토큰 무효화 시스템
-- **Rate Limiting**: Bucket4j 기반 API 요청 제한
+- **Rate Limiting**: Redis 기반 커스텀 API 요청 제한
 - **리소스 소유권 검증**: AOP 기반 데이터 접근 권한 관리
 
 ### 📈 확장성과 성능
@@ -120,11 +120,11 @@ Spring Boot 3.4.5와 Java 21의 최신 기술을 기반으로 구축되어, 높�
 - **JWT (jjwt 0.12.6)** - JSON Web Token 구현
 - **BCrypt** - 비밀번호 암호화
 - **OAuth2** - 소셜 로그인 연동
-- **Bucket4j** - Redis 기반 속도 제한
+- **Custom Redis Rate Limiting** - Redis 기반 커스텀 속도 제한
 - **Logstash Encoder** - 구조화된 보안 로깅
 
 ### 문서화 및 테스트
-- **SpringDoc OpenAPI 2.0.2** - API 문서 자동 생성
+- **SpringDoc OpenAPI 2.7.0** - API 문서 자동 생성
 - **JUnit 5** - 테스트 프레임워크
 - **Mockito** - 단위 테스트용 모킹 프레임워크
 - **Spring Boot Test** - 통합 테스트 지원

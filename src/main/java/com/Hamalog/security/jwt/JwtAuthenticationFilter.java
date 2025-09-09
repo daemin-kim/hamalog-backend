@@ -41,7 +41,7 @@ public class JwtAuthenticationFilter extends OncePerRequestFilter {
 
         // Add security context to MDC
         MDC.put("security.clientIp", clientIp);
-        MDC.put("security.userAgent", userAgent != null ? userAgent.substring(0, Math.min(userAgent.length(), 100)) : "unknown");
+        MDC.put("security.userAgent", sanitizeForLogging(userAgent, 50));
 
         try {
             if (token != null) {
@@ -62,7 +62,7 @@ public class JwtAuthenticationFilter extends OncePerRequestFilter {
                     MDC.put("security.authenticatedUser", loginId);
                     
                     log.info("[SECURITY] Authentication successful - user={} method={} uri={} clientIp={} userAgent={}", 
-                        loginId, method, requestUri, clientIp, userAgent != null ? userAgent.substring(0, Math.min(userAgent.length(), 50)) : "unknown");
+                        loginId, method, requestUri, clientIp, sanitizeForLogging(userAgent, 30));
                 } else {
                     log.warn("[SECURITY] JWT token validation failed - method={} uri={} clientIp={} reason=invalid_token", 
                         method, requestUri, clientIp);
@@ -129,5 +129,28 @@ public class JwtAuthenticationFilter extends OncePerRequestFilter {
         
         // Most API endpoints require authentication
         return uri.startsWith("/api/") || uri.startsWith("/medication/") || uri.startsWith("/side-effect/");
+    }
+
+    /**
+     * Sanitizes input strings for safe logging, preventing log injection attacks
+     * @param input the input string to sanitize
+     * @param maxLength maximum length of the output string
+     * @return sanitized string safe for logging
+     */
+    private String sanitizeForLogging(String input, int maxLength) {
+        if (input == null) {
+            return "unknown";
+        }
+        
+        // Remove potential log injection characters (newlines, carriage returns, etc.)
+        String sanitized = input.replaceAll("[\r\n\t]", "_")
+                               .replaceAll("[\\p{Cntrl}]", "_");
+        
+        // Limit length to prevent log bloat
+        if (sanitized.length() > maxLength) {
+            sanitized = sanitized.substring(0, maxLength) + "...";
+        }
+        
+        return sanitized;
     }
 }

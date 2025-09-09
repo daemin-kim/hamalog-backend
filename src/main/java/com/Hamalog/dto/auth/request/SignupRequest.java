@@ -22,5 +22,7 @@ public record SignupRequest(
         @NotBlank @Pattern(regexp = "^010\\d{8}$", message = "{member.phoneNumber.pattern}") String phoneNumber,
         
         @Schema(description = "생년월일", example = "1990-01-01", requiredMode = Schema.RequiredMode.REQUIRED, type = "string", format = "date")
-        @NotNull LocalDate birth
+        @NotNull 
+        @Past(message = "{member.birth.past}")
+        LocalDate birth
 ) {}

@@ -1,7 +1,10 @@
 package com.Hamalog.security.encryption;
 
 import org.springframework.beans.factory.annotation.Value;
+import org.springframework.core.env.Environment;
 import org.springframework.stereotype.Component;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 import javax.crypto.Cipher;
 import javax.crypto.KeyGenerator;
@@ -14,33 +17,56 @@ import java.util.Base64;
 @Component
 public class DataEncryptionUtil {
 
+    private static final Logger log = LoggerFactory.getLogger(DataEncryptionUtil.class);
     private static final String ALGORITHM = "AES";
     private static final String TRANSFORMATION = "AES/GCM/NoPadding";
     private static final int GCM_IV_LENGTH = 12;
     private static final int GCM_TAG_LENGTH = 16;
 
     private final SecretKey secretKey;
+    private final Environment environment;
 
-    public DataEncryptionUtil(@Value("${hamalog.encryption.key:}") String encryptionKey) {
+    public DataEncryptionUtil(
+            @Value("${hamalog.encryption.key:}") String encryptionKey,
+            Environment environment) {
+        this.environment = environment;
         this.secretKey = initializeSecretKey(encryptionKey);
     }
 
     private SecretKey initializeSecretKey(String encryptionKey) {
+        // Check if running in production profile
+        boolean isProduction = environment.getActiveProfiles().length > 0 && 
+                              java.util.Arrays.asList(environment.getActiveProfiles()).contains("prod");
+        
         if (encryptionKey == null || encryptionKey.isBlank()) {
-            // Use hard-coded fallback key to prevent runtime errors
-            encryptionKey = "+ZFRGoRl5CElrJfikdx1TmzQ3U8OJ+J6im5OMjuvsqE=";
+            if (isProduction) {
+                throw new IllegalStateException("데이터 암호화 키가 설정되지 않았습니다. 프로덕션 환경에서는 HAMALOG_ENCRYPTION_KEY 환경변수를 반드시 설정해야 합니다.");
+            }
+            
+            // Generate secure random key for development
+            log.warn("WARNING: 데이터 암호화 키가 설정되지 않았습니다. 개발용 임시 키를 생성합니다.");
+            log.warn("이 키는 재시작마다 변경됩니다. HAMALOG_ENCRYPTION_KEY 환경변수를 설정하여 영구적인 암호화를 사용하세요.");
+            
+            byte[] randomKey = new byte[32]; // 256 bits
+            new SecureRandom().nextBytes(randomKey);
+            return new SecretKeySpec(randomKey, ALGORITHM);
         }
         
         try {
             byte[] decodedKey = Base64.getDecoder().decode(encryptionKey);
             if (decodedKey.length != 32) {
-                throw new IllegalStateException("암호화 키는 정확히 256비트(32바이트)여야 합니다.");
+                throw new IllegalStateException("데이터 암호화 키는 정확히 256비트(32바이트)여야 합니다. 현재 키 길이: " + (decodedKey.length * 8) + "비트");
             }
+            
+            if (!isProduction) {
+                log.info("데이터 암호화가 제공된 키로 구성되었습니다.");
+            }
+            
             return new SecretKeySpec(decodedKey, ALGORITHM);
         } catch (IllegalArgumentException e) {
-            throw new IllegalStateException("암호화 키는 유효한 Base64 형식이어야 합니다.", e);
+            throw new IllegalStateException("데이터 암호화 키는 유효한 Base64 형식이어야 합니다. 올바른 Base64 형식의 256비트 키를 사용하세요.", e);
         } catch (Exception e) {
-            throw new IllegalStateException("암호화 키 초기화 중 오류가 발생했습니다.", e);
+            throw new IllegalStateException("데이터 암호화 키 초기화 중 오류가 발생했습니다.", e);
         }
     }
 

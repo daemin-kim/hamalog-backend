@@ -126,7 +126,7 @@ services:
       - JWT_EXPIRY=\${JWT_EXPIRY:-3600000}
       
       # Data Encryption Configuration
-      - HAMALOG_ENCRYPTION_KEY=\${HAMALOG_ENCRYPTION_KEY:-}
+      - HAMALOG_ENCRYPTION_KEY=\${HAMALOG_ENCRYPTION_KEY}
       
       # OAuth2 Configuration
       - KAKAO_CLIENT_ID=\${KAKAO_CLIENT_ID:-dummy-client-id}

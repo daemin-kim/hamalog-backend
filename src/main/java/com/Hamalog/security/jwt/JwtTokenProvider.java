@@ -43,9 +43,18 @@ public class JwtTokenProvider {
         boolean isProduction = environment.getActiveProfiles().length > 0 && 
                               java.util.Arrays.asList(environment.getActiveProfiles()).contains("prod");
         
-        if (secret == null || secret.isBlank()) {
+        if (secret == null || secret.trim().isEmpty()) {
             if (isProduction) {
-                throw new IllegalStateException("JWT 비밀키가 설정되지 않았습니다. 프로덕션 환경에서는 JWT_SECRET 환경변수를 반드시 설정해야 합니다.");
+                String errorMessage = String.format(
+                    "JWT 비밀키가 설정되지 않았습니다. 프로덕션 환경에서는 JWT_SECRET 환경변수를 반드시 설정해야 합니다.\n" +
+                    "현재 JWT_SECRET 상태: [%s]\n" +
+                    "현재 JWT_SECRET 길이: %d\n" +
+                    "해결 방법: JWT_SECRET 환경변수를 Base64 인코딩된 256비트 키로 설정하세요.\n" +
+                    "키 생성 예시: openssl rand -base64 32",
+                    secret == null ? "null" : "'" + secret + "'",
+                    secret == null ? 0 : secret.length()
+                );
+                throw new IllegalStateException(errorMessage);
             }
             
             // Generate secure random key for development

@@ -33,6 +33,51 @@ cleanup() {
 
 trap cleanup EXIT
 
+# 환경변수 유효성 검사 함수
+validate_environment() {
+    echo "🔍 환경변수 유효성 검사 중..."
+    
+    # JWT_SECRET 검사 - 정확한 구분을 위해 순서 변경
+    if [ ! "${JWT_SECRET+x}" ]; then
+        echo "⚠️  JWT_SECRET이 설정되지 않았습니다."
+        echo "프로덕션 배포를 위해서는 JWT_SECRET 환경변수가 필요합니다."
+        echo "예시: export JWT_SECRET=\$(openssl rand -base64 32)"
+        echo "또는: JWT_SECRET=\$(openssl rand -base64 32) ./deploy.sh"
+        return 1
+    elif [ -z "$JWT_SECRET" ]; then
+        echo "❌ JWT_SECRET이 빈 문자열로 설정되어 있습니다. (이것이 컨테이너 시작 오류의 원인입니다!)"
+        echo "현재 값: '$JWT_SECRET' (길이: ${#JWT_SECRET})"
+        echo "유효한 Base64 인코딩된 256비트 키를 설정해주세요."
+        echo "키 생성: export JWT_SECRET=\$(openssl rand -base64 32)"
+        return 1
+    elif [ "${#JWT_SECRET}" -lt 32 ]; then
+        echo "❌ JWT_SECRET이 너무 짧습니다. 최소 32자 이상의 Base64 키가 필요합니다."
+        echo "현재 길이: ${#JWT_SECRET}자"
+        echo "키 생성: export JWT_SECRET=\$(openssl rand -base64 32)"
+        return 1
+    else
+        echo "✅ JWT_SECRET 검증 완료 (길이: ${#JWT_SECRET}자)"
+    fi
+    
+    # 기타 중요한 환경변수 검사
+    if [ -z "${DB_PASSWORD:-}" ]; then
+        echo "⚠️  DB_PASSWORD가 설정되지 않았습니다. 기본값을 사용합니다."
+    fi
+    
+    if [ -z "${MYSQL_ROOT_PASSWORD:-}" ]; then
+        echo "⚠️  MYSQL_ROOT_PASSWORD가 설정되지 않았습니다. 기본값을 사용합니다."
+    fi
+    
+    echo "✅ 환경변수 검증이 완료되었습니다."
+    return 0
+}
+
+# 환경변수 유효성 검사 실행
+if ! validate_environment; then
+    echo "❌ 환경변수 검증에 실패했습니다. 배포를 중단합니다."
+    exit 1
+fi
+
 # 1단계: 프로덕션 docker-compose 파일 생성
 echo "📝 프로덕션 docker-compose 설정을 생성하는 중..."
 cat > ${COMPOSE_FILE} << EOF

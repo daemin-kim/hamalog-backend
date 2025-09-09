@@ -54,33 +54,40 @@ public class PerformanceMonitoringAspect {
         long startTime = System.currentTimeMillis();
         long startNanos = System.nanoTime();
         
+        // Memory tracking
+        Runtime runtime = Runtime.getRuntime();
+        long memoryBefore = runtime.totalMemory() - runtime.freeMemory();
+        
         // MDC에 성능 모니터링 컨텍스트 추가
         MDC.put("perf.method", methodKey);
         MDC.put("perf.startTime", String.valueOf(startTime));
+        MDC.put("perf.memoryBefore", String.valueOf(memoryBefore));
 
         try {
             Object result = joinPoint.proceed();
             
             long duration = System.currentTimeMillis() - startTime;
             long durationNanos = System.nanoTime() - startNanos;
+            long memoryAfter = runtime.totalMemory() - runtime.freeMemory();
             
             // 성능 통계 업데이트
             updateMethodStats(methodKey, duration, true);
             
             // 성능 레벨 결정 및 로깅
             PerformanceLevel level = getPerformanceLevel(duration);
-            logPerformanceResult(methodKey, duration, durationNanos, level, true, null);
+            logPerformanceResult(methodKey, duration, durationNanos, level, true, null, memoryBefore, memoryAfter);
             
             return result;
             
         } catch (Exception e) {
             long duration = System.currentTimeMillis() - startTime;
             long durationNanos = System.nanoTime() - startNanos;
+            long memoryAfter = runtime.totalMemory() - runtime.freeMemory();
             
             // 실패한 경우에도 성능 통계 업데이트
             updateMethodStats(methodKey, duration, false);
             logPerformanceResult(methodKey, duration, durationNanos, 
-                               getPerformanceLevel(duration), false, e);
+                               getPerformanceLevel(duration), false, e, memoryBefore, memoryAfter);
             
             throw e;
             
@@ -88,6 +95,7 @@ public class PerformanceMonitoringAspect {
             // MDC 정리
             MDC.remove("perf.method");
             MDC.remove("perf.startTime");
+            MDC.remove("perf.memoryBefore");
         }
     }
 
@@ -109,14 +117,18 @@ public class PerformanceMonitoringAspect {
     }
 
     private void logPerformanceResult(String methodKey, long duration, long durationNanos, 
-                                    PerformanceLevel level, boolean success, Exception error) {
+                                    PerformanceLevel level, boolean success, Exception error, 
+                                    long memoryBefore, long memoryAfter) {
         
         MethodStats stats = methodStats.get(methodKey);
+        long memoryUsed = memoryAfter - memoryBefore;
         
         MDC.put("perf.duration", String.valueOf(duration));
         MDC.put("perf.durationNanos", String.valueOf(durationNanos));
         MDC.put("perf.level", level.name());
         MDC.put("perf.success", String.valueOf(success));
+        MDC.put("perf.memoryUsed", String.valueOf(memoryUsed));
+        MDC.put("perf.memoryAfter", String.valueOf(memoryAfter));
         
         if (stats != null) {
             MDC.put("perf.callCount", String.valueOf(stats.getTotalCalls()));
@@ -138,8 +150,8 @@ public class PerformanceMonitoringAspect {
                 .userId(userId)
                 .methodName(getMethodNameFromKey(methodKey))
                 .className(getClassNameFromKey(methodKey))
-                .memoryBefore(null) // Could be enhanced to track memory usage
-                .memoryAfter(null)  // Could be enhanced to track memory usage
+                .memoryBefore(memoryBefore)
+                .memoryAfter(memoryAfter)
                 .cpuTime(durationNanos) // Using nano time as CPU time approximation
                 .build();
         
@@ -153,6 +165,8 @@ public class PerformanceMonitoringAspect {
         MDC.remove("perf.callCount");
         MDC.remove("perf.avgDuration");
         MDC.remove("perf.successRate");
+        MDC.remove("perf.memoryUsed");
+        MDC.remove("perf.memoryAfter");
     }
 
     /**

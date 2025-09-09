@@ -73,19 +73,6 @@ public class BusinessAuditAspect {
         MDC.put("audit.userAgent", sanitizeUserAgent(userAgent));
 
         String inputParams = getAuditSafeParameters(joinPoint);
-        
-        AuditEvent startEvent = AuditEvent.builder()
-                .operation(operationType + "_START")
-                .entityType("BUSINESS_OPERATION")
-                .entityId(methodName)
-                .userId(userId)
-                .ipAddress(ipAddress)
-                .userAgent(sanitizeUserAgent(userAgent))
-                .status("STARTED")
-                .details("Parameters: " + inputParams)
-                .build();
-        
-        structuredLogger.audit(startEvent);
 
         try {
             Object result = joinPoint.proceed();

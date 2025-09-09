@@ -17,6 +17,7 @@ public class ApiEvent {
     private int statusCode;
     private Long requestSize;
     private Long responseSize;
+    private String requestType;  // "내부 요청" or "외부 요청"
     private Map<String, Object> parameters;
 
     public static ApiEventBuilder builder() {
@@ -35,6 +36,7 @@ public class ApiEvent {
     public int getStatusCode() { return statusCode; }
     public Long getRequestSize() { return requestSize; }
     public Long getResponseSize() { return responseSize; }
+    public String getRequestType() { return requestType; }
     public Map<String, Object> getParameters() { return parameters; }
 
     // Private constructor - use builder
@@ -95,6 +97,11 @@ public class ApiEvent {
 
         public ApiEventBuilder responseSize(Long responseSize) {
             event.responseSize = responseSize;
+            return this;
+        }
+
+        public ApiEventBuilder requestType(String requestType) {
+            event.requestType = requestType;
             return this;
         }
 

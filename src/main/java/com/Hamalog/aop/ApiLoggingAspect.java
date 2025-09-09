@@ -50,6 +50,7 @@ public class ApiLoggingAspect {
         String path = request != null ? request.getRequestURI() : "UNKNOWN";
         String ipAddress = request != null ? getClientIpAddress(request) : "UNKNOWN";
         String userAgent = request != null ? request.getHeader("User-Agent") : "UNKNOWN";
+        String requestType = determineRequestType(path);
 
         MDC.put("api.method", methodName);
         MDC.put("api.user", user);
@@ -73,6 +74,7 @@ public class ApiLoggingAspect {
                     .userAgent(userAgent)
                     .durationMs(elapsed)
                     .statusCode(200) // Assuming success is 200, could be enhanced to get actual status
+                    .requestType(requestType)
                     .parameters(parametersMap)
                     .build();
             
@@ -96,6 +98,7 @@ public class ApiLoggingAspect {
                     .userAgent(userAgent)
                     .durationMs(elapsed)
                     .statusCode(500) // Assuming error is 500, could be enhanced
+                    .requestType(requestType)
                     .parameters(parametersMap)
                     .build();
             
@@ -227,5 +230,20 @@ public class ApiLoggingAspect {
         }
         
         return String.format("[%s response - details hidden for security]", className);
+    }
+    
+    /**
+     * Determine request type based on the request path
+     */
+    private String determineRequestType(String path) {
+        if (path == null) return "외부 요청";
+        
+        // Internal requests: actuator endpoints for health checks and monitoring
+        if (path.startsWith("/actuator/")) {
+            return "내부 요청";
+        }
+        
+        // All other requests are considered external
+        return "외부 요청";
     }
 }

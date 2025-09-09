@@ -161,17 +161,18 @@ public class StructuredLogger {
             context.put("api_status_code", event.getStatusCode());
             context.put("api_request_size", event.getRequestSize());
             context.put("api_response_size", event.getResponseSize());
+            context.put("api_request_type", event.getRequestType());
             context.put("api_parameters", event.getParameters());
             
             setMDCContext(context);
             
             if (event.getStatusCode() >= 400) {
-                APPLICATION_LOGGER.error("API_ERROR: {} {} - User: {} - Status: {} - Duration: {}ms", 
-                        event.getHttpMethod(), event.getPath(), event.getUserId(), 
+                APPLICATION_LOGGER.error("API_ERROR: [{}] {} {} - User: {} - Status: {} - Duration: {}ms", 
+                        event.getRequestType(), event.getHttpMethod(), event.getPath(), event.getUserId(), 
                         event.getStatusCode(), event.getDurationMs());
             } else {
-                APPLICATION_LOGGER.info("API_SUCCESS: {} {} - User: {} - Status: {} - Duration: {}ms", 
-                        event.getHttpMethod(), event.getPath(), event.getUserId(), 
+                APPLICATION_LOGGER.info("API_SUCCESS: [{}] {} {} - User: {} - Status: {} - Duration: {}ms", 
+                        event.getRequestType(), event.getHttpMethod(), event.getPath(), event.getUserId(), 
                         event.getStatusCode(), event.getDurationMs());
             }
         } finally {

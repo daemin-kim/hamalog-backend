@@ -33,53 +33,54 @@ cleanup() {
 
 trap cleanup EXIT
 
-# 환경변수 유효성 검사 함수
-validate_environment() {
-    echo "🔍 환경변수 유효성 검사 중..."
+# 자동 키 생성 함수
+generate_secure_key() {
+    if command -v openssl >/dev/null 2>&1; then
+        openssl rand -base64 32
+    else
+        echo "❌ openssl이 설치되지 않았습니다. 보안 키 생성을 위해 openssl을 설치해주세요."
+        exit 1
+    fi
+}
+
+# 환경변수 자동 설정 및 유효성 검사 함수
+setup_and_validate_environment() {
+    echo "🔍 환경변수 설정 및 유효성 검사 중..."
     
-    # JWT_SECRET 검사 - 정확한 구분을 위해 순서 변경
-    if [ ! "${JWT_SECRET+x}" ]; then
-        echo "⚠️  JWT_SECRET이 설정되지 않았습니다."
-        echo "프로덕션 배포를 위해서는 JWT_SECRET 환경변수가 필요합니다."
-        echo "예시: export JWT_SECRET=\$(openssl rand -base64 32)"
-        echo "또는: JWT_SECRET=\$(openssl rand -base64 32) ./deploy.sh"
-        return 1
-    elif [ -z "$JWT_SECRET" ]; then
-        echo "❌ JWT_SECRET이 빈 문자열로 설정되어 있습니다. (이것이 컨테이너 시작 오류의 원인입니다!)"
-        echo "현재 값: '$JWT_SECRET' (길이: ${#JWT_SECRET})"
-        echo "유효한 Base64 인코딩된 256비트 키를 설정해주세요."
-        echo "키 생성: export JWT_SECRET=\$(openssl rand -base64 32)"
-        return 1
+    # JWT_SECRET 자동 생성 또는 검증
+    if [ ! "${JWT_SECRET+x}" ] || [ -z "$JWT_SECRET" ]; then
+        echo "🔑 JWT_SECRET이 설정되지 않았습니다. 자동으로 보안 키를 생성합니다..."
+        export JWT_SECRET=$(generate_secure_key)
+        echo "✅ JWT_SECRET이 자동으로 생성되었습니다 (길이: ${#JWT_SECRET}자)"
+        echo "📝 생성된 JWT_SECRET: $JWT_SECRET"
+        echo "💾 이 키를 저장해두시면 다음 배포 시 재사용할 수 있습니다."
     elif [ "${#JWT_SECRET}" -lt 32 ]; then
-        echo "❌ JWT_SECRET이 너무 짧습니다. 최소 32자 이상의 Base64 키가 필요합니다."
-        echo "현재 길이: ${#JWT_SECRET}자"
-        echo "키 생성: export JWT_SECRET=\$(openssl rand -base64 32)"
-        return 1
+        echo "❌ 제공된 JWT_SECRET이 너무 짧습니다 (현재: ${#JWT_SECRET}자). 새로운 키를 생성합니다..."
+        export JWT_SECRET=$(generate_secure_key)
+        echo "✅ 새로운 JWT_SECRET이 생성되었습니다 (길이: ${#JWT_SECRET}자)"
+        echo "📝 생성된 JWT_SECRET: $JWT_SECRET"
     else
         echo "✅ JWT_SECRET 검증 완료 (길이: ${#JWT_SECRET}자)"
     fi
     
-    # HAMALOG_ENCRYPTION_KEY 검사 - 정확한 구분을 위해 순서 변경
-    if [ ! "${HAMALOG_ENCRYPTION_KEY+x}" ]; then
-        echo "⚠️  HAMALOG_ENCRYPTION_KEY가 설정되지 않았습니다."
-        echo "프로덕션 배포를 위해서는 HAMALOG_ENCRYPTION_KEY 환경변수가 필요합니다."
-        echo "예시: export HAMALOG_ENCRYPTION_KEY=\$(openssl rand -base64 32)"
-        echo "또는: HAMALOG_ENCRYPTION_KEY=\$(openssl rand -base64 32) ./deploy.sh"
-        return 1
-    elif [ -z "$HAMALOG_ENCRYPTION_KEY" ]; then
-        echo "❌ HAMALOG_ENCRYPTION_KEY가 빈 문자열로 설정되어 있습니다. (이것이 컨테이너 시작 오류의 원인입니다!)"
-        echo "현재 값: '$HAMALOG_ENCRYPTION_KEY' (길이: ${#HAMALOG_ENCRYPTION_KEY})"
-        echo "유효한 Base64 인코딩된 256비트 키를 설정해주세요."
-        echo "키 생성: export HAMALOG_ENCRYPTION_KEY=\$(openssl rand -base64 32)"
-        return 1
+    # HAMALOG_ENCRYPTION_KEY 자동 생성 또는 검증
+    if [ ! "${HAMALOG_ENCRYPTION_KEY+x}" ] || [ -z "$HAMALOG_ENCRYPTION_KEY" ]; then
+        echo "🔑 HAMALOG_ENCRYPTION_KEY가 설정되지 않았습니다. 자동으로 보안 키를 생성합니다..."
+        export HAMALOG_ENCRYPTION_KEY=$(generate_secure_key)
+        echo "✅ HAMALOG_ENCRYPTION_KEY가 자동으로 생성되었습니다 (길이: ${#HAMALOG_ENCRYPTION_KEY}자)"
+        echo "📝 생성된 HAMALOG_ENCRYPTION_KEY: $HAMALOG_ENCRYPTION_KEY"
+        echo "💾 이 키를 저장해두시면 다음 배포 시 재사용할 수 있습니다."
     elif [ "${#HAMALOG_ENCRYPTION_KEY}" -lt 32 ]; then
-        echo "❌ HAMALOG_ENCRYPTION_KEY가 너무 짧습니다. 최소 32자 이상의 Base64 키가 필요합니다."
-        echo "현재 길이: ${#HAMALOG_ENCRYPTION_KEY}자"
-        echo "키 생성: export HAMALOG_ENCRYPTION_KEY=\$(openssl rand -base64 32)"
-        return 1
+        echo "❌ 제공된 HAMALOG_ENCRYPTION_KEY가 너무 짧습니다 (현재: ${#HAMALOG_ENCRYPTION_KEY}자). 새로운 키를 생성합니다..."
+        export HAMALOG_ENCRYPTION_KEY=$(generate_secure_key)
+        echo "✅ 새로운 HAMALOG_ENCRYPTION_KEY가 생성되었습니다 (길이: ${#HAMALOG_ENCRYPTION_KEY}자)"
+        echo "📝 생성된 HAMALOG_ENCRYPTION_KEY: $HAMALOG_ENCRYPTION_KEY"
     else
         echo "✅ HAMALOG_ENCRYPTION_KEY 검증 완료 (길이: ${#HAMALOG_ENCRYPTION_KEY}자)"
     fi
+    
+    # 생성된 키들을 파일에 저장 (선택사항)
+    save_keys_to_file
     
     # 기타 중요한 환경변수 검사
     if [ -z "${DB_PASSWORD:-}" ]; then
@@ -90,13 +91,75 @@ validate_environment() {
         echo "⚠️  MYSQL_ROOT_PASSWORD가 설정되지 않았습니다. 기본값을 사용합니다."
     fi
     
-    echo "✅ 환경변수 검증이 완료되었습니다."
+    echo "✅ 환경변수 설정 및 검증이 완료되었습니다."
     return 0
 }
 
-# 환경변수 유효성 검사 실행
-if ! validate_environment; then
-    echo "❌ 환경변수 검증에 실패했습니다. 배포를 중단합니다."
+# 키를 파일에 저장하는 함수 (재사용을 위해)
+save_keys_to_file() {
+    local env_file=".env.hamalog-keys"
+    
+    if [ -f "$env_file" ]; then
+        echo "📁 기존 키 파일이 발견되었습니다: $env_file"
+        return 0
+    fi
+    
+    echo "💾 생성된 키들을 $env_file 파일에 저장합니다..."
+    cat > "$env_file" << EOF
+# Hamalog 자동 생성 키들 ($(date))
+# 이 파일을 안전한 곳에 보관하고, 다음 배포 시 다음 명령어로 키를 로드하세요:
+# source $env_file && ./deploy.sh
+
+export JWT_SECRET="$JWT_SECRET"
+export HAMALOG_ENCRYPTION_KEY="$HAMALOG_ENCRYPTION_KEY"
+
+# 사용법:
+# 1. 키 재사용: source $env_file && ./deploy.sh
+# 2. 새 키 생성: rm $env_file && ./deploy.sh
+EOF
+    
+    chmod 600 "$env_file"  # 소유자만 읽기/쓰기 가능
+    echo "✅ 키가 $env_file에 저장되었습니다"
+    echo "🔒 파일 권한이 600으로 설정되었습니다 (보안)"
+    echo "📖 다음 배포 시 키 재사용: source $env_file && ./deploy.sh"
+}
+
+# 기존 키 파일 로드 시도
+load_existing_keys() {
+    local env_file=".env.hamalog-keys"
+    
+    if [ -f "$env_file" ]; then
+        echo "📁 기존 키 파일을 발견했습니다: $env_file"
+        echo "🔑 저장된 키를 로드합니다..."
+        
+        # 파일에서 키 읽기 (보안을 위해 source 대신 직접 파싱)
+        while IFS='=' read -r key value; do
+            # 주석과 빈 줄 건너뛰기
+            [[ $key =~ ^#.*$ ]] && continue
+            [[ -z $key ]] && continue
+            
+            # export 제거 및 따옴표 제거
+            key=${key#export }
+            key=${key// /}  # 공백 제거
+            value=${value//\"/}  # 따옴표 제거
+            
+            if [[ $key == "JWT_SECRET" ]] && [[ ! "${JWT_SECRET+x}" ]]; then
+                export JWT_SECRET="$value"
+                echo "✅ JWT_SECRET을 파일에서 로드했습니다"
+            elif [[ $key == "HAMALOG_ENCRYPTION_KEY" ]] && [[ ! "${HAMALOG_ENCRYPTION_KEY+x}" ]]; then
+                export HAMALOG_ENCRYPTION_KEY="$value"
+                echo "✅ HAMALOG_ENCRYPTION_KEY를 파일에서 로드했습니다"
+            fi
+        done < "$env_file"
+    fi
+}
+
+# 기존 키 파일 로드 시도
+load_existing_keys
+
+# 환경변수 자동 설정 및 유효성 검사 실행
+if ! setup_and_validate_environment; then
+    echo "❌ 환경변수 설정에 실패했습니다. 배포를 중단합니다."
     exit 1
 fi
 
@@ -122,7 +185,7 @@ services:
       - SPRING_DATA_REDIS_PORT=6379
       
       # JWT Configuration
-      - JWT_SECRET=\${JWT_SECRET:-EzUuJwKK4vLnvk5r7yAgdNP/sa1dL87febZhlayPGjI=}
+      - JWT_SECRET=\${JWT_SECRET}
       - JWT_EXPIRY=\${JWT_EXPIRY:-3600000}
       
       # Data Encryption Configuration

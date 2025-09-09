@@ -2,6 +2,7 @@ package com.Hamalog.controller.sideEffect;
 
 import com.Hamalog.dto.sideEffect.request.SideEffectRecordRequest;
 import com.Hamalog.dto.sideEffect.response.RecentSideEffectResponse;
+import com.Hamalog.security.annotation.RequireResourceOwnership;
 import com.Hamalog.service.sideEffect.SideEffectService;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.Parameter;
@@ -34,6 +35,12 @@ public class SideEffectController {
             @ApiResponse(responseCode = "404", description = "사용자를 찾을 수 없음")
     })
     @GetMapping("/recent")
+    @RequireResourceOwnership(
+        resourceType = RequireResourceOwnership.ResourceType.MEMBER,
+        paramName = "userId",
+        source = RequireResourceOwnership.ParameterSource.REQUEST_PARAM,
+        strategy = RequireResourceOwnership.OwnershipStrategy.DIRECT
+    )
     public ResponseEntity<RecentSideEffectResponse> getRecentSideEffects(
             @Parameter(
                     in = ParameterIn.QUERY,
@@ -43,12 +50,6 @@ public class SideEffectController {
             )
             @RequestParam Long userId,
             @AuthenticationPrincipal UserDetails userDetails) {
-        
-        // Authorization check: ensure user can only access their own side effect data
-        String currentLoginId = userDetails.getUsername();
-        if (!sideEffectService.isOwner(userId, currentLoginId)) {
-            return ResponseEntity.status(HttpStatus.FORBIDDEN).build();
-        }
         
         return ResponseEntity.ok(sideEffectService.getRecentSideEffects(userId));
     }
@@ -62,15 +63,16 @@ public class SideEffectController {
             @ApiResponse(responseCode = "404", description = "사용자를 찾을 수 없음")
     })
     @PostMapping("/record")
+    @RequireResourceOwnership(
+        resourceType = RequireResourceOwnership.ResourceType.MEMBER,
+        paramName = "request",
+        source = RequireResourceOwnership.ParameterSource.REQUEST_BODY,
+        bodyField = "memberId",
+        strategy = RequireResourceOwnership.OwnershipStrategy.DIRECT
+    )
     public ResponseEntity<Void> createSideEffectRecord(
             @Valid @RequestBody SideEffectRecordRequest request,
             @AuthenticationPrincipal UserDetails userDetails) {
-        
-        // Authorization check: ensure user can only create records for themselves
-        String currentLoginId = userDetails.getUsername();
-        if (!sideEffectService.isOwner(request.memberId(), currentLoginId)) {
-            return ResponseEntity.status(HttpStatus.FORBIDDEN).build();
-        }
         
         sideEffectService.createSideEffectRecord(request);
         

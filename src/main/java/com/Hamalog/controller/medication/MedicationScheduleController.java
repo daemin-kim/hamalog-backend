@@ -5,6 +5,7 @@ import com.Hamalog.dto.medication.request.MedicationScheduleCreateRequest;
 import com.Hamalog.dto.medication.request.MedicationScheduleUpdateRequest;
 import com.Hamalog.dto.medication.response.MedicationScheduleResponse;
 import com.Hamalog.dto.medication.response.MedicationScheduleListResponse;
+import com.Hamalog.security.annotation.RequireResourceOwnership;
 import com.Hamalog.service.medication.MedicationScheduleService;
 import com.Hamalog.service.medication.FileStorageService;
 import io.swagger.v3.oas.annotations.Operation;
@@ -53,6 +54,11 @@ public class MedicationScheduleController {
             @ApiResponse(responseCode = "404", description = "회원이 존재하지 않음", content = @Content)
     })
     @GetMapping("/list/{member-id}")
+    @RequireResourceOwnership(
+        resourceType = RequireResourceOwnership.ResourceType.MEDICATION_SCHEDULE_BY_MEMBER,
+        paramName = "member-id",
+        strategy = RequireResourceOwnership.OwnershipStrategy.DIRECT
+    )
     public ResponseEntity<MedicationScheduleListResponse> getMedicationSchedules(
             @Parameter(description = "회원 ID", required = true, example = "1", in = ParameterIn.PATH)
             @PathVariable("member-id") Long memberId,
@@ -60,11 +66,6 @@ public class MedicationScheduleController {
             Pageable pageable,
             @AuthenticationPrincipal UserDetails userDetails
     ){
-        String currentLoginId = userDetails.getUsername();
-        if (!medicationScheduleService.isOwner(memberId, currentLoginId)) {
-            return ResponseEntity.status(HttpStatus.FORBIDDEN).build();
-        }
-        
         Page<MedicationSchedule> medicationSchedules = medicationScheduleService.getMedicationSchedules(memberId, pageable);
         Page<MedicationScheduleResponse> medicationScheduleResponses = medicationSchedules.map(MedicationScheduleResponse::from);
         MedicationScheduleListResponse response = MedicationScheduleListResponse.from(medicationScheduleResponses);
@@ -80,18 +81,17 @@ public class MedicationScheduleController {
             @ApiResponse(responseCode = "404", description = "복약 스케줄이 존재하지 않음", content = @Content)
     })
     @GetMapping("/{medication-schedule-id}")
+    @RequireResourceOwnership(
+        resourceType = RequireResourceOwnership.ResourceType.MEDICATION_SCHEDULE,
+        paramName = "medication-schedule-id",
+        strategy = RequireResourceOwnership.OwnershipStrategy.DIRECT
+    )
     public ResponseEntity<MedicationScheduleResponse> getMedicationScheduleById(
             @Parameter(description = "복약 스케줄 ID", required = true, example = "1", in = ParameterIn.PATH)
             @PathVariable("medication-schedule-id") Long medicationScheduleId,
             @AuthenticationPrincipal UserDetails userDetails
     ){
         MedicationSchedule medicationSchedule = medicationScheduleService.getMedicationSchedule(medicationScheduleId);
-        
-        String currentLoginId = userDetails.getUsername();
-        if (!medicationScheduleService.isOwner(medicationSchedule.getMember().getMemberId(), currentLoginId)) {
-            return ResponseEntity.status(HttpStatus.FORBIDDEN).build();
-        }
-        
         return ResponseEntity.ok(MedicationScheduleResponse.from(medicationSchedule));
     }
 
@@ -105,6 +105,13 @@ public class MedicationScheduleController {
             @ApiResponse(responseCode = "404", description = "회원이 존재하지 않음", content = @Content)
     })
     @PostMapping(consumes = MediaType.MULTIPART_FORM_DATA_VALUE)
+    @RequireResourceOwnership(
+        resourceType = RequireResourceOwnership.ResourceType.MEDICATION_SCHEDULE_BY_MEMBER,
+        paramName = "data",
+        source = RequireResourceOwnership.ParameterSource.REQUEST_BODY,
+        bodyField = "memberId",
+        strategy = RequireResourceOwnership.OwnershipStrategy.DIRECT
+    )
     public ResponseEntity<MedicationScheduleResponse> createMedicationSchedule(
             @Parameter(description = "복약 스케줄 생성 요청 데이터", required = true)
             @RequestPart("data") @Valid MedicationScheduleCreateRequest medicationScheduleCreateRequest,
@@ -113,11 +120,6 @@ public class MedicationScheduleController {
             @RequestPart(value = "image", required = false) MultipartFile image,
             @AuthenticationPrincipal UserDetails userDetails
     ) {
-        String currentLoginId = userDetails.getUsername();
-        if (!medicationScheduleService.isOwner(medicationScheduleCreateRequest.memberId(), currentLoginId)) {
-            return ResponseEntity.status(HttpStatus.FORBIDDEN).build();
-        }
-        
         MedicationSchedule createdMedicationSchedule = medicationScheduleService.createMedicationSchedule(medicationScheduleCreateRequest);
         return ResponseEntity.status(HttpStatus.CREATED).body(MedicationScheduleResponse.from(createdMedicationSchedule));
     }
@@ -131,6 +133,11 @@ public class MedicationScheduleController {
             @ApiResponse(responseCode = "404", description = "복약 스케줄이 존재하지 않음", content = @Content)
     })
     @PutMapping("/{medication-schedule-id}")
+    @RequireResourceOwnership(
+        resourceType = RequireResourceOwnership.ResourceType.MEDICATION_SCHEDULE,
+        paramName = "medication-schedule-id",
+        strategy = RequireResourceOwnership.OwnershipStrategy.DIRECT
+    )
     public ResponseEntity<MedicationScheduleResponse> updateMedicationSchedule(
             @Parameter(description = "수정할 복약 스케줄 ID", required = true, example = "1", in = ParameterIn.PATH)
             @PathVariable("medication-schedule-id") Long medicationScheduleId,
@@ -139,13 +146,6 @@ public class MedicationScheduleController {
             @RequestBody @Valid MedicationScheduleUpdateRequest medicationScheduleUpdateRequest,
             @AuthenticationPrincipal UserDetails userDetails
     ) {
-        MedicationSchedule medicationSchedule = medicationScheduleService.getMedicationSchedule(medicationScheduleId);
-        
-        String currentLoginId = userDetails.getUsername();
-        if (!medicationScheduleService.isOwner(medicationSchedule.getMember().getMemberId(), currentLoginId)) {
-            return ResponseEntity.status(HttpStatus.FORBIDDEN).build();
-        }
-        
         MedicationSchedule updatedMedicationSchedule = medicationScheduleService.updateMedicationSchedule(medicationScheduleId, medicationScheduleUpdateRequest);
         return ResponseEntity.ok(MedicationScheduleResponse.from(updatedMedicationSchedule));
     }
@@ -157,18 +157,16 @@ public class MedicationScheduleController {
             @ApiResponse(responseCode = "404", description = "복약 스케줄이 존재하지 않음", content = @Content)
     })
     @DeleteMapping("/{medication-schedule-id}")
+    @RequireResourceOwnership(
+        resourceType = RequireResourceOwnership.ResourceType.MEDICATION_SCHEDULE,
+        paramName = "medication-schedule-id",
+        strategy = RequireResourceOwnership.OwnershipStrategy.DIRECT
+    )
     public ResponseEntity<Void> deleteMedicationSchedule(
             @Parameter(description = "삭제할 복약 스케줄 ID", required = true, example = "1", in = ParameterIn.PATH)
             @PathVariable("medication-schedule-id") Long medicationScheduleId,
             @AuthenticationPrincipal UserDetails userDetails
     ) {
-        MedicationSchedule medicationSchedule = medicationScheduleService.getMedicationSchedule(medicationScheduleId);
-        
-        String currentLoginId = userDetails.getUsername();
-        if (!medicationScheduleService.isOwner(medicationSchedule.getMember().getMemberId(), currentLoginId)) {
-            return ResponseEntity.status(HttpStatus.FORBIDDEN).build();
-        }
-        
         medicationScheduleService.deleteMedicationSchedule(medicationScheduleId);
         return ResponseEntity.noContent().build();
     }

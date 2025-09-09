@@ -4,6 +4,7 @@ import com.Hamalog.domain.medication.MedicationRecord;
 import com.Hamalog.dto.medication.request.MedicationRecordCreateRequest;
 import com.Hamalog.dto.medication.request.MedicationRecordUpdateRequest;
 import com.Hamalog.dto.medication.response.MedicationRecordResponse;
+import com.Hamalog.security.annotation.RequireResourceOwnership;
 import com.Hamalog.service.medication.MedicationRecordService;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.Parameter;
@@ -45,16 +46,16 @@ public class MedicationRecordController {
                     content = @Content)
     })
     @GetMapping("/list/{medication-schedule-id}")
+    @RequireResourceOwnership(
+        resourceType = RequireResourceOwnership.ResourceType.MEDICATION_SCHEDULE,
+        paramName = "medication-schedule-id",
+        strategy = RequireResourceOwnership.OwnershipStrategy.DIRECT
+    )
     public ResponseEntity<List<MedicationRecordResponse>> getMedicationRecords(
             @Parameter(in = ParameterIn.PATH, description = "복약 스케줄 ID", required = true, example = "1")
             @PathVariable("medication-schedule-id") Long medicationScheduleId,
             @AuthenticationPrincipal UserDetails userDetails
     ) {
-        String currentLoginId = userDetails.getUsername();
-        if (!medicationRecordService.isOwnerOfSchedule(medicationScheduleId, currentLoginId)) {
-            return ResponseEntity.status(HttpStatus.FORBIDDEN).build();
-        }
-        
         List<MedicationRecord> medicationRecords = medicationRecordService.getMedicationRecords(medicationScheduleId);
         List<MedicationRecordResponse> medicationRecordResponses = medicationRecords.stream()
                 .map(MedicationRecordResponse::from)
@@ -74,16 +75,16 @@ public class MedicationRecordController {
                     content = @Content)
     })
     @GetMapping("/{medication-record-id}")
+    @RequireResourceOwnership(
+        resourceType = RequireResourceOwnership.ResourceType.MEDICATION_RECORD,
+        paramName = "medication-record-id",
+        strategy = RequireResourceOwnership.OwnershipStrategy.DIRECT
+    )
     public ResponseEntity<MedicationRecordResponse> getMedicationRecordById(
             @Parameter(in = ParameterIn.PATH, description = "복약 기록 ID", required = true, example = "1")
             @PathVariable("medication-record-id") Long medicationRecordId,
             @AuthenticationPrincipal UserDetails userDetails
     ) {
-        String currentLoginId = userDetails.getUsername();
-        if (!medicationRecordService.isOwnerOfRecord(medicationRecordId, currentLoginId)) {
-            return ResponseEntity.status(HttpStatus.FORBIDDEN).build();
-        }
-        
         MedicationRecord medicationRecord = medicationRecordService.getMedicationRecord(medicationRecordId);
         return ResponseEntity.ok(MedicationRecordResponse.from(medicationRecord));
     }
@@ -100,16 +101,18 @@ public class MedicationRecordController {
                     content = @Content)
     })
     @PostMapping
+    @RequireResourceOwnership(
+        resourceType = RequireResourceOwnership.ResourceType.MEDICATION_SCHEDULE,
+        paramName = "medicationRecordCreateRequest",
+        source = RequireResourceOwnership.ParameterSource.REQUEST_BODY,
+        bodyField = "medicationScheduleId",
+        strategy = RequireResourceOwnership.OwnershipStrategy.DIRECT
+    )
     public ResponseEntity<MedicationRecordResponse> createMedicationRecord(
             @Parameter(description = "복약 기록 생성 요청 데이터", required = true)
             @Valid @RequestBody MedicationRecordCreateRequest medicationRecordCreateRequest,
             @AuthenticationPrincipal UserDetails userDetails
     ) {
-        String currentLoginId = userDetails.getUsername();
-        if (!medicationRecordService.isOwnerOfSchedule(medicationRecordCreateRequest.medicationScheduleId(), currentLoginId)) {
-            return ResponseEntity.status(HttpStatus.FORBIDDEN).build();
-        }
-        
         MedicationRecord createdMedicationRecord = medicationRecordService.createMedicationRecord(medicationRecordCreateRequest);
         return ResponseEntity.status(HttpStatus.CREATED).body(MedicationRecordResponse.from(createdMedicationRecord));
     }
@@ -126,6 +129,11 @@ public class MedicationRecordController {
                     content = @Content)
     })
     @PutMapping("/{medication-record-id}")
+    @RequireResourceOwnership(
+        resourceType = RequireResourceOwnership.ResourceType.MEDICATION_RECORD,
+        paramName = "medication-record-id",
+        strategy = RequireResourceOwnership.OwnershipStrategy.DIRECT
+    )
     public ResponseEntity<MedicationRecordResponse> updateMedicationRecord(
             @Parameter(in = ParameterIn.PATH, description = "수정할 복약 기록 ID", required = true, example = "1")
             @PathVariable("medication-record-id") Long medicationRecordId,
@@ -134,11 +142,6 @@ public class MedicationRecordController {
             @Valid @RequestBody MedicationRecordUpdateRequest medicationRecordUpdateRequest,
             @AuthenticationPrincipal UserDetails userDetails
     ) {
-        String currentLoginId = userDetails.getUsername();
-        if (!medicationRecordService.isOwnerOfRecord(medicationRecordId, currentLoginId)) {
-            return ResponseEntity.status(HttpStatus.FORBIDDEN).build();
-        }
-        
         MedicationRecord updatedMedicationRecord = medicationRecordService.updateMedicationRecord(medicationRecordId, medicationRecordUpdateRequest);
         return ResponseEntity.ok(MedicationRecordResponse.from(updatedMedicationRecord));
     }
@@ -152,16 +155,16 @@ public class MedicationRecordController {
             @ApiResponse(responseCode = "404", description = "복약 기록을 찾을 수 없음", content = @Content)
     })
     @DeleteMapping("/{medication-record-id}")
+    @RequireResourceOwnership(
+        resourceType = RequireResourceOwnership.ResourceType.MEDICATION_RECORD,
+        paramName = "medication-record-id",
+        strategy = RequireResourceOwnership.OwnershipStrategy.DIRECT
+    )
     public ResponseEntity<Void> deleteMedicationRecord(
             @Parameter(in = ParameterIn.PATH, description = "삭제할 복약 기록 ID", required = true, example = "1")
             @PathVariable("medication-record-id") Long medicationRecordId,
             @AuthenticationPrincipal UserDetails userDetails
     ) {
-        String currentLoginId = userDetails.getUsername();
-        if (!medicationRecordService.isOwnerOfRecord(medicationRecordId, currentLoginId)) {
-            return ResponseEntity.status(HttpStatus.FORBIDDEN).build();
-        }
-        
         medicationRecordService.deleteMedicationRecord(medicationRecordId);
         return ResponseEntity.noContent().build();
     }

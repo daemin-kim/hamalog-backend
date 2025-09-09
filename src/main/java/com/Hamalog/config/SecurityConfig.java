@@ -93,7 +93,6 @@ public class SecurityConfig {
                 )
                 .addFilterBefore(requestSizeMonitoringFilter, UsernamePasswordAuthenticationFilter.class);
         
-        // Only add rate limiting filter if it's available (Redis configured)
         if (rateLimitingFilter != null) {
             http.addFilterBefore(rateLimitingFilter, UsernamePasswordAuthenticationFilter.class);
         }

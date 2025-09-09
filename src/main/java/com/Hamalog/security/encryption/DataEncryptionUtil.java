@@ -39,14 +39,6 @@ public class DataEncryptionUtil {
                               java.util.Arrays.asList(environment.getActiveProfiles()).contains("prod");
         
         // Add comprehensive startup logging for debugging
-        log.info("==================== 데이터 암호화 키 초기화 시작 ====================");
-        log.info("활성 프로필: {}", java.util.Arrays.toString(environment.getActiveProfiles()));
-        log.info("프로덕션 모드: {}", isProduction);
-        log.info("수신된 암호화 키 상태:");
-        log.info("  - null 여부: {}", encryptionKey == null);
-        log.info("  - 값: [{}]", encryptionKey == null ? "null" : encryptionKey);
-        log.info("  - 길이: {}", encryptionKey == null ? 0 : encryptionKey.length());
-        log.info("  - trim 후 비어있음: {}", encryptionKey == null || encryptionKey.trim().isEmpty());
         
         // Environment variable direct check for debugging
         String directEnvValue = environment.getProperty("hamalog.encryption.key");

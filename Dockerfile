@@ -1,33 +1,21 @@
 FROM openjdk:21-jdk
 
-# 작업 디렉토리 설정
 WORKDIR /app
 
-# JAR 파일 복사
 COPY build/libs/*.jar app.jar
 
-# 문서화 및 검증을 위한 환경 변수 선언
 ENV SPRING_PROFILES_ACTIVE=prod
-# 참고: JWT_SECRET은 런타임에 docker run -e JWT_SECRET=value를 통해 설정해야 함
-# JWT_SECRET을 빈 값으로 선언하지 말 것 - 기본값을 덮어쓰게 됨
 ENV JWT_EXPIRY=3600000
 ENV SPRING_DATASOURCE_URL=""
 ENV SPRING_DATASOURCE_USERNAME=""
 ENV SPRING_DATASOURCE_PASSWORD=""
 ENV SPRING_DATA_REDIS_HOST=localhost
 ENV SPRING_DATA_REDIS_PORT=6379
-# KAKAO_CLIENT_ID와 KAKAO_CLIENT_SECRET은 런타임에 설정해야 함
-# OAuth2EmptyVariableHandler의 정상 작동을 위해 빈 값으로 선언하지 말 것
-# 설정 방법: docker run -e KAKAO_CLIENT_ID=your_id -e KAKAO_CLIENT_SECRET=your_secret
 
-# 애플리케이션이 실행되는 포트 노출
 EXPOSE 8080
 
-# 애플리케이션이 정상 실행되는지 확인하는 상태 검사
 HEALTHCHECK --interval=30s --timeout=10s --start-period=40s --retries=3 \
     CMD curl -f http://localhost:8080/actuator/health || exit 1
-
-# 환경 변수 검증과 함께 애플리케이션 실행
 ENTRYPOINT ["sh", "-c", "\
     echo 'Hamalog 애플리케이션을 시작합니다...' && \
     echo '활성 프로필: ${SPRING_PROFILES_ACTIVE}' && \

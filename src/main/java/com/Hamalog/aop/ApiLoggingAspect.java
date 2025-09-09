@@ -45,29 +45,24 @@ public class ApiLoggingAspect {
         String params = getParameterInfo(signature, joinPoint.getArgs());
         String user = getAuthenticatedUser();
 
-        // Get HTTP context
         HttpServletRequest request = getCurrentRequest();
         String httpMethod = request != null ? request.getMethod() : "UNKNOWN";
         String path = request != null ? request.getRequestURI() : "UNKNOWN";
         String ipAddress = request != null ? getClientIpAddress(request) : "UNKNOWN";
         String userAgent = request != null ? request.getHeader("User-Agent") : "UNKNOWN";
 
-        // Add additional structured logging context
         MDC.put("api.method", methodName);
         MDC.put("api.user", user);
         
-        // Create parameters map for structured logging
         Map<String, Object> parametersMap = createParametersMap(signature, joinPoint.getArgs());
 
         try {
             Object result = joinPoint.proceed();
             long elapsed = System.currentTimeMillis() - startTime;
             
-            // Add performance metrics to MDC
             MDC.put("api.duration", String.valueOf(elapsed));
             MDC.put("api.status", "success");
             
-            // Create API event for successful request
             ApiEvent apiEvent = ApiEvent.builder()
                     .httpMethod(httpMethod)
                     .path(path)
@@ -87,12 +82,10 @@ public class ApiLoggingAspect {
         } catch (Exception e) {
             long elapsed = System.currentTimeMillis() - startTime;
             
-            // Add error context to MDC
             MDC.put("api.duration", String.valueOf(elapsed));
             MDC.put("api.status", "error");
             MDC.put("api.errorType", e.getClass().getSimpleName());
             
-            // Create API event for failed request
             ApiEvent apiErrorEvent = ApiEvent.builder()
                     .httpMethod(httpMethod)
                     .path(path)
@@ -110,7 +103,6 @@ public class ApiLoggingAspect {
             
             throw e;
         } finally {
-            // Clean up MDC context
             MDC.remove("api.method");
             MDC.remove("api.user");
             MDC.remove("api.duration");
@@ -157,11 +149,11 @@ public class ApiLoggingAspect {
     }
 
     private String getPerformanceText(long elapsed) {
-        if (elapsed < 100) return "VERY_FAST"; // Very fast
-        if (elapsed < 500) return "FAST"; // Fast
-        if (elapsed < 1000) return "MODERATE"; // Moderate
-        if (elapsed < 3000) return "SLOW"; // Slow
-        return "VERY_SLOW"; // Very slow
+        if (elapsed < 100) return "VERY_FAST";
+        if (elapsed < 500) return "FAST";
+        if (elapsed < 1000) return "MODERATE";
+        if (elapsed < 3000) return "SLOW";
+        return "VERY_SLOW";
     }
     
     /**
@@ -227,17 +219,13 @@ public class ApiLoggingAspect {
     private String sanitizeResult(Object result) {
         if (result == null) return "null";
         
-        // For security reasons, avoid logging detailed response content
-        // that might contain sensitive user data
         String className = result.getClass().getSimpleName();
         
-        // Check if result is a collection/list
         if (result instanceof java.util.Collection) {
             int size = ((java.util.Collection<?>) result).size();
             return String.format("[Collection<%s> size=%d]", className, size);
         }
         
-        // For individual response objects, just log the type
         return String.format("[%s response - details hidden for security]", className);
     }
 }

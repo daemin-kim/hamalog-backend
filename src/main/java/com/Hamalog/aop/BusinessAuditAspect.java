@@ -43,19 +43,15 @@ public class BusinessAuditAspect {
     @Autowired
     private StructuredLogger structuredLogger;
 
-    // 생성 작업 감사
     @Pointcut("execution(public * com.Hamalog.service..create*(..))")
     public void createOperations() {}
 
-    // 수정 작업 감사
     @Pointcut("execution(public * com.Hamalog.service..update*(..))")
     public void updateOperations() {}
 
-    // 삭제 작업 감사
     @Pointcut("execution(public * com.Hamalog.service..delete*(..))")
     public void deleteOperations() {}
 
-    // 로그인/인증 작업 감사
     @Pointcut("execution(public * com.Hamalog.service.auth.AuthService.*(..))")
     public void authOperations() {}
 
@@ -69,7 +65,6 @@ public class BusinessAuditAspect {
         String ipAddress = getClientIpAddress();
         String timestamp = LocalDateTime.now().format(DateTimeFormatter.ISO_LOCAL_DATE_TIME);
         
-        // 감사 컨텍스트 설정
         MDC.put("audit.operation", operationType);
         MDC.put("audit.method", methodName);
         MDC.put("audit.userId", userId);
@@ -77,10 +72,8 @@ public class BusinessAuditAspect {
         MDC.put("audit.timestamp", timestamp);
         MDC.put("audit.userAgent", sanitizeUserAgent(userAgent));
 
-        // 입력 파라미터 로깅 (민감 정보 제외)
         String inputParams = getAuditSafeParameters(joinPoint);
         
-        // Create audit event for operation start
         AuditEvent startEvent = AuditEvent.builder()
                 .operation(operationType + "_START")
                 .entityType("BUSINESS_OPERATION")
@@ -97,12 +90,10 @@ public class BusinessAuditAspect {
         try {
             Object result = joinPoint.proceed();
             
-            // 성공 감사 로그
             String resultSummary = getResultSummary(result);
             MDC.put("audit.status", "SUCCESS");
             MDC.put("audit.result", resultSummary);
             
-            // Create audit event for successful operation
             AuditEvent successEvent = AuditEvent.builder()
                     .operation(operationType)
                     .entityType("BUSINESS_OPERATION")
@@ -119,12 +110,10 @@ public class BusinessAuditAspect {
             return result;
             
         } catch (Exception e) {
-            // 실패 감사 로그
             MDC.put("audit.status", "FAILURE");
             MDC.put("audit.error", e.getClass().getSimpleName());
             MDC.put("audit.errorMessage", e.getMessage());
             
-            // Create audit event for failed operation
             AuditEvent failureEvent = AuditEvent.builder()
                     .operation(operationType)
                     .entityType("BUSINESS_OPERATION")
@@ -141,7 +130,6 @@ public class BusinessAuditAspect {
             throw e;
             
         } finally {
-            // MDC 정리
             clearAuditContext();
         }
     }
@@ -158,7 +146,6 @@ public class BusinessAuditAspect {
         MDC.put("audit.ipAddress", ipAddress);
         MDC.put("audit.timestamp", LocalDateTime.now().format(DateTimeFormatter.ISO_LOCAL_DATE_TIME));
         
-        // Create security event for successful login
         SecurityEvent loginEvent = SecurityEvent.builder()
                 .eventType("AUTHENTICATION")
                 .userId(userId)
@@ -190,10 +177,8 @@ public class BusinessAuditAspect {
         MDC.put("audit.timestamp", LocalDateTime.now().format(DateTimeFormatter.ISO_LOCAL_DATE_TIME));
         MDC.put("audit.error", ex.getClass().getSimpleName());
         
-        // Determine risk level based on exception type
         String riskLevel = determineLoginFailureRiskLevel(ex, attemptedUser);
         
-        // Create security event for failed login
         SecurityEvent loginFailureEvent = SecurityEvent.builder()
                 .eventType("AUTHENTICATION_FAILURE")
                 .userId(attemptedUser)
@@ -211,7 +196,6 @@ public class BusinessAuditAspect {
         clearAuditContext();
     }
 
-    // 데이터 변경 작업에 대한 상세 감사
     @Around("execution(public * com.Hamalog.service.medication.MedicationRecordService.create*(..))")
     public Object auditMedicationRecordChanges(ProceedingJoinPoint joinPoint) throws Throwable {
         return auditDataChange(joinPoint, "MEDICATION_RECORD", "CREATE");

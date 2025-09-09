@@ -76,21 +76,17 @@ public class AuthService {
     }
 
     private void deleteMemberRelatedData(Long memberId) {
-        // Delete side effect records for this member (efficient batch delete)
         sideEffectRecordRepository.deleteByMemberId(memberId);
 
-        // Get medication schedule IDs for this member first
         var medicationScheduleIds = medicationScheduleRepository.findAllByMember_MemberId(memberId)
                 .stream()
                 .map(schedule -> schedule.getMedicationScheduleId())
                 .toList();
 
-        // Delete medication records for these schedules in batch
         if (!medicationScheduleIds.isEmpty()) {
             medicationRecordRepository.deleteByScheduleIds(medicationScheduleIds);
         }
 
-        // Delete medication schedules for this member (efficient batch delete)
         medicationScheduleRepository.deleteByMemberId(memberId);
     }
 

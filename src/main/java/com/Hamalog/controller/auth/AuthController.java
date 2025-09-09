@@ -62,7 +62,6 @@ public class AuthController {
             @ApiResponse(responseCode = "404", description = "사용자를 찾을 수 없음")
     })
     public ResponseEntity<String> deleteAccount(HttpServletRequest request) {
-        // Get current authenticated user
         Authentication authentication = SecurityContextHolder.getContext().getAuthentication();
         if (authentication == null || !authentication.isAuthenticated() || 
             "anonymousUser".equals(authentication.getName())) {
@@ -71,14 +70,12 @@ public class AuthController {
 
         String loginId = authentication.getName();
         
-        // Extract JWT token for invalidation
         String token = null;
         String authorizationHeader = request.getHeader("Authorization");
         if (authorizationHeader != null && authorizationHeader.startsWith("Bearer ")) {
             token = authorizationHeader.substring(7);
         }
 
-        // Delete the member account
         authService.deleteMember(loginId, token);
         
         return ResponseEntity.ok("회원 탈퇴가 완료되었습니다");

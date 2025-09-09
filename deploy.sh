@@ -59,6 +59,28 @@ validate_environment() {
         echo "✅ JWT_SECRET 검증 완료 (길이: ${#JWT_SECRET}자)"
     fi
     
+    # HAMALOG_ENCRYPTION_KEY 검사 - 정확한 구분을 위해 순서 변경
+    if [ ! "${HAMALOG_ENCRYPTION_KEY+x}" ]; then
+        echo "⚠️  HAMALOG_ENCRYPTION_KEY가 설정되지 않았습니다."
+        echo "프로덕션 배포를 위해서는 HAMALOG_ENCRYPTION_KEY 환경변수가 필요합니다."
+        echo "예시: export HAMALOG_ENCRYPTION_KEY=\$(openssl rand -base64 32)"
+        echo "또는: HAMALOG_ENCRYPTION_KEY=\$(openssl rand -base64 32) ./deploy.sh"
+        return 1
+    elif [ -z "$HAMALOG_ENCRYPTION_KEY" ]; then
+        echo "❌ HAMALOG_ENCRYPTION_KEY가 빈 문자열로 설정되어 있습니다. (이것이 컨테이너 시작 오류의 원인입니다!)"
+        echo "현재 값: '$HAMALOG_ENCRYPTION_KEY' (길이: ${#HAMALOG_ENCRYPTION_KEY})"
+        echo "유효한 Base64 인코딩된 256비트 키를 설정해주세요."
+        echo "키 생성: export HAMALOG_ENCRYPTION_KEY=\$(openssl rand -base64 32)"
+        return 1
+    elif [ "${#HAMALOG_ENCRYPTION_KEY}" -lt 32 ]; then
+        echo "❌ HAMALOG_ENCRYPTION_KEY가 너무 짧습니다. 최소 32자 이상의 Base64 키가 필요합니다."
+        echo "현재 길이: ${#HAMALOG_ENCRYPTION_KEY}자"
+        echo "키 생성: export HAMALOG_ENCRYPTION_KEY=\$(openssl rand -base64 32)"
+        return 1
+    else
+        echo "✅ HAMALOG_ENCRYPTION_KEY 검증 완료 (길이: ${#HAMALOG_ENCRYPTION_KEY}자)"
+    fi
+    
     # 기타 중요한 환경변수 검사
     if [ -z "${DB_PASSWORD:-}" ]; then
         echo "⚠️  DB_PASSWORD가 설정되지 않았습니다. 기본값을 사용합니다."
@@ -102,6 +124,9 @@ services:
       # JWT Configuration
       - JWT_SECRET=\${JWT_SECRET:-EzUuJwKK4vLnvk5r7yAgdNP/sa1dL87febZhlayPGjI=}
       - JWT_EXPIRY=\${JWT_EXPIRY:-3600000}
+      
+      # Data Encryption Configuration
+      - HAMALOG_ENCRYPTION_KEY=\${HAMALOG_ENCRYPTION_KEY:-}
       
       # OAuth2 Configuration
       - KAKAO_CLIENT_ID=\${KAKAO_CLIENT_ID:-dummy-client-id}

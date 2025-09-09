@@ -38,9 +38,18 @@ public class DataEncryptionUtil {
         boolean isProduction = environment.getActiveProfiles().length > 0 && 
                               java.util.Arrays.asList(environment.getActiveProfiles()).contains("prod");
         
-        if (encryptionKey == null || encryptionKey.isBlank()) {
+        if (encryptionKey == null || encryptionKey.trim().isEmpty()) {
             if (isProduction) {
-                throw new IllegalStateException("데이터 암호화 키가 설정되지 않았습니다. 프로덕션 환경에서는 HAMALOG_ENCRYPTION_KEY 환경변수를 반드시 설정해야 합니다.");
+                String errorMessage = String.format(
+                    "데이터 암호화 키가 설정되지 않았습니다. 프로덕션 환경에서는 HAMALOG_ENCRYPTION_KEY 환경변수를 반드시 설정해야 합니다.\n" +
+                    "현재 HAMALOG_ENCRYPTION_KEY 상태: [%s]\n" +
+                    "현재 HAMALOG_ENCRYPTION_KEY 길이: %d\n" +
+                    "해결 방법: HAMALOG_ENCRYPTION_KEY 환경변수를 Base64 인코딩된 256비트 키로 설정하세요.\n" +
+                    "키 생성 예시: openssl rand -base64 32",
+                    encryptionKey == null ? "null" : "'" + encryptionKey + "'",
+                    encryptionKey == null ? 0 : encryptionKey.length()
+                );
+                throw new IllegalStateException(errorMessage);
             }
             
             // Generate secure random key for development

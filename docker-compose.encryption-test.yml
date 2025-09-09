@@ -1,0 +1,6 @@
+services:
+  test-app:
+    image: alpine:latest
+    environment:
+      - TEST_ENCRYPTION_KEY=${HAMALOG_ENCRYPTION_KEY:-}
+    command: sh -c 'echo "Received TEST_ENCRYPTION_KEY: [$TEST_ENCRYPTION_KEY]"; if [ -z "$TEST_ENCRYPTION_KEY" ]; then echo "ENCRYPTION_KEY is empty!"; else echo "ENCRYPTION_KEY length: ${#TEST_ENCRYPTION_KEY}"; fi'

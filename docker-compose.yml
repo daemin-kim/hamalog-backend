@@ -22,7 +22,8 @@ services:
       - JWT_EXPIRY=${JWT_EXPIRY:-3600000}
       
       # 데이터 암호화 설정 (프로덕션에서는 환경 변수로 설정해야 함)
-      - HAMALOG_ENCRYPTION_KEY=${HAMALOG_ENCRYPTION_KEY:-dGVzdC1lbmNyeXB0aW9uLWtleS0xMjMtNDU2Nzg=}
+      # Default key is for development only - use secure key in production
+      - HAMALOG_ENCRYPTION_KEY=${HAMALOG_ENCRYPTION_KEY:-4MoGUKm/b9RXqFtUgxwK3BpVQF/RtZFMb4EwdzaRSlg=}
       
       # OAuth2 설정 (프로덕션에서는 환경 변수로 설정해야 함)
       - KAKAO_CLIENT_ID=${KAKAO_CLIENT_ID:-dummy-client-id}

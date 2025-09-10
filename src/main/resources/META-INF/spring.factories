@@ -1,2 +1,2 @@
 # Spring Boot Environment Post Processors
-org.springframework.boot.env.EnvironmentPostProcessor=com.Hamalog.config.OAuth2EmptyVariableHandler
+org.springframework.boot.env.EnvironmentPostProcessor=com.Hamalog.config.OAuth2EmptyVariableHandler,com.Hamalog.config.SecurityKeyEmptyVariableHandler

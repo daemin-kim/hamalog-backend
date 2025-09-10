@@ -1,5 +1,9 @@
 package com.Hamalog.service.medication;
 
+import com.Hamalog.domain.events.DomainEventPublisher;
+import com.Hamalog.domain.events.medication.MedicationScheduleCreated;
+import com.Hamalog.domain.events.medication.MedicationScheduleDeleted;
+import com.Hamalog.domain.events.medication.MedicationScheduleUpdated;
 import com.Hamalog.domain.medication.AlarmType;
 import com.Hamalog.domain.medication.MedicationSchedule;
 import com.Hamalog.domain.member.Member;
@@ -9,6 +13,8 @@ import com.Hamalog.exception.medication.MedicationScheduleNotFoundException;
 import com.Hamalog.exception.member.MemberNotFoundException;
 import com.Hamalog.repository.medication.MedicationScheduleRepository;
 import com.Hamalog.repository.member.MemberRepository;
+import lombok.RequiredArgsConstructor;
+import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -17,18 +23,13 @@ import java.util.List;
 
 @Service
 @Transactional
+@RequiredArgsConstructor
+@Slf4j
 public class MedicationScheduleService {
 
     private final MemberRepository memberRepository;
     private final MedicationScheduleRepository medicationScheduleRepository;
-
-    public MedicationScheduleService(
-            MemberRepository memberRepository,
-            MedicationScheduleRepository medicationScheduleRepository
-    ) {
-        this.memberRepository = memberRepository;
-        this.medicationScheduleRepository = medicationScheduleRepository;
-    }
+    private final DomainEventPublisher domainEventPublisher;
 
     @Transactional(readOnly = true)
     public List<MedicationSchedule> getMedicationSchedules(Long memberId) {
@@ -64,7 +65,27 @@ public class MedicationScheduleService {
                 AlarmType.valueOf(medicationScheduleCreateRequest.alarmType())
         );
 
-        return medicationScheduleRepository.save(medicationSchedule);
+        MedicationSchedule savedSchedule = medicationScheduleRepository.save(medicationSchedule);
+        
+        // Publish domain event for decoupled business logic
+        MedicationScheduleCreated event = new MedicationScheduleCreated(
+                savedSchedule.getMedicationScheduleId(),
+                savedSchedule.getMember().getMemberId(),
+                savedSchedule.getMember().getLoginId(),
+                savedSchedule.getName(),
+                savedSchedule.getHospitalName(),
+                savedSchedule.getPrescriptionDate(),
+                savedSchedule.getMemo(),
+                savedSchedule.getStartOfAd(),
+                savedSchedule.getPrescriptionDays(),
+                savedSchedule.getPerDay(),
+                savedSchedule.getAlarmType()
+        );
+        
+        domainEventPublisher.publish(event);
+        log.debug("Published MedicationScheduleCreated event for schedule ID: {}", savedSchedule.getMedicationScheduleId());
+
+        return savedSchedule;
     }
 
     public MedicationSchedule updateMedicationSchedule(
@@ -84,12 +105,50 @@ public class MedicationScheduleService {
                 medicationSchedule.alarmType()
         );
 
-        return medicationScheduleRepository.save(existingMedicationSchedule);
+        MedicationSchedule updatedSchedule = medicationScheduleRepository.save(existingMedicationSchedule);
+        
+        // Publish domain event for decoupled business logic
+        MedicationScheduleUpdated event = new MedicationScheduleUpdated(
+                updatedSchedule.getMedicationScheduleId(),
+                updatedSchedule.getMember().getMemberId(),
+                updatedSchedule.getMember().getLoginId(),
+                updatedSchedule.getName(),
+                updatedSchedule.getHospitalName(),
+                updatedSchedule.getPrescriptionDate(),
+                updatedSchedule.getMemo(),
+                updatedSchedule.getStartOfAd(),
+                updatedSchedule.getPrescriptionDays(),
+                updatedSchedule.getPerDay(),
+                updatedSchedule.getAlarmType()
+        );
+        
+        domainEventPublisher.publish(event);
+        log.debug("Published MedicationScheduleUpdated event for schedule ID: {}", updatedSchedule.getMedicationScheduleId());
+
+        return updatedSchedule;
     }
 
     public void deleteMedicationSchedule(Long medicationScheduleId) {
         MedicationSchedule medicationSchedule = getMedicationSchedule(medicationScheduleId);
+        
+        // Capture information before deletion for the event
+        Long scheduleId = medicationSchedule.getMedicationScheduleId();
+        Long memberId = medicationSchedule.getMember().getMemberId();
+        String memberLoginId = medicationSchedule.getMember().getLoginId();
+        String scheduleName = medicationSchedule.getName();
+        
         medicationScheduleRepository.delete(medicationSchedule);
+        
+        // Publish domain event for decoupled business logic
+        MedicationScheduleDeleted event = new MedicationScheduleDeleted(
+                scheduleId,
+                memberId,
+                memberLoginId,
+                scheduleName
+        );
+        
+        domainEventPublisher.publish(event);
+        log.debug("Published MedicationScheduleDeleted event for schedule ID: {}", scheduleId);
     }
     
     @Transactional(readOnly = true)

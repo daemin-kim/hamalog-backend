@@ -4,6 +4,7 @@ import com.Hamalog.dto.auth.request.LoginRequest;
 import com.Hamalog.dto.auth.response.LoginResponse;
 import com.Hamalog.dto.auth.request.SignupRequest;
 import com.Hamalog.service.auth.AuthService;
+import com.Hamalog.service.i18n.MessageService;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.Parameter;
 import io.swagger.v3.oas.annotations.media.Content;
@@ -26,11 +27,12 @@ import org.springframework.web.bind.annotation.*;
 public class AuthController {
 
     private final AuthService authService;
+    private final MessageService messageService;
 
     @PostMapping("/signup")
     public ResponseEntity<String> signup(@Valid @RequestBody SignupRequest request) {
         authService.registerMember(request);
-        return ResponseEntity.ok("회원가입 성공");
+        return ResponseEntity.ok(messageService.getMessage("auth.signup.success"));
     }
 
     @PostMapping("/login")
@@ -46,10 +48,10 @@ public class AuthController {
         if (authorizationHeader != null && authorizationHeader.startsWith("Bearer ")) {
             String token = authorizationHeader.substring(7);
             authService.logoutUser(token);
-            return ResponseEntity.ok("로그아웃 성공 - 토큰이 무효화되었습니다");
+            return ResponseEntity.ok(messageService.getMessage("auth.logout.success"));
         }
         
-        return ResponseEntity.ok("로그아웃 성공");
+        return ResponseEntity.ok(messageService.getMessage("auth.logout.success.simple"));
     }
 
     @DeleteMapping("/account")
@@ -65,7 +67,7 @@ public class AuthController {
         Authentication authentication = SecurityContextHolder.getContext().getAuthentication();
         if (authentication == null || !authentication.isAuthenticated() || 
             "anonymousUser".equals(authentication.getName())) {
-            return ResponseEntity.status(401).body("인증이 필요합니다");
+            return ResponseEntity.status(401).body(messageService.getMessage("auth.authentication.required"));
         }
 
         String loginId = authentication.getName();
@@ -78,6 +80,6 @@ public class AuthController {
 
         authService.deleteMember(loginId, token);
         
-        return ResponseEntity.ok("회원 탈퇴가 완료되었습니다");
+        return ResponseEntity.ok(messageService.getMessage("auth.account.deletion.success"));
     }
 }

@@ -38,28 +38,27 @@ public class DataEncryptionUtil {
         boolean isProduction = environment.getActiveProfiles().length > 0 && 
                               java.util.Arrays.asList(environment.getActiveProfiles()).contains("prod");
         
-        // Add comprehensive startup logging for debugging
-        
-        // Environment variable direct check for debugging
+        // Check encryption key configuration status (production-safe logging)
         String directEnvValue = environment.getProperty("hamalog.encryption.key");
-        log.info("Environment에서 직접 읽은 값: [{}]", directEnvValue);
-        log.info("Environment 직접 값 길이: {}", directEnvValue == null ? 0 : directEnvValue.length());
+        log.info("Encryption key configuration status - Key present: {}, Length: {}", 
+                directEnvValue != null && !directEnvValue.trim().isEmpty(), 
+                directEnvValue == null ? 0 : directEnvValue.length());
         
         if (encryptionKey == null || encryptionKey.trim().isEmpty()) {
             log.error("❌ 프로덕션 환경에서 데이터 암호화 키가 비어있습니다!");
             if (isProduction) {
                 String errorMessage = String.format(
                     "데이터 암호화 키가 설정되지 않았습니다. 프로덕션 환경에서는 HAMALOG_ENCRYPTION_KEY 환경변수를 반드시 설정해야 합니다.\n" +
-                    "현재 HAMALOG_ENCRYPTION_KEY 상태: [%s]\n" +
+                    "현재 HAMALOG_ENCRYPTION_KEY 상태: %s\n" +
                     "현재 HAMALOG_ENCRYPTION_KEY 길이: %d\n" +
-                    "Environment 직접 읽은 값: [%s]\n" +
+                    "Environment 키 존재 여부: %s\n" +
                     "활성 프로필: %s\n" +
                     "해결 방법: HAMALOG_ENCRYPTION_KEY 환경변수를 Base64 인코딩된 256비트 키로 설정하세요.\n" +
                     "키 생성 예시: openssl rand -base64 32\n" +
                     "Docker 실행 예시: docker run -e HAMALOG_ENCRYPTION_KEY=$(openssl rand -base64 32) your-image",
-                    encryptionKey == null ? "null" : "'" + encryptionKey + "'",
+                    encryptionKey == null ? "NOT_SET" : "EMPTY_OR_INVALID",
                     encryptionKey == null ? 0 : encryptionKey.length(),
-                    directEnvValue == null ? "null" : "'" + directEnvValue + "'",
+                    directEnvValue != null && !directEnvValue.trim().isEmpty() ? "PRESENT" : "NOT_SET",
                     java.util.Arrays.toString(environment.getActiveProfiles())
                 );
                 log.error("==================== 데이터 암호화 키 초기화 실패 ====================");

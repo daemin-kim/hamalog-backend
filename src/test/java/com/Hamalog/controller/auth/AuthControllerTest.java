@@ -4,6 +4,7 @@ import com.Hamalog.dto.auth.request.LoginRequest;
 import com.Hamalog.dto.auth.request.SignupRequest;
 import com.Hamalog.dto.auth.response.LoginResponse;
 import com.Hamalog.service.auth.AuthService;
+import com.Hamalog.service.i18n.MessageService;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.datatype.jsr310.JavaTimeModule;
 import org.junit.jupiter.api.BeforeEach;
@@ -31,6 +32,7 @@ import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.anyString;
 import static org.mockito.BDDMockito.given;
 import static org.mockito.Mockito.*;
+import static org.mockito.Mockito.lenient;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.*;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.*;
 
@@ -42,6 +44,9 @@ class AuthControllerTest {
 
     @Mock
     private AuthService authService;
+
+    @Mock
+    private MessageService messageService;
 
     @InjectMocks
     private AuthController authController;
@@ -64,6 +69,13 @@ class AuthControllerTest {
                 .setMessageConverters(stringConverter, jsonConverter)
                 .defaultResponseCharacterEncoding(StandardCharsets.UTF_8)
                 .build();
+        
+        // MessageService 모킹 설정 (lenient를 사용하여 불필요한 stubbing 경고 방지)
+        lenient().when(messageService.getMessage("auth.signup.success")).thenReturn("회원가입 성공");
+        lenient().when(messageService.getMessage("auth.logout.success")).thenReturn("로그아웃 성공 - 토큰이 무효화되었습니다");
+        lenient().when(messageService.getMessage("auth.logout.success.simple")).thenReturn("로그아웃 성공");
+        lenient().when(messageService.getMessage("auth.authentication.required")).thenReturn("인증이 필요합니다");
+        lenient().when(messageService.getMessage("auth.account.deletion.success")).thenReturn("회원 탈퇴가 완료되었습니다");
         
         signupRequest = new SignupRequest(
                 "test@example.com",

@@ -1,5 +1,6 @@
 package com.Hamalog.logging;
 
+import com.Hamalog.config.TestRedisConfig;
 import com.Hamalog.logging.business.BusinessIntelligenceLogger;
 import com.Hamalog.logging.events.*;
 import com.Hamalog.logging.metrics.JVMMetricsLogger;
@@ -8,6 +9,7 @@ import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 import org.springframework.boot.test.context.SpringBootTest;
+import org.springframework.context.annotation.Import;
 import org.springframework.test.context.TestPropertySource;
 
 import java.util.HashMap;
@@ -18,6 +20,7 @@ import java.util.Map;
  * Tests all major logging components and their integration
  */
 @SpringBootTest
+@Import(TestRedisConfig.class)
 @TestPropertySource(properties = {
     "app.aop.global-enabled=true",
     "app.aop.api-logging.enabled=true",

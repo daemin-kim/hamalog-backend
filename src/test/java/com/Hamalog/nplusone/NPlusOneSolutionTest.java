@@ -1,5 +1,6 @@
 package com.Hamalog.nplusone;
 
+import com.Hamalog.config.TestRedisConfig;
 import com.Hamalog.domain.medication.AlarmType;
 import com.Hamalog.domain.medication.MedicationSchedule;
 import com.Hamalog.domain.member.Member;
@@ -10,6 +11,7 @@ import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.context.SpringBootTest;
+import org.springframework.context.annotation.Import;
 import org.springframework.test.context.ActiveProfiles;
 import org.springframework.test.context.TestPropertySource;
 import org.springframework.transaction.annotation.Transactional;
@@ -19,6 +21,7 @@ import java.time.LocalDateTime;
 import java.util.List;
 
 @SpringBootTest
+@Import(TestRedisConfig.class)
 @ActiveProfiles("local")
 @TestPropertySource(properties = {
     "hamalog.encryption.key=+ZFRGoRl5CElrJfikdx1TmzQ3U8OJ+J6im5OMjuvsqE="

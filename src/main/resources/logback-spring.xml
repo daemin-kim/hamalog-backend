@@ -1,17 +1,18 @@
+<!--
 <?xml version="1.0" encoding="UTF-8"?>
 <configuration>
-    <!-- Define properties for log file paths and patterns -->
+    &lt;!&ndash; Define properties for log file paths and patterns &ndash;&gt;
     <springProfile name="!prod">
         <property name="LOG_PATH" value="${LOG_DIR:-./logs}"/>
         <property name="LOG_LEVEL" value="${LOG_LEVEL:-INFO}"/>
     </springProfile>
-    
+
     <springProfile name="prod">
         <property name="LOG_PATH" value="${LOG_DIR:-/var/log/hamalog}"/>
         <property name="LOG_LEVEL" value="${LOG_LEVEL:-WARN}"/>
     </springProfile>
 
-    <!-- Console Appender for Development -->
+    &lt;!&ndash; Console Appender for Development &ndash;&gt;
     <springProfile name="!prod">
         <appender name="CONSOLE" class="ch.qos.logback.core.ConsoleAppender">
             <encoder class="ch.qos.logback.classic.encoder.PatternLayoutEncoder">
@@ -20,7 +21,7 @@
         </appender>
     </springProfile>
 
-    <!-- JSON Console Appender for Production -->
+    &lt;!&ndash; JSON Console Appender for Production &ndash;&gt;
     <springProfile name="prod">
         <appender name="CONSOLE" class="ch.qos.logback.core.ConsoleAppender">
             <encoder class="net.logstash.logback.encoder.LogstashEncoder">
@@ -38,7 +39,7 @@
         </appender>
     </springProfile>
 
-    <!-- Application Log File Appender -->
+    &lt;!&ndash; Application Log File Appender &ndash;&gt;
     <appender name="APPLICATION_FILE" class="ch.qos.logback.core.rolling.RollingFileAppender">
         <file>${LOG_PATH}/hamalog.log</file>
         <rollingPolicy class="ch.qos.logback.core.rolling.SizeAndTimeBasedRollingPolicy">
@@ -54,7 +55,7 @@
         </encoder>
     </appender>
 
-    <!-- Audit Log File Appender -->
+    &lt;!&ndash; Audit Log File Appender &ndash;&gt;
     <appender name="AUDIT_FILE" class="ch.qos.logback.core.rolling.RollingFileAppender">
         <file>${LOG_PATH}/audit.log</file>
         <rollingPolicy class="ch.qos.logback.core.rolling.SizeAndTimeBasedRollingPolicy">
@@ -70,7 +71,7 @@
         </encoder>
     </appender>
 
-    <!-- Security Log File Appender -->
+    &lt;!&ndash; Security Log File Appender &ndash;&gt;
     <appender name="SECURITY_FILE" class="ch.qos.logback.core.rolling.RollingFileAppender">
         <file>${LOG_PATH}/security.log</file>
         <rollingPolicy class="ch.qos.logback.core.rolling.SizeAndTimeBasedRollingPolicy">
@@ -86,7 +87,7 @@
         </encoder>
     </appender>
 
-    <!-- Performance Log File Appender -->
+    &lt;!&ndash; Performance Log File Appender &ndash;&gt;
     <appender name="PERFORMANCE_FILE" class="ch.qos.logback.core.rolling.RollingFileAppender">
         <file>${LOG_PATH}/performance.log</file>
         <rollingPolicy class="ch.qos.logback.core.rolling.SizeAndTimeBasedRollingPolicy">
@@ -102,7 +103,7 @@
         </encoder>
     </appender>
 
-    <!-- Error Log File Appender for Critical Issues -->
+    &lt;!&ndash; Error Log File Appender for Critical Issues &ndash;&gt;
     <appender name="ERROR_FILE" class="ch.qos.logback.core.rolling.RollingFileAppender">
         <file>${LOG_PATH}/error.log</file>
         <filter class="ch.qos.logback.classic.filter.ThresholdFilter">
@@ -122,7 +123,7 @@
         </encoder>
     </appender>
 
-    <!-- Async Appenders for Better Performance -->
+    &lt;!&ndash; Async Appenders for Better Performance &ndash;&gt;
     <appender name="ASYNC_APPLICATION" class="ch.qos.logback.classic.AsyncAppender">
         <appender-ref ref="APPLICATION_FILE"/>
         <queueSize>1024</queueSize>
@@ -137,16 +138,16 @@
         <includeCallerData>true</includeCallerData>
     </appender>
 
-    <!-- Logger Configurations -->
-    
-    <!-- Application Logger -->
+    &lt;!&ndash; Logger Configurations &ndash;&gt;
+
+    &lt;!&ndash; Application Logger &ndash;&gt;
     <logger name="com.Hamalog" level="${LOG_LEVEL}" additivity="false">
         <appender-ref ref="CONSOLE"/>
         <appender-ref ref="ASYNC_APPLICATION"/>
         <appender-ref ref="ASYNC_ERROR"/>
     </logger>
 
-    <!-- Audit Logger -->
+    &lt;!&ndash; Audit Logger &ndash;&gt;
     <logger name="AUDIT" level="INFO" additivity="false">
         <appender-ref ref="AUDIT_FILE"/>
         <springProfile name="!prod">
@@ -154,7 +155,7 @@
         </springProfile>
     </logger>
 
-    <!-- Security Logger -->
+    &lt;!&ndash; Security Logger &ndash;&gt;
     <logger name="SECURITY" level="INFO" additivity="false">
         <appender-ref ref="SECURITY_FILE"/>
         <appender-ref ref="ASYNC_ERROR"/>
@@ -163,7 +164,7 @@
         </springProfile>
     </logger>
 
-    <!-- Performance Logger -->
+    &lt;!&ndash; Performance Logger &ndash;&gt;
     <logger name="PERFORMANCE" level="INFO" additivity="false">
         <appender-ref ref="PERFORMANCE_FILE"/>
         <springProfile name="local,dev">
@@ -171,30 +172,31 @@
         </springProfile>
     </logger>
 
-    <!-- Third-party Library Logging -->
+    &lt;!&ndash; Third-party Library Logging &ndash;&gt;
     <logger name="org.springframework.web" level="INFO"/>
     <logger name="org.springframework.security" level="WARN"/>
     <logger name="org.hibernate" level="WARN"/>
     <logger name="org.apache.http" level="WARN"/>
     <logger name="com.zaxxer.hikari" level="WARN"/>
-    
-    <!-- Reduce noise from health checks -->
+
+    &lt;!&ndash; Reduce noise from health checks &ndash;&gt;
     <logger name="org.springframework.boot.actuate.health" level="WARN"/>
-    
-    <!-- Spring Boot specific -->
+
+    &lt;!&ndash; Spring Boot specific &ndash;&gt;
     <logger name="org.springframework.boot" level="INFO"/>
 
-    <!-- Root Logger -->
+    &lt;!&ndash; Root Logger &ndash;&gt;
     <root level="INFO">
         <appender-ref ref="CONSOLE"/>
         <appender-ref ref="ASYNC_APPLICATION"/>
         <appender-ref ref="ASYNC_ERROR"/>
     </root>
 
-    <!-- JVM Shutdown Hook to ensure logs are flushed -->
+    &lt;!&ndash; JVM Shutdown Hook to ensure logs are flushed &ndash;&gt;
     <shutdownHook class="ch.qos.logback.core.hook.DelayingShutdownHook"/>
 
-    <!-- Status Listener for debugging logback configuration issues -->
+    &lt;!&ndash; Status Listener for debugging logback configuration issues &ndash;&gt;
     <statusListener class="ch.qos.logback.core.status.OnConsoleStatusListener"/>
 
 </configuration>
+-->

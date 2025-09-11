@@ -1,4 +1,6 @@
-### 공통 사항
+# Hamalog API 명세서
+
+## 공통 사항
 
 ⚠️ **로그인 및 회원가입 외의 모든 엔드포인트는 JWT 토큰 기반 인증이 필요합니다.** ⚠️
 
@@ -6,9 +8,10 @@
 - 인증되지 않은 사용자가 API에 접근하는 것을 방지하기 위함입니다.
 - EndPoint에 파라미터가 포함되는 경우(GET 등), 구별하기 위해 파라미터는 `{}`로 감싸져 있습니다.
 - 가독성을 위해 엔드포인트 내 변수명은 케밥 케이스(띄어쓰기 대신에 하이픈 '-'이 들어간 형태)로 작성합니다.
-- 모든 API는 사용자 권한 검증을 통해 본인의 데이터만 접근 가능하도록 보안이 강화되었습니다.
+- 모든 API는 리소스 소유권 검증을 통해 본인의 데이터만 접근 가능하도록 보안이 강화되었습니다.
+- AOP 기반 성능 모니터링, 비즈니스 감사, 캐싱, 재시도 메커니즘이 적용되었습니다.
 
-[http://112.72.157.193:8080](http://112.72.248.195:8080)
+**Base URL**: `http://localhost:8080`
 
 ### 에러 응답 규칙
 
@@ -37,12 +40,12 @@
 
 | 기능 | EndPoint | Method | Request Data | Response Data | 비고 |
 |------|----------|--------|--------------|---------------|------|
-| **회원가입** | `/auth/signup` | `POST` | 회원가입 요청 데이터 예시 참고 | `"회원가입 성공"`<br/>(Content-Type: text/plain) | **loginId는 이메일 형식이어야 합니다.** nickName 필드가 추가되었습니다. 각 필드는 유효성 검사 규칙을 따릅니다. `loginId` 중복 시 400 에러를 응답합니다. |
-| **일반 로그인** | `/auth/login` | `POST` | 로그인 요청 데이터 예시 참고 | 로그인 응답 데이터 예시 참고 | **응답 구조 확정.** `refreshToken` 없이 JWT 액세스 토큰만 반환됩니다. |
-| **로그아웃** | `/auth/logout` | `POST` | (없음) | `"로그아웃 성공 - 토큰이 무효화되었습니다"`<br/>(Content-Type: text/plain) | 요청 시 헤더에 유효한 JWT 토큰이 필요합니다. **서버 측에서 토큰을 블랙리스트에 추가하여 무효화**합니다. |
-| **회원 탈퇴** | `/auth/account` | `DELETE` | (없음) | `"회원 탈퇴가 완료되었습니다"`<br/>(Content-Type: text/plain) | **신규 추가된 기능.** 현재 로그인된 회원의 계정을 삭제합니다. 모든 관련 데이터(복용 기록, 부작용 기록 등)도 함께 삭제됩니다. |
-| **카카오 로그인 시작** | `/oauth2/auth/kakao` | `GET` | (없음) | 카카오 인증 서버로 리디렉션 (302) | **구현 완료.** 카카오 OAuth2 인증 과정을 시작합니다. |
-| **카카오 로그인 콜백** | `/api/auth/kakao/callback` | `POST` | `?code={authorization_code}` | 카카오 로그인 응답 데이터 예시 참고 | **구현 완료.** 카카오에서 전송된 authorization code를 처리하여 JWT 토큰을 반환합니다. |
+| **회원가입** | `/auth/signup` | `POST` | 회원가입 요청 데이터 참고 | `"회원가입이 성공적으로 완료되었습니다"`<br/>(Content-Type: text/plain) | **loginId는 이메일 형식 필수.** nickName은 한글/영어 1-10자. phoneNumber는 010으로 시작하는 11자리. 모든 필드 유효성 검사 적용. |
+| **일반 로그인** | `/auth/login` | `POST` | 로그인 요청 데이터 참고 | 로그인 응답 데이터 참고 | **JWT 액세스 토큰만 반환.** refreshToken 없음. 토큰 만료 시 재로그인 필요. |
+| **로그아웃** | `/auth/logout` | `POST` | (없음) | `"로그아웃이 성공적으로 처리되었습니다"`<br/>(Content-Type: text/plain) | **JWT 토큰 필수.** Redis 기반 토큰 블랙리스트로 즉시 무효화. |
+| **회원 탈퇴** | `/auth/account` | `DELETE` | (없음) | `"회원 탈퇴가 완료되었습니다"`<br/>(Content-Type: text/plain) | **인증된 사용자만 가능.** 모든 관련 데이터(복약 스케줄, 복약 기록, 부작용 기록) 영구 삭제. |
+| **카카오 로그인 시작** | `/oauth2/auth/kakao` | `GET` | (없음) | 카카오 인증 서버로 리디렉션 (302) | **OAuth2 인증 시작.** 카카오 로그인 페이지로 자동 리디렉션. |
+| **카카오 로그인 콜백** | `/oauth2/auth/kakao/callback` | `POST` | `?code={authorization_code}` | 로그인 응답 데이터 참고 | **Authorization code 처리.** 신규 사용자 자동 등록. JWT 토큰 반환. |
 
 #### 인증 API 데이터 구조
 
@@ -51,10 +54,10 @@
 {
   "loginId": "user@example.com", 
   "password": "password123", 
-  "name": "김민준",
-  "nickName": "민준이",
+  "name": "홍길동",
+  "nickName": "홍길동",
   "phoneNumber": "01012345678",
-  "birth": "1995-05-15"
+  "birth": "1990-01-01"
 }
 ```
 
@@ -314,11 +317,6 @@
 }
 ```
 
-### 보고서 (Report) API (`/report`)
-
-| 기능 | EndPoint | Method | Request Data | Response Data | 비고 |
-|------|----------|--------|--------------|---------------|------|
-| **보고서 조회** | `/report` | `GET` | `?userId=1&startDate=2025-07-01&endDate=2025-07-31&type=monthly` | (없음) | **미구현 상태.** |
 
 ## 수정 마일스톤
 
@@ -348,3 +346,8 @@
     - **구현 검증**: 모든 컨트롤러와 DTO 구조가 문서화된 API 명세와 일치함을 확인.
     - **엔드포인트 검증**: 인증(AuthController), OAuth2(OAuth2Controller), 복약 스케줄(MedicationScheduleController), 복약 기록(MedicationRecordController), 부작용(SideEffectController) 모든 API 엔드포인트가 정확히 문서화됨.
     - **보안 검증**: 모든 보호된 엔드포인트에 JWT 토큰 기반 인증 및 사용자 권한 검증이 올바르게 구현됨.
+- **2025/9/11**: **Hamalog 프로젝트 구조에 맞춘 API 명세 최종 검토**
+    - **프로젝트 정보 업데이트**: Base URL을 localhost:8080으로 변경, AOP 기반 기능들 명시
+    - **인증 API 정확성 검증**: AuthController와 OAuth2Controller의 실제 구현과 완전 일치 확인
+    - **미구현 기능 제거**: Report API 섹션 제거 (실제 컨트롤러 미존재)
+    - **종합 검토 완료**: 5개 컨트롤러(Auth, OAuth2, MedicationSchedule, MedicationRecord, SideEffect) 모든 엔드포인트가 실제 구현과 정확히 일치함을 재확인

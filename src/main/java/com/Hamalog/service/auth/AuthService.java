@@ -19,6 +19,7 @@ import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.context.ApplicationEventPublisher;
 import org.springframework.http.*;
 import org.springframework.security.authentication.AuthenticationManager;
 import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
@@ -53,6 +54,7 @@ public class AuthService {
     private final ClientRegistrationRepository clientRegistrationRepository;
     private final RestTemplate restTemplate;
     private final ObjectMapper objectMapper;
+    private final ApplicationEventPublisher eventPublisher;
 
     @Transactional
     public void registerMember(SignupRequest request) {
@@ -82,12 +84,14 @@ public class AuthService {
         Member member = memberRepository.findByLoginId(loginId)
                 .orElseThrow(() -> new CustomException(ErrorCode.MEMBER_NOT_FOUND));
 
-        deleteMemberRelatedData(member.getMemberId());
+        Long memberId = member.getMemberId();
+        deleteMemberRelatedData(memberId);
         
         memberRepository.delete(member);
         
+        // Publish event to handle Redis operations after transaction completion
         if (isValidTokenFormat(token)) {
-            tokenBlacklistService.blacklistToken(token);
+            eventPublisher.publishEvent(new MemberDeletedEvent(loginId, token, memberId));
         }
     }
 

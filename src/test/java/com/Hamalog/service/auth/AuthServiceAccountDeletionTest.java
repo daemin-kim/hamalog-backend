@@ -6,6 +6,7 @@ import com.Hamalog.domain.medication.MedicationRecord;
 import com.Hamalog.domain.medication.MedicationTime;
 import com.Hamalog.domain.medication.AlarmType;
 import com.Hamalog.domain.sideEffect.SideEffectRecord;
+import com.Hamalog.domain.events.member.MemberDeletedEvent;
 import com.Hamalog.exception.CustomException;
 import com.Hamalog.exception.ErrorCode;
 import com.Hamalog.repository.member.MemberRepository;
@@ -20,8 +21,12 @@ import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.InjectMocks;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
+import org.springframework.context.ApplicationEventPublisher;
 import org.springframework.security.authentication.AuthenticationManager;
 import org.springframework.security.crypto.password.PasswordEncoder;
+import org.springframework.security.oauth2.client.registration.ClientRegistrationRepository;
+import org.springframework.web.client.RestTemplate;
+import com.fasterxml.jackson.databind.ObjectMapper;
 
 import java.lang.reflect.Field;
 import java.time.LocalDate;
@@ -33,6 +38,7 @@ import java.util.Optional;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.mockito.BDDMockito.given;
 import static org.mockito.Mockito.*;
+import static org.mockito.ArgumentMatchers.any;
 
 @ExtendWith(MockitoExtension.class)
 @DisplayName("AuthService Account Deletion Tests")
@@ -61,6 +67,18 @@ class AuthServiceAccountDeletionTest {
     
     @Mock
     private AuthenticationManager authenticationManager;
+    
+    @Mock
+    private ApplicationEventPublisher eventPublisher;
+    
+    @Mock
+    private ClientRegistrationRepository clientRegistrationRepository;
+    
+    @Mock
+    private RestTemplate restTemplate;
+    
+    @Mock
+    private ObjectMapper objectMapper;
 
     @InjectMocks
     private AuthService authService;
@@ -113,7 +131,7 @@ class AuthServiceAccountDeletionTest {
         verify(medicationRecordRepository).deleteByScheduleIds(Arrays.asList(1L));
         verify(medicationScheduleRepository).deleteByMemberId(memberId);
         verify(memberRepository).delete(member);
-        verify(tokenBlacklistService).blacklistToken(token);
+        verify(eventPublisher).publishEvent(any(MemberDeletedEvent.class)); // Event is published for async token blacklisting
     }
 
     @Test
@@ -132,7 +150,7 @@ class AuthServiceAccountDeletionTest {
 
         verify(memberRepository).findByLoginId(loginId);
         verify(memberRepository, never()).delete(any());
-        verify(tokenBlacklistService, never()).blacklistToken(any());
+        verify(eventPublisher, never()).publishEvent(any());
     }
 
     @Test
@@ -166,6 +184,6 @@ class AuthServiceAccountDeletionTest {
         verify(medicationScheduleRepository).findAllByMember_MemberId(memberId);
         verify(medicationScheduleRepository).deleteByMemberId(memberId);
         verify(memberRepository).delete(member);
-        verify(tokenBlacklistService, never()).blacklistToken(any());
+        verify(eventPublisher, never()).publishEvent(any()); // No event published for null token
     }
 }

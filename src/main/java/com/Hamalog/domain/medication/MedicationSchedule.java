@@ -45,6 +45,10 @@ public class MedicationSchedule {
     @Column(name = "alarm_type", nullable = false)
     private AlarmType alarmType;
 
+    @Version
+    @Column(name = "version")
+    private Long version;
+
     public MedicationSchedule(
             Member member,
             String name,

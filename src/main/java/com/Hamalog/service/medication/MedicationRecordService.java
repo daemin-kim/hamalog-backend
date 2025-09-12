@@ -12,6 +12,7 @@ import com.Hamalog.repository.medication.MedicationRecordRepository;
 import com.Hamalog.repository.medication.MedicationScheduleRepository;
 import com.Hamalog.repository.medication.MedicationTimeRepository;
 import com.Hamalog.repository.member.MemberRepository;
+import com.Hamalog.security.annotation.RequireResourceOwnership;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -32,6 +33,11 @@ public class MedicationRecordService {
         return medicationRecordRepository.findAllByMedicationSchedule_MedicationScheduleId(medicationScheduleId);
     }
 
+    @RequireResourceOwnership(
+            resourceType = RequireResourceOwnership.ResourceType.MEDICATION_RECORD,
+            paramName = "medicationRecordId",
+            strategy = RequireResourceOwnership.OwnershipStrategy.DIRECT
+    )
     public MedicationRecord getMedicationRecord(
             Long medicationRecordId
     ) {
@@ -39,7 +45,7 @@ public class MedicationRecordService {
                 .orElseThrow(MedicationRecordNotFoundException::new);
     }
 
-    @Transactional
+    @Transactional(rollbackFor = {Exception.class})
     public MedicationRecord createMedicationRecord(
             MedicationRecordCreateRequest medicationRecordCreateRequest
     ) {
@@ -59,7 +65,12 @@ public class MedicationRecordService {
         return medicationRecordRepository.save(medicationRecord);
     }
 
-    @Transactional
+    @RequireResourceOwnership(
+            resourceType = RequireResourceOwnership.ResourceType.MEDICATION_RECORD,
+            paramName = "medicationRecordId",
+            strategy = RequireResourceOwnership.OwnershipStrategy.DIRECT
+    )
+    @Transactional(rollbackFor = {Exception.class})
     public MedicationRecord updateMedicationRecord(
             Long medicationRecordId,
             MedicationRecordUpdateRequest medicationRecordUpdateRequest
@@ -75,7 +86,12 @@ public class MedicationRecordService {
         return medicationRecordRepository.save(medicationRecord);
     }
 
-    @Transactional
+    @RequireResourceOwnership(
+            resourceType = RequireResourceOwnership.ResourceType.MEDICATION_RECORD,
+            paramName = "medicationRecordId",
+            strategy = RequireResourceOwnership.OwnershipStrategy.DIRECT
+    )
+    @Transactional(rollbackFor = {Exception.class})
     public void deleteMedicationRecord(Long medicationRecordId) {
         MedicationRecord medicationRecord = medicationRecordRepository.findById(medicationRecordId)
                 .orElseThrow(MedicationRecordNotFoundException::new);

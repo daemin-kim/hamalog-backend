@@ -29,6 +29,10 @@ public class MedicationRecord {
     @Column(name = "real_take_time")
     private LocalDateTime realTakeTime;
 
+    @Version
+    @Column(name = "version")
+    private Long version;
+
     public MedicationRecord(
             MedicationSchedule medicationSchedule,
             MedicationTime medicationTime,

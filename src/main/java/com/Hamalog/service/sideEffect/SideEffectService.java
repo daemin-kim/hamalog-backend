@@ -12,6 +12,7 @@ import com.Hamalog.repository.member.MemberRepository;
 import com.Hamalog.repository.sideEffect.SideEffectRecordRepository;
 import com.Hamalog.repository.sideEffect.SideEffectRepository;
 import com.Hamalog.repository.sideEffect.SideEffectSideEffectRecordRepository;
+import com.Hamalog.security.annotation.RequireResourceOwnership;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -68,7 +69,14 @@ public class SideEffectService {
         return new RecentSideEffectResponse(names);
     }
     
-    @Transactional
+    @RequireResourceOwnership(
+            resourceType = RequireResourceOwnership.ResourceType.MEMBER,
+            paramName = "memberId",
+            source = RequireResourceOwnership.ParameterSource.REQUEST_BODY,
+            bodyField = "memberId",
+            strategy = RequireResourceOwnership.OwnershipStrategy.DIRECT
+    )
+    @Transactional(rollbackFor = {Exception.class})
     public void createSideEffectRecord(SideEffectRecordRequest request) {
         // 회원 존재 여부 확인
         Member member = memberRepository.findById(request.memberId())

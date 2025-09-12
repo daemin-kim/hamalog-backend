@@ -13,8 +13,10 @@ import com.Hamalog.exception.medication.MedicationScheduleNotFoundException;
 import com.Hamalog.exception.member.MemberNotFoundException;
 import com.Hamalog.repository.medication.MedicationScheduleRepository;
 import com.Hamalog.repository.member.MemberRepository;
+import com.Hamalog.security.annotation.RequireResourceOwnership;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.context.ApplicationEventPublisher;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -41,12 +43,18 @@ public class MedicationScheduleService {
         return medicationScheduleRepository.findByMember_MemberId(memberId, pageable);
     }
 
+    @RequireResourceOwnership(
+            resourceType = RequireResourceOwnership.ResourceType.MEDICATION_SCHEDULE,
+            paramName = "medicationScheduleId",
+            strategy = RequireResourceOwnership.OwnershipStrategy.DIRECT
+    )
     @Transactional(readOnly = true)
     public MedicationSchedule getMedicationSchedule(Long medicationScheduleId) {
         return medicationScheduleRepository.findById(medicationScheduleId)
                 .orElseThrow(MedicationScheduleNotFoundException::new);
     }
 
+    @Transactional(rollbackFor = {Exception.class})
     public MedicationSchedule createMedicationSchedule(
             MedicationScheduleCreateRequest medicationScheduleCreateRequest
     ) {
@@ -88,6 +96,12 @@ public class MedicationScheduleService {
         return savedSchedule;
     }
 
+    @RequireResourceOwnership(
+            resourceType = RequireResourceOwnership.ResourceType.MEDICATION_SCHEDULE,
+            paramName = "medicationScheduleId",
+            strategy = RequireResourceOwnership.OwnershipStrategy.DIRECT
+    )
+    @Transactional(rollbackFor = {Exception.class})
     public MedicationSchedule updateMedicationSchedule(
             Long medicationScheduleId,
             MedicationScheduleUpdateRequest medicationSchedule
@@ -128,6 +142,12 @@ public class MedicationScheduleService {
         return updatedSchedule;
     }
 
+    @RequireResourceOwnership(
+            resourceType = RequireResourceOwnership.ResourceType.MEDICATION_SCHEDULE,
+            paramName = "medicationScheduleId",
+            strategy = RequireResourceOwnership.OwnershipStrategy.DIRECT
+    )
+    @Transactional(rollbackFor = {Exception.class})
     public void deleteMedicationSchedule(Long medicationScheduleId) {
         MedicationSchedule medicationSchedule = getMedicationSchedule(medicationScheduleId);
         

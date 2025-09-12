@@ -56,7 +56,7 @@ public class AuthService {
     private final ObjectMapper objectMapper;
     private final ApplicationEventPublisher eventPublisher;
 
-    @Transactional
+    @Transactional(rollbackFor = {Exception.class})
     public void registerMember(SignupRequest request) {
         validateMemberRegistration(request);
         
@@ -79,7 +79,7 @@ public class AuthService {
         }
     }
 
-    @Transactional
+    @Transactional(rollbackFor = {Exception.class})
     public void deleteMember(String loginId, String token) {
         Member member = memberRepository.findByLoginId(loginId)
                 .orElseThrow(() -> new CustomException(ErrorCode.MEMBER_NOT_FOUND));

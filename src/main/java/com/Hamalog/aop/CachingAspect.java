@@ -9,6 +9,7 @@ import org.aspectj.lang.reflect.MethodSignature;
 import org.slf4j.MDC;
 import org.springframework.boot.autoconfigure.condition.ConditionalOnClass;
 import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty;
+import org.springframework.core.annotation.Order;
 import org.springframework.data.redis.core.RedisTemplate;
 import org.springframework.stereotype.Component;
 
@@ -33,6 +34,7 @@ import java.util.concurrent.atomic.LongAdder;
 @Aspect
 @Component
 @ConditionalOnProperty(name = "app.aop.cache.enabled", matchIfMissing = true)
+@Order(5)
 public class CachingAspect {
 
     @Autowired(required = false)

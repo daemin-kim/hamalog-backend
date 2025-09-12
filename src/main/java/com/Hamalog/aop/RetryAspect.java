@@ -8,6 +8,7 @@ import org.aspectj.lang.reflect.MethodSignature;
 import org.slf4j.MDC;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty;
+import org.springframework.core.annotation.Order;
 import org.springframework.dao.DataAccessException;
 import org.springframework.stereotype.Component;
 import org.springframework.web.client.ResourceAccessException;
@@ -26,6 +27,7 @@ import java.util.concurrent.ThreadLocalRandom;
 @Aspect
 @Component
 @ConditionalOnProperty(name = "app.aop.retry.enabled", matchIfMissing = true)
+@Order(4)
 public class RetryAspect {
 
     @Value("${app.retry.default-attempts:3}")

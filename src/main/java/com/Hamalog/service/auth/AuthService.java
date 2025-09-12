@@ -1,5 +1,6 @@
 package com.Hamalog.service.auth;
 
+import com.Hamalog.domain.events.member.MemberDeletedEvent;
 import com.Hamalog.domain.member.Member;
 import com.Hamalog.domain.medication.MedicationRecord;
 import com.Hamalog.domain.medication.MedicationSchedule;
@@ -14,19 +15,31 @@ import com.Hamalog.repository.medication.MedicationScheduleRepository;
 import com.Hamalog.repository.sideEffect.SideEffectRecordRepository;
 import com.Hamalog.security.jwt.JwtTokenProvider;
 import com.Hamalog.security.jwt.TokenBlacklistService;
+import com.fasterxml.jackson.databind.JsonNode;
+import com.fasterxml.jackson.databind.ObjectMapper;
 import lombok.RequiredArgsConstructor;
+import lombok.extern.slf4j.Slf4j;
+import org.springframework.http.*;
 import org.springframework.security.authentication.AuthenticationManager;
 import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
 import org.springframework.security.core.Authentication;
 import org.springframework.security.crypto.password.PasswordEncoder;
+import org.springframework.security.oauth2.client.registration.ClientRegistration;
+import org.springframework.security.oauth2.client.registration.ClientRegistrationRepository;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
+import org.springframework.util.LinkedMultiValueMap;
+import org.springframework.util.MultiValueMap;
+import org.springframework.web.client.RestTemplate;
 
+import java.time.LocalDate;
 import java.time.LocalDateTime;
+import java.util.Optional;
 
 @Service
 @Transactional(readOnly = true)
 @RequiredArgsConstructor
+@Slf4j
 public class AuthService {
 
     private final MemberRepository memberRepository;
@@ -37,6 +50,9 @@ public class AuthService {
     private final JwtTokenProvider jwtTokenProvider;
     private final TokenBlacklistService tokenBlacklistService;
     private final AuthenticationManager authenticationManager;
+    private final ClientRegistrationRepository clientRegistrationRepository;
+    private final RestTemplate restTemplate;
+    private final ObjectMapper objectMapper;
 
     @Transactional
     public void registerMember(SignupRequest request) {
@@ -106,6 +122,155 @@ public class AuthService {
                 .birth(request.birth())
                 .createdAt(LocalDateTime.now())
                 .build();
+    }
+
+    @Transactional
+    public LoginResponse processOAuth2Callback(String code) {
+        log.info("Processing OAuth2 callback with authorization code");
+        
+        try {
+            // Get Kakao client registration
+            ClientRegistration kakaoRegistration = clientRegistrationRepository.findByRegistrationId("kakao");
+            if (kakaoRegistration == null) {
+                log.error("Kakao client registration not found");
+                throw new CustomException(ErrorCode.INTERNAL_SERVER_ERROR);
+            }
+            
+            // Exchange authorization code for access token
+            String accessToken = exchangeCodeForToken(code, kakaoRegistration);
+            if (accessToken == null) {
+                log.error("Failed to exchange code for access token");
+                throw new CustomException(ErrorCode.BAD_REQUEST);
+            }
+            
+            // Get user info from Kakao
+            JsonNode userInfo = getUserInfoFromKakao(accessToken);
+            if (userInfo == null) {
+                log.error("Failed to get user info from Kakao");
+                throw new CustomException(ErrorCode.BAD_REQUEST);
+            }
+            
+            // Process user (create or find existing)
+            String loginId = processKakaoUser(userInfo);
+            
+            // Generate JWT token
+            String jwtToken = jwtTokenProvider.createToken(loginId);
+            
+            log.info("Successfully processed OAuth2 callback for user: {}", loginId);
+            return new LoginResponse(jwtToken);
+            
+        } catch (CustomException e) {
+            throw e;
+        } catch (Exception e) {
+            log.error("Error processing OAuth2 callback", e);
+            throw new CustomException(ErrorCode.INTERNAL_SERVER_ERROR);
+        }
+    }
+    
+    private String exchangeCodeForToken(String code, ClientRegistration kakaoRegistration) {
+        try {
+            // Prepare token request
+            HttpHeaders headers = new HttpHeaders();
+            headers.setContentType(MediaType.APPLICATION_FORM_URLENCODED);
+            
+            MultiValueMap<String, String> params = new LinkedMultiValueMap<>();
+            params.add("grant_type", "authorization_code");
+            params.add("client_id", kakaoRegistration.getClientId());
+            params.add("client_secret", kakaoRegistration.getClientSecret());
+            params.add("redirect_uri", kakaoRegistration.getRedirectUri());
+            params.add("code", code);
+            
+            HttpEntity<MultiValueMap<String, String>> request = new HttpEntity<>(params, headers);
+            
+            // Make token request
+            ResponseEntity<String> response = restTemplate.postForEntity(
+                    kakaoRegistration.getProviderDetails().getTokenUri(),
+                    request,
+                    String.class
+            );
+            
+            if (response.getStatusCode().is2xxSuccessful() && response.getBody() != null) {
+                JsonNode tokenResponse = objectMapper.readTree(response.getBody());
+                return tokenResponse.get("access_token").asText();
+            }
+            
+            log.error("Token exchange failed with status: {}", response.getStatusCode());
+            return null;
+            
+        } catch (Exception e) {
+            log.error("Error exchanging code for token", e);
+            return null;
+        }
+    }
+    
+    private JsonNode getUserInfoFromKakao(String accessToken) {
+        try {
+            HttpHeaders headers = new HttpHeaders();
+            headers.setBearerAuth(accessToken);
+            headers.setContentType(MediaType.APPLICATION_JSON);
+            
+            HttpEntity<String> request = new HttpEntity<>(headers);
+            
+            ResponseEntity<String> response = restTemplate.exchange(
+                    "https://kapi.kakao.com/v2/user/me",
+                    HttpMethod.GET,
+                    request,
+                    String.class
+            );
+            
+            if (response.getStatusCode().is2xxSuccessful() && response.getBody() != null) {
+                return objectMapper.readTree(response.getBody());
+            }
+            
+            log.error("User info request failed with status: {}", response.getStatusCode());
+            return null;
+            
+        } catch (Exception e) {
+            log.error("Error getting user info from Kakao", e);
+            return null;
+        }
+    }
+    
+    private String processKakaoUser(JsonNode userInfo) {
+        // Extract Kakao ID
+        Long kakaoId = userInfo.get("id").asLong();
+        
+        // Extract user profile information
+        JsonNode kakaoAccount = userInfo.get("kakao_account");
+        JsonNode profile = kakaoAccount != null ? kakaoAccount.get("profile") : null;
+        String nickname = profile != null ? profile.get("nickname").asText(null) : null;
+        
+        // Create loginId in the same format as KakaoOAuth2UserService
+        String loginId = "kakao_" + kakaoId + "@oauth2.internal";
+        
+        // Check if user already exists
+        Optional<Member> existingMember = memberRepository.findByLoginId(loginId);
+        
+        if (existingMember.isEmpty()) {
+            // Create new member (same logic as KakaoOAuth2UserService)
+            String name = (nickname != null && !nickname.isBlank()) ? 
+                    (nickname.length() > 15 ? nickname.substring(0, 15) : nickname) : 
+                    "OAuth2_" + kakaoId.toString().substring(0, Math.min(kakaoId.toString().length(), 8));
+            
+            String phoneNumber = "01012345678"; // Placeholder as in KakaoOAuth2UserService
+            LocalDate birth = LocalDate.of(2000, 1, 1); // Default birth date
+            String nickName = (nickname != null && !nickname.isBlank()) ? nickname : "카카오유저";
+            
+            Member member = Member.builder()
+                    .loginId(loginId)
+                    .password("{oauth2}") // Mark as OAuth2 account
+                    .name(name)
+                    .nickName(nickName)
+                    .phoneNumber(phoneNumber)
+                    .birth(birth)
+                    .createdAt(LocalDateTime.now())
+                    .build();
+            
+            memberRepository.save(member);
+            log.info("Created new OAuth2 member for Kakao id {} as loginId {}", kakaoId, loginId);
+        }
+        
+        return loginId;
     }
 
     private boolean isValidTokenFormat(String token) {

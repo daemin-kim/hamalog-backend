@@ -12,6 +12,7 @@ import org.slf4j.MDC;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty;
+import org.springframework.core.annotation.Order;
 import org.springframework.security.core.Authentication;
 import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.stereotype.Component;
@@ -28,6 +29,7 @@ import java.util.concurrent.atomic.LongAdder;
 @Aspect
 @Component
 @ConditionalOnProperty(name = "app.aop.performance.enabled", matchIfMissing = true)
+@Order(2)
 public class PerformanceMonitoringAspect {
 
     @Autowired

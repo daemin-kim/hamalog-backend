@@ -19,7 +19,7 @@ import org.springframework.transaction.annotation.Transactional;
 import java.util.List;
 
 @Service
-@Transactional
+@Transactional(readOnly = true)
 @RequiredArgsConstructor
 public class MedicationRecordService {
 
@@ -28,12 +28,10 @@ public class MedicationRecordService {
     private final MedicationTimeRepository medicationTimeRepository;
     private final MemberRepository memberRepository;
 
-    @Transactional(readOnly = true)
     public List<MedicationRecord> getMedicationRecords(Long medicationScheduleId) {
         return medicationRecordRepository.findAllByMedicationSchedule_MedicationScheduleId(medicationScheduleId);
     }
 
-    @Transactional(readOnly = true)
     public MedicationRecord getMedicationRecord(
             Long medicationRecordId
     ) {
@@ -41,6 +39,7 @@ public class MedicationRecordService {
                 .orElseThrow(MedicationRecordNotFoundException::new);
     }
 
+    @Transactional
     public MedicationRecord createMedicationRecord(
             MedicationRecordCreateRequest medicationRecordCreateRequest
     ) {
@@ -60,6 +59,7 @@ public class MedicationRecordService {
         return medicationRecordRepository.save(medicationRecord);
     }
 
+    @Transactional
     public MedicationRecord updateMedicationRecord(
             Long medicationRecordId,
             MedicationRecordUpdateRequest medicationRecordUpdateRequest
@@ -75,20 +75,19 @@ public class MedicationRecordService {
         return medicationRecordRepository.save(medicationRecord);
     }
 
+    @Transactional
     public void deleteMedicationRecord(Long medicationRecordId) {
         MedicationRecord medicationRecord = medicationRecordRepository.findById(medicationRecordId)
                 .orElseThrow(MedicationRecordNotFoundException::new);
         medicationRecordRepository.delete(medicationRecord);
     }
     
-    @Transactional(readOnly = true)
     public boolean isOwnerOfSchedule(Long medicationScheduleId, String loginId) {
         return medicationScheduleRepository.findById(medicationScheduleId)
                 .map(schedule -> schedule.getMember().getLoginId().equals(loginId))
                 .orElse(false);
     }
     
-    @Transactional(readOnly = true)
     public boolean isOwnerOfRecord(Long medicationRecordId, String loginId) {
         return medicationRecordRepository.findById(medicationRecordId)
                 .map(record -> record.getMedicationSchedule().getMember().getLoginId().equals(loginId))

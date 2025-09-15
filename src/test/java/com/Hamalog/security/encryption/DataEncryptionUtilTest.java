@@ -25,7 +25,7 @@ class DataEncryptionUtilTest {
         String emptyKey = "";
 
         // when & then
-        assertThatThrownBy(() -> new DataEncryptionUtil(emptyKey, environment))
+        assertThatThrownBy(() -> new DataEncryptionUtil(emptyKey, environment, null))
                 .isInstanceOf(IllegalStateException.class)
                 .hasMessageContaining("데이터 암호화 키가 설정되지 않았습니다")
                 .hasMessageContaining("HAMALOG_ENCRYPTION_KEY 환경변수를 반드시 설정해야 합니다")
@@ -40,7 +40,7 @@ class DataEncryptionUtilTest {
         String nullKey = null;
 
         // when & then
-        assertThatThrownBy(() -> new DataEncryptionUtil(nullKey, environment))
+        assertThatThrownBy(() -> new DataEncryptionUtil(nullKey, environment, null))
                 .isInstanceOf(IllegalStateException.class)
                 .hasMessageContaining("데이터 암호화 키가 설정되지 않았습니다")
                 .hasMessageContaining("현재 HAMALOG_ENCRYPTION_KEY 상태: NOT_SET");
@@ -54,7 +54,7 @@ class DataEncryptionUtilTest {
         String emptyKey = "";
 
         // when & then
-        assertThatCode(() -> new DataEncryptionUtil(emptyKey, environment))
+        assertThatCode(() -> new DataEncryptionUtil(emptyKey, environment, null))
                 .doesNotThrowAnyException();
     }
 
@@ -66,7 +66,7 @@ class DataEncryptionUtilTest {
         String validKey = "4MoGUKm/b9RXqFtUgxwK3BpVQF/RtZFMb4EwdzaRSlg="; // 32-byte base64 key
 
         // when & then
-        assertThatCode(() -> new DataEncryptionUtil(validKey, environment))
+        assertThatCode(() -> new DataEncryptionUtil(validKey, environment, null))
                 .doesNotThrowAnyException();
     }
 
@@ -78,7 +78,7 @@ class DataEncryptionUtilTest {
         String invalidKey = "invalid-base64-key!!!";
 
         // when & then
-        assertThatThrownBy(() -> new DataEncryptionUtil(invalidKey, environment))
+        assertThatThrownBy(() -> new DataEncryptionUtil(invalidKey, environment, null))
                 .isInstanceOf(IllegalStateException.class)
                 .hasMessageContaining("데이터 암호화 키는 유효한 Base64 형식이어야 합니다");
     }
@@ -91,7 +91,7 @@ class DataEncryptionUtilTest {
         String shortKey = "c2hvcnQta2V5"; // "short-key" in base64 (too short)
 
         // when & then
-        assertThatThrownBy(() -> new DataEncryptionUtil(shortKey, environment))
+        assertThatThrownBy(() -> new DataEncryptionUtil(shortKey, environment, null))
                 .isInstanceOf(IllegalStateException.class)
                 .hasMessageContaining("데이터 암호화 키 초기화 중 오류가 발생했습니다")
                 .hasCauseInstanceOf(IllegalStateException.class)
@@ -104,7 +104,7 @@ class DataEncryptionUtilTest {
         // given
         when(environment.getActiveProfiles()).thenReturn(new String[]{"prod"});
         String validKey = "4MoGUKm/b9RXqFtUgxwK3BpVQF/RtZFMb4EwdzaRSlg=";
-        DataEncryptionUtil encryptionUtil = new DataEncryptionUtil(validKey, environment);
+        DataEncryptionUtil encryptionUtil = new DataEncryptionUtil(validKey, environment, null);
         String plainText = "sensitive data to encrypt";
 
         // when
@@ -122,7 +122,7 @@ class DataEncryptionUtilTest {
         // given
         when(environment.getActiveProfiles()).thenReturn(new String[]{"prod"});
         String validKey = "4MoGUKm/b9RXqFtUgxwK3BpVQF/RtZFMb4EwdzaRSlg=";
-        DataEncryptionUtil encryptionUtil = new DataEncryptionUtil(validKey, environment);
+        DataEncryptionUtil encryptionUtil = new DataEncryptionUtil(validKey, environment, null);
 
         // when & then
         assertThat(encryptionUtil.encrypt(null)).isNull();

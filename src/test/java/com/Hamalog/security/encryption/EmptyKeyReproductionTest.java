@@ -20,7 +20,7 @@ class EmptyKeyReproductionTest {
         
         // when & then
         IllegalStateException exception = assertThrows(IllegalStateException.class, 
-            () -> new DataEncryptionUtil(emptyKey, environment));
+            () -> new DataEncryptionUtil(emptyKey, environment, null));
         
         assertTrue(exception.getMessage().contains("데이터 암호화 키가 설정되지 않았습니다"));
         assertTrue(exception.getMessage().contains("HAMALOG_ENCRYPTION_KEY"));
@@ -37,7 +37,7 @@ class EmptyKeyReproductionTest {
         
         // when & then
         IllegalStateException exception = assertThrows(IllegalStateException.class, 
-            () -> new DataEncryptionUtil(nullKey, environment));
+            () -> new DataEncryptionUtil(nullKey, environment, null));
         
         assertTrue(exception.getMessage().contains("데이터 암호화 키가 설정되지 않았습니다"));
         System.out.println("[DEBUG_LOG] Exception message: " + exception.getMessage());
@@ -52,7 +52,7 @@ class EmptyKeyReproductionTest {
         String emptyKey = "";
         
         // when
-        DataEncryptionUtil util = new DataEncryptionUtil(emptyKey, environment);
+        DataEncryptionUtil util = new DataEncryptionUtil(emptyKey, environment, null);
         
         // then
         assertNotNull(util);
@@ -75,7 +75,7 @@ class EmptyKeyReproductionTest {
         String validKey = "bkfhn2mnq/kXp6V3yGuPYGmtCTweKwr0IyEkC2Rp4lA="; // base64 encoded 32-byte key
         
         // when
-        DataEncryptionUtil util = new DataEncryptionUtil(validKey, environment);
+        DataEncryptionUtil util = new DataEncryptionUtil(validKey, environment, null);
         
         // then
         assertNotNull(util);

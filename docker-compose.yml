@@ -1,4 +1,23 @@
 services:
+  vault:
+    image: hashicorp/vault:1.15.2
+    container_name: hamalog-vault
+    ports:
+      - "8200:8200"
+    environment:
+      VAULT_DEV_ROOT_TOKEN_ID: hamalog-dev-token
+      VAULT_DEV_LISTEN_ADDRESS: 0.0.0.0:8200
+      VAULT_API_ADDR: http://vault:8200
+    cap_add:
+      - IPC_LOCK
+    command: vault server -dev
+    healthcheck:
+      test: ["CMD", "vault", "status"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+    restart: unless-stopped
+
   hamalog-app:
     build: .
     ports:
@@ -10,15 +29,24 @@ services:
       - SPRING_DATASOURCE_PASSWORD=${SPRING_DATASOURCE_PASSWORD:-hamalog_password}
       - SPRING_DATA_REDIS_HOST=redis
       - SPRING_DATA_REDIS_PORT=6379
-      - JWT_SECRET=${JWT_SECRET}
+      # Vault configuration
+      - HAMALOG_VAULT_ENABLED=${HAMALOG_VAULT_ENABLED:-true}
+      - HAMALOG_VAULT_URI=http://vault:8200
+      - HAMALOG_VAULT_TOKEN=${VAULT_TOKEN:-hamalog-dev-token}
+      - HAMALOG_VAULT_KV_BACKEND=secret
+      - HAMALOG_VAULT_KV_DEFAULT_CONTEXT=hamalog
+      # Fallback environment variables (for backward compatibility)
+      - JWT_SECRET=${JWT_SECRET:-}
       - JWT_EXPIRY=${JWT_EXPIRY:-3600000}
-      - HAMALOG_ENCRYPTION_KEY=${HAMALOG_ENCRYPTION_KEY}
+      - HAMALOG_ENCRYPTION_KEY=${HAMALOG_ENCRYPTION_KEY:-}
       - KAKAO_CLIENT_ID=${KAKAO_CLIENT_ID:-dummy-client-id}
       - KAKAO_CLIENT_SECRET=${KAKAO_CLIENT_SECRET:-dummy-client-secret}
     depends_on:
       mysql-hamalog:
         condition: service_healthy
       redis:
+        condition: service_healthy
+      vault:
         condition: service_healthy
     volumes:
       - hamalog-uploads:/data/hamalog/images

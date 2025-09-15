@@ -23,6 +23,7 @@ import java.util.List;
 @SpringBootTest
 @Import(TestRedisConfig.class)
 @ActiveProfiles("local")
+@TestPropertySource(locations = "classpath:application-test.properties")
 @TestPropertySource(properties = {
     "hamalog.encryption.key=+ZFRGoRl5CElrJfikdx1TmzQ3U8OJ+J6im5OMjuvsqE="
 })

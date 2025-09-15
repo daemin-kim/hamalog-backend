@@ -1,10 +1,12 @@
 package com.Hamalog.security.jwt;
 
+import com.Hamalog.service.vault.VaultKeyProvider;
 import io.jsonwebtoken.*;
 import io.jsonwebtoken.security.Keys;
 import jakarta.annotation.PostConstruct;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.core.env.Environment;
 import org.springframework.stereotype.Component;
@@ -21,20 +23,23 @@ public class JwtTokenProvider {
     private static final Logger log = LoggerFactory.getLogger(JwtTokenProvider.class);
 
     private SecretKey secretKey;
-    private final String secret;
+    private final String fallbackSecret;
     private final long validityInMilliseconds;
     private final TokenBlacklistService tokenBlacklistService;
     private final Environment environment;
+    private final VaultKeyProvider vaultKeyProvider;
 
     public JwtTokenProvider(
-            @Value("${jwt.secret:}") String secret,
+            @Value("${jwt.secret:}") String fallbackSecret,
             @Value("${jwt.expiry:3600000}") long validityInMilliseconds,
             TokenBlacklistService tokenBlacklistService,
-            Environment environment) {
-        this.secret = secret;
+            Environment environment,
+            @Autowired(required = false) VaultKeyProvider vaultKeyProvider) {
+        this.fallbackSecret = fallbackSecret;
         this.validityInMilliseconds = validityInMilliseconds;
         this.tokenBlacklistService = tokenBlacklistService;
         this.environment = environment;
+        this.vaultKeyProvider = vaultKeyProvider;
     }
 
     @PostConstruct
@@ -43,13 +48,37 @@ public class JwtTokenProvider {
         boolean isProduction = environment.getActiveProfiles().length > 0 && 
                               java.util.Arrays.asList(environment.getActiveProfiles()).contains("prod");
         
+        // Try to get JWT secret from Vault first, then fallback to environment variables
+        String secret = null;
+        
+        if (vaultKeyProvider != null) {
+            try {
+                secret = vaultKeyProvider.getJwtSecret().orElse(null);
+                if (secret != null) {
+                    log.info("[JWT_PROVIDER] Using JWT secret from Vault");
+                }
+            } catch (Exception e) {
+                log.warn("[JWT_PROVIDER] Failed to retrieve JWT secret from Vault: {}", e.getMessage());
+            }
+        }
+        
+        // Fallback to direct environment/property injection
+        if (secret == null) {
+            secret = fallbackSecret;
+            if (secret != null && !secret.trim().isEmpty()) {
+                log.info("[JWT_PROVIDER] Using JWT secret from environment variables");
+            }
+        }
+        
         if (secret == null || secret.trim().isEmpty()) {
             if (isProduction) {
                 String errorMessage = String.format(
-                    "JWT 비밀키가 설정되지 않았습니다. 프로덕션 환경에서는 JWT_SECRET 환경변수를 반드시 설정해야 합니다.\n" +
+                    "JWT 비밀키가 설정되지 않았습니다. 프로덕션 환경에서는 Vault 또는 JWT_SECRET 환경변수를 반드시 설정해야 합니다.\n" +
                     "현재 JWT_SECRET 상태: [%s]\n" +
                     "현재 JWT_SECRET 길이: %d\n" +
-                    "해결 방법: JWT_SECRET 환경변수를 Base64 인코딩된 256비트 키로 설정하세요.\n" +
+                    "해결 방법:\n" +
+                    "1. Vault 사용: hamalog.vault.enabled=true 설정 후 Vault에 jwt-secret 저장\n" +
+                    "2. 환경변수 사용: JWT_SECRET 환경변수를 Base64 인코딩된 256비트 키로 설정\n" +
                     "키 생성 예시: openssl rand -base64 32",
                     secret == null ? "null" : "'" + secret + "'",
                     secret == null ? 0 : secret.length()
@@ -58,8 +87,8 @@ public class JwtTokenProvider {
             }
             
             // Generate secure random key for development
-            log.warn("WARNING: JWT secret not configured. Generating random key for DEVELOPMENT ONLY.");
-            log.warn("This key will change on every restart. Set JWT_SECRET environment variable for persistent sessions.");
+            log.warn("WARNING: JWT secret not configured in Vault or environment variables. Generating random key for DEVELOPMENT ONLY.");
+            log.warn("This key will change on every restart. Configure Vault or set JWT_SECRET environment variable for persistent sessions.");
             
             byte[] randomKey = new byte[32]; // 256 bits
             new SecureRandom().nextBytes(randomKey);

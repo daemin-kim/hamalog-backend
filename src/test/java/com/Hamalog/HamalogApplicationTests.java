@@ -8,6 +8,7 @@ import org.springframework.test.context.TestPropertySource;
 
 @SpringBootTest
 @Import(TestRedisConfig.class)
+@TestPropertySource(locations = "classpath:application-test.properties")
 @TestPropertySource(properties = {
     "spring.jpa.hibernate.ddl-auto=create-drop",
     "logging.level.org.hibernate.SQL=warn",

@@ -1,5 +1,7 @@
 package com.Hamalog.security.encryption;
 
+import com.Hamalog.service.vault.VaultKeyProvider;
+import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.core.env.Environment;
 import org.springframework.stereotype.Component;
@@ -25,24 +27,49 @@ public class DataEncryptionUtil {
 
     private final SecretKey secretKey;
     private final Environment environment;
+    private final VaultKeyProvider vaultKeyProvider;
 
     public DataEncryptionUtil(
-            @Value("${hamalog.encryption.key:}") String encryptionKey,
-            Environment environment) {
+            @Value("${hamalog.encryption.key:}") String fallbackEncryptionKey,
+            Environment environment,
+            @Autowired(required = false) VaultKeyProvider vaultKeyProvider) {
         this.environment = environment;
-        this.secretKey = initializeSecretKey(encryptionKey);
+        this.vaultKeyProvider = vaultKeyProvider;
+        this.secretKey = initializeSecretKey(fallbackEncryptionKey);
     }
 
-    private SecretKey initializeSecretKey(String encryptionKey) {
+    private SecretKey initializeSecretKey(String fallbackEncryptionKey) {
         // Check if running in production profile
         boolean isProduction = environment.getActiveProfiles().length > 0 && 
                               java.util.Arrays.asList(environment.getActiveProfiles()).contains("prod");
         
+        // Try to get encryption key from Vault first, then fallback to environment variables
+        String encryptionKey = null;
+        
+        if (vaultKeyProvider != null) {
+            try {
+                encryptionKey = vaultKeyProvider.getEncryptionKey().orElse(null);
+                if (encryptionKey != null) {
+                    log.info("[ENCRYPTION_UTIL] Using encryption key from Vault");
+                }
+            } catch (Exception e) {
+                log.warn("[ENCRYPTION_UTIL] Failed to retrieve encryption key from Vault: {}", e.getMessage());
+            }
+        }
+        
+        // Fallback to direct environment/property injection
+        if (encryptionKey == null) {
+            encryptionKey = fallbackEncryptionKey;
+            if (encryptionKey != null && !encryptionKey.trim().isEmpty()) {
+                log.info("[ENCRYPTION_UTIL] Using encryption key from environment variables");
+            }
+        }
+        
         // Check encryption key configuration status (production-safe logging)
         String directEnvValue = environment.getProperty("hamalog.encryption.key");
         log.info("Encryption key configuration status - Key present: {}, Length: {}", 
-                directEnvValue != null && !directEnvValue.trim().isEmpty(), 
-                directEnvValue == null ? 0 : directEnvValue.length());
+                encryptionKey != null && !encryptionKey.trim().isEmpty(), 
+                encryptionKey == null ? 0 : encryptionKey.length());
         
         if (encryptionKey == null || encryptionKey.trim().isEmpty()) {
             log.error("❌ 프로덕션 환경에서 데이터 암호화 키가 비어있습니다!");

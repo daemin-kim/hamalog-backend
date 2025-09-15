@@ -21,6 +21,7 @@ import java.util.Map;
  */
 @SpringBootTest
 @Import(TestRedisConfig.class)
+@TestPropertySource(locations = "classpath:application-test.properties")
 @TestPropertySource(properties = {
     "app.aop.global-enabled=true",
     "app.aop.api-logging.enabled=true",

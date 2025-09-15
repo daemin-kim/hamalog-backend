@@ -36,7 +36,7 @@ services:
       - HAMALOG_VAULT_KV_BACKEND=secret
       - HAMALOG_VAULT_KV_DEFAULT_CONTEXT=hamalog
       # Fallback environment variables (for backward compatibility)
-      - JWT_SECRET=${JWT_SECRET:-}
+      - JWT_SECRET=${JWT_SECRET:-xcrVqYlPMcLeEoEX+h8vjxZ97lS6AETwQJXJSLJ/h8g=}
       - JWT_EXPIRY=${JWT_EXPIRY:-3600000}
       - HAMALOG_ENCRYPTION_KEY=${HAMALOG_ENCRYPTION_KEY:-}
       - KAKAO_CLIENT_ID=${KAKAO_CLIENT_ID:-dummy-client-id}

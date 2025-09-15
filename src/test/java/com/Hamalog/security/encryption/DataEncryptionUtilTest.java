@@ -25,7 +25,7 @@ class DataEncryptionUtilTest {
         String emptyKey = "";
 
         // when
-        DataEncryptionUtil encryptionUtil = new DataEncryptionUtil(emptyKey, environment, null);
+        DataEncryptionUtil encryptionUtil = new DataEncryptionUtil(emptyKey, environment);
 
         // then - Should not throw during initialization
         assertThat(encryptionUtil).isNotNull();
@@ -34,7 +34,7 @@ class DataEncryptionUtilTest {
         assertThatThrownBy(() -> encryptionUtil.encrypt("test data"))
                 .isInstanceOf(IllegalStateException.class)
                 .hasMessageContaining("❌ 데이터 암호화가 비활성화되었습니다")
-                .hasMessageContaining("Vault 또는 환경변수에서 올바른 암호화 키를 설정하세요");
+                .hasMessageContaining("환경변수에서 올바른 암호화 키를 설정하세요");
     }
 
     @Test
@@ -45,7 +45,7 @@ class DataEncryptionUtilTest {
         String nullKey = null;
 
         // when
-        DataEncryptionUtil encryptionUtil = new DataEncryptionUtil(nullKey, environment, null);
+        DataEncryptionUtil encryptionUtil = new DataEncryptionUtil(nullKey, environment);
 
         // then - Should not throw during initialization
         assertThat(encryptionUtil).isNotNull();
@@ -53,8 +53,8 @@ class DataEncryptionUtilTest {
         // But should throw when trying to decrypt
         assertThatThrownBy(() -> encryptionUtil.decrypt("encrypted-data"))
                 .isInstanceOf(IllegalStateException.class)
-                .hasMessageContaining("❌ 데이터 복호화가 비활성화되었습니다")
-                .hasMessageContaining("Vault 또는 환경변수에서 올바른 암호화 키를 설정하세요");
+                .hasMessageContaining("❌ 데이터 암호화가 비활성화되었습니다")
+                .hasMessageContaining("환경변수에서 올바른 암호화 키를 설정하세요");
     }
 
     @Test
@@ -65,7 +65,7 @@ class DataEncryptionUtilTest {
         String emptyKey = "";
 
         // when & then
-        assertThatCode(() -> new DataEncryptionUtil(emptyKey, environment, null))
+        assertThatCode(() -> new DataEncryptionUtil(emptyKey, environment))
                 .doesNotThrowAnyException();
     }
 
@@ -77,7 +77,7 @@ class DataEncryptionUtilTest {
         String validKey = "4MoGUKm/b9RXqFtUgxwK3BpVQF/RtZFMb4EwdzaRSlg="; // 32-byte base64 key
 
         // when & then
-        assertThatCode(() -> new DataEncryptionUtil(validKey, environment, null))
+        assertThatCode(() -> new DataEncryptionUtil(validKey, environment))
                 .doesNotThrowAnyException();
     }
 
@@ -89,7 +89,7 @@ class DataEncryptionUtilTest {
         String invalidKey = "invalid-base64-key!!!";
 
         // when & then
-        assertThatThrownBy(() -> new DataEncryptionUtil(invalidKey, environment, null))
+        assertThatThrownBy(() -> new DataEncryptionUtil(invalidKey, environment))
                 .isInstanceOf(IllegalStateException.class)
                 .hasMessageContaining("데이터 암호화 키는 유효한 Base64 형식이어야 합니다");
     }
@@ -102,7 +102,7 @@ class DataEncryptionUtilTest {
         String shortKey = "c2hvcnQta2V5"; // "short-key" in base64 (too short)
 
         // when & then
-        assertThatThrownBy(() -> new DataEncryptionUtil(shortKey, environment, null))
+        assertThatThrownBy(() -> new DataEncryptionUtil(shortKey, environment))
                 .isInstanceOf(IllegalStateException.class)
                 .hasMessageContaining("데이터 암호화 키 초기화 중 오류가 발생했습니다")
                 .hasCauseInstanceOf(IllegalStateException.class)
@@ -115,7 +115,7 @@ class DataEncryptionUtilTest {
         // given
         when(environment.getActiveProfiles()).thenReturn(new String[]{"prod"});
         String validKey = "4MoGUKm/b9RXqFtUgxwK3BpVQF/RtZFMb4EwdzaRSlg=";
-        DataEncryptionUtil encryptionUtil = new DataEncryptionUtil(validKey, environment, null);
+        DataEncryptionUtil encryptionUtil = new DataEncryptionUtil(validKey, environment);
         String plainText = "sensitive data to encrypt";
 
         // when
@@ -133,7 +133,7 @@ class DataEncryptionUtilTest {
         // given
         when(environment.getActiveProfiles()).thenReturn(new String[]{"prod"});
         String validKey = "4MoGUKm/b9RXqFtUgxwK3BpVQF/RtZFMb4EwdzaRSlg=";
-        DataEncryptionUtil encryptionUtil = new DataEncryptionUtil(validKey, environment, null);
+        DataEncryptionUtil encryptionUtil = new DataEncryptionUtil(validKey, environment);
 
         // when & then
         assertThat(encryptionUtil.encrypt(null)).isNull();

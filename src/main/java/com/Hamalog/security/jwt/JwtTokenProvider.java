@@ -1,6 +1,5 @@
 package com.Hamalog.security.jwt;
 
-import com.Hamalog.service.vault.VaultKeyProvider;
 import io.jsonwebtoken.*;
 import io.jsonwebtoken.security.Keys;
 import jakarta.annotation.PostConstruct;
@@ -27,19 +26,16 @@ public class JwtTokenProvider {
     private final long validityInMilliseconds;
     private final TokenBlacklistService tokenBlacklistService;
     private final Environment environment;
-    private final VaultKeyProvider vaultKeyProvider;
 
     public JwtTokenProvider(
             @Value("${jwt.secret:}") String fallbackSecret,
             @Value("${jwt.expiry:3600000}") long validityInMilliseconds,
             TokenBlacklistService tokenBlacklistService,
-            Environment environment,
-            @Autowired(required = false) VaultKeyProvider vaultKeyProvider) {
+            Environment environment) {
         this.fallbackSecret = fallbackSecret;
         this.validityInMilliseconds = validityInMilliseconds;
         this.tokenBlacklistService = tokenBlacklistService;
         this.environment = environment;
-        this.vaultKeyProvider = vaultKeyProvider;
     }
 
     @PostConstruct
@@ -48,37 +44,20 @@ public class JwtTokenProvider {
         boolean isProduction = environment.getActiveProfiles().length > 0 && 
                               java.util.Arrays.asList(environment.getActiveProfiles()).contains("prod");
         
-        // Try to get JWT secret from Vault first, then fallback to environment variables
-        String secret = null;
-        
-        if (vaultKeyProvider != null) {
-            try {
-                secret = vaultKeyProvider.getJwtSecret().orElse(null);
-                if (secret != null) {
-                    log.info("[JWT_PROVIDER] Using JWT secret from Vault");
-                }
-            } catch (Exception e) {
-                log.warn("[JWT_PROVIDER] Failed to retrieve JWT secret from Vault: {}", e.getMessage());
-            }
-        }
-        
-        // Fallback to direct environment/property injection
-        if (secret == null) {
-            secret = fallbackSecret;
-            if (secret != null && !secret.trim().isEmpty()) {
-                log.info("[JWT_PROVIDER] Using JWT secret from environment variables");
-            }
+        // Use JWT secret from properties file
+        String secret = fallbackSecret;
+        if (secret != null && !secret.trim().isEmpty()) {
+            log.info("[JWT_PROVIDER] Using JWT secret from properties configuration");
         }
         
         if (secret == null || secret.trim().isEmpty()) {
             if (isProduction) {
                 String errorMessage = String.format(
-                    "JWT 비밀키가 설정되지 않았습니다. 프로덕션 환경에서는 Vault 또는 JWT_SECRET 환경변수를 반드시 설정해야 합니다.\n" +
-                    "현재 JWT_SECRET 상태: [%s]\n" +
-                    "현재 JWT_SECRET 길이: %d\n" +
+                    "JWT 비밀키가 설정되지 않았습니다. 프로덕션 환경에서는 jwt.secret 프로퍼티를 반드시 설정해야 합니다.\n" +
+                    "현재 jwt.secret 상태: [%s]\n" +
+                    "현재 jwt.secret 길이: %d\n" +
                     "해결 방법:\n" +
-                    "1. Vault 사용: hamalog.vault.enabled=true 설정 후 Vault에 jwt-secret 저장\n" +
-                    "2. 환경변수 사용: JWT_SECRET 환경변수를 Base64 인코딩된 256비트 키로 설정\n" +
+                    "1. application-prod.properties 파일에서 jwt.secret을 Base64 인코딩된 256비트 키로 설정\n" +
                     "키 생성 예시: openssl rand -base64 32",
                     secret == null ? "null" : "'" + secret + "'",
                     secret == null ? 0 : secret.length()

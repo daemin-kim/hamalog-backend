@@ -1,55 +1,4 @@
 services:
-  vault:
-    image: hashicorp/vault:1.15.2
-    container_name: hamalog-vault
-    labels:
-      - "com.hamalog.service=vault"
-      - "com.hamalog.description=HashiCorp Vault for secure secret management"
-      - "com.hamalog.version=1.15.2"
-      - "com.hamalog.component=security"
-    ports:
-      - "8200:8200"
-    environment:
-      VAULT_DEV_ROOT_TOKEN_ID: hamalog-dev-token
-      VAULT_DEV_LISTEN_ADDRESS: 0.0.0.0:8200
-      VAULT_API_ADDR: http://vault:8200
-    cap_add:
-      - IPC_LOCK
-    command: vault server -dev
-    volumes:
-      - vault-data:/vault/data
-      - vault-logs:/vault/logs
-      - ./vault-init:/vault/init:ro
-    healthcheck:
-      test: ["CMD", "sh", "-c", "VAULT_ADDR=http://localhost:8200 vault status"]
-      interval: 30s
-      timeout: 10s
-      retries: 3
-      start_period: 30s
-    restart: unless-stopped
-
-  vault-init:
-    image: hashicorp/vault:1.15.2
-    container_name: hamalog-vault-init
-    environment:
-      VAULT_ADDR: http://vault:8200
-      VAULT_TOKEN: hamalog-dev-token
-    volumes:
-      - ./vault-init:/vault/init:ro
-    depends_on:
-      vault:
-        condition: service_healthy
-    command: >
-      sh -c "
-      echo 'Waiting for Vault to be ready...';
-      sleep 10;
-      echo 'Enabling KV v2 secrets engine...';
-      vault secrets enable -path=secret kv-v2 || echo 'KV v2 already enabled';
-      echo 'Creating hamalog secret context...';
-      vault kv put secret/hamalog jwt-secret='EzUuJwKK4vLnvk5r7yAgdNP/sa1dL87febZhlayPGjI=' encryption-key='7u+EyAhNyWu2hebIO0XoqUH1gwdoyyHKxcIKC2+A6aM=' kakao-client-id='86f21dfff5d2e9e3e1f76167df979268' kakao-client-secret='ScyrNoUeoFLrCNS5MB7CF2kKxUVzaymx';
-      echo 'Vault initialization complete';
-      "
-    restart: "no"
 
   hamalog-app:
     build: .
@@ -62,24 +11,16 @@ services:
       - SPRING_DATASOURCE_PASSWORD=${SPRING_DATASOURCE_PASSWORD:-hamalog_password}
       - SPRING_DATA_REDIS_HOST=redis
       - SPRING_DATA_REDIS_PORT=6379
-      # Vault configuration
-      - HAMALOG_VAULT_ENABLED=${HAMALOG_VAULT_ENABLED:-true}
-      - HAMALOG_VAULT_URI=http://vault:8200
-      - HAMALOG_VAULT_TOKEN=hamalog-dev-token
-      - HAMALOG_VAULT_KV_BACKEND=secret
-      - HAMALOG_VAULT_KV_DEFAULT_CONTEXT=hamalog
-      # Production keys are retrieved exclusively from Vault
-      # No fallback environment variables to ensure Vault integration works properly
+      # Production environment configuration
       - JWT_EXPIRY=3600000
+      # Real Kakao OAuth2 credentials for production
+      - KAKAO_CLIENT_ID=86f21dfff5d2e9e3e1f76167df979268
+      - KAKAO_CLIENT_SECRET=ScyrNoUeoFLrCNS5MB7CF2kKxUVzaymx
     depends_on:
       mysql-hamalog:
         condition: service_healthy
       redis:
         condition: service_healthy
-      vault:
-        condition: service_healthy
-      vault-init:
-        condition: service_completed_successfully
     volumes:
       - hamalog-uploads:/data/hamalog/images
     restart: unless-stopped
@@ -120,5 +61,3 @@ volumes:
   mysql-data:
   redis-data:
   hamalog-uploads:
-  vault-data:
-  vault-logs:

@@ -11,12 +11,44 @@ services:
     cap_add:
       - IPC_LOCK
     command: vault server -dev
+    volumes:
+      - vault-data:/vault/data
+      - vault-logs:/vault/logs
+      - ./vault-init:/vault/init:ro
     healthcheck:
       test: ["CMD", "vault", "status"]
       interval: 30s
       timeout: 10s
       retries: 3
+      start_period: 30s
     restart: unless-stopped
+
+  vault-init:
+    image: hashicorp/vault:1.15.2
+    container_name: hamalog-vault-init
+    environment:
+      VAULT_ADDR: http://vault:8200
+      VAULT_TOKEN: hamalog-dev-token
+    volumes:
+      - ./vault-init:/vault/init:ro
+    depends_on:
+      vault:
+        condition: service_healthy
+    command: >
+      sh -c "
+      echo 'Waiting for Vault to be ready...';
+      sleep 10;
+      echo 'Enabling KV v2 secrets engine...';
+      vault secrets enable -path=secret kv-v2 || echo 'KV v2 already enabled';
+      echo 'Creating hamalog secret context...';
+      vault kv put secret/hamalog 
+        jwt-secret='$${JWT_SECRET:-xcrVqYlPMcLeEoEX+h8vjxZ97lS6AETwQJXJSLJ/h8g=}'
+        encryption-key='$${HAMALOG_ENCRYPTION_KEY:-}'
+        kakao-client-id='$${KAKAO_CLIENT_ID:-dummy-client-id}'
+        kakao-client-secret='$${KAKAO_CLIENT_SECRET:-dummy-client-secret}';
+      echo 'Vault initialization complete';
+      "
+    restart: "no"
 
   hamalog-app:
     build: .
@@ -48,6 +80,8 @@ services:
         condition: service_healthy
       vault:
         condition: service_healthy
+      vault-init:
+        condition: service_completed_successfully
     volumes:
       - hamalog-uploads:/data/hamalog/images
     restart: unless-stopped
@@ -88,3 +122,5 @@ volumes:
   mysql-data:
   redis-data:
   hamalog-uploads:
+  vault-data:
+  vault-logs:

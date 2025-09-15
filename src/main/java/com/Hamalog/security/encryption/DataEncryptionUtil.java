@@ -32,7 +32,7 @@ public class DataEncryptionUtil {
     private final boolean encryptionDisabled;
 
     public DataEncryptionUtil(
-            @Value("${hamalog.encryption.key:}") String fallbackEncryptionKey,
+            @Value("${hamalog.encryption.key:${HAMALOG_ENCRYPTION_KEY:}}") String fallbackEncryptionKey,
             Environment environment,
             @Autowired(required = false) VaultKeyProvider vaultKeyProvider) {
         this.environment = environment;

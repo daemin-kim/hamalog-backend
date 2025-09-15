@@ -130,27 +130,22 @@ public class AuthService {
 
     @Transactional
     public LoginResponse processOAuth2Callback(String code) {
-        log.info("Processing OAuth2 callback with authorization code");
-        
         try {
             // Get Kakao client registration
             ClientRegistration kakaoRegistration = clientRegistrationRepository.findByRegistrationId("kakao");
             if (kakaoRegistration == null) {
-                log.error("Kakao client registration not found");
                 throw new CustomException(ErrorCode.INTERNAL_SERVER_ERROR);
             }
             
             // Exchange authorization code for access token
             String accessToken = exchangeCodeForToken(code, kakaoRegistration);
             if (accessToken == null) {
-                log.error("Failed to exchange code for access token");
                 throw new CustomException(ErrorCode.BAD_REQUEST);
             }
             
             // Get user info from Kakao
             JsonNode userInfo = getUserInfoFromKakao(accessToken);
             if (userInfo == null) {
-                log.error("Failed to get user info from Kakao");
                 throw new CustomException(ErrorCode.BAD_REQUEST);
             }
             
@@ -160,13 +155,11 @@ public class AuthService {
             // Generate JWT token
             String jwtToken = jwtTokenProvider.createToken(loginId);
             
-            log.info("Successfully processed OAuth2 callback for user: {}", loginId);
             return new LoginResponse(jwtToken);
             
         } catch (CustomException e) {
             throw e;
         } catch (Exception e) {
-            log.error("Error processing OAuth2 callback", e);
             throw new CustomException(ErrorCode.INTERNAL_SERVER_ERROR);
         }
     }
@@ -198,11 +191,9 @@ public class AuthService {
                 return tokenResponse.get("access_token").asText();
             }
             
-            log.error("Token exchange failed with status: {}", response.getStatusCode());
             return null;
             
         } catch (Exception e) {
-            log.error("Error exchanging code for token", e);
             return null;
         }
     }
@@ -226,11 +217,9 @@ public class AuthService {
                 return objectMapper.readTree(response.getBody());
             }
             
-            log.error("User info request failed with status: {}", response.getStatusCode());
             return null;
             
         } catch (Exception e) {
-            log.error("Error getting user info from Kakao", e);
             return null;
         }
     }
@@ -271,7 +260,6 @@ public class AuthService {
                     .build();
             
             memberRepository.save(member);
-            log.info("Created new OAuth2 member for Kakao id {} as loginId {}", kakaoId, loginId);
         }
         
         return loginId;

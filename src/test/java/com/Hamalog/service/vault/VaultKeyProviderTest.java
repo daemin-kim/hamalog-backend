@@ -36,43 +36,6 @@ class VaultKeyProviderTest {
         );
     }
 
-    @Test
-    @DisplayName("Should retrieve JWT secret from environment variable when Vault is unavailable")
-    void getJwtSecret_VaultUnavailable_ShouldFallbackToEnvironmentVariable() {
-        // given
-        String expectedSecret = "test-jwt-secret-from-env";
-        System.setProperty("jwt.secret", expectedSecret);
-        
-        try {
-            // when
-            Optional<String> result = vaultKeyProvider.getJwtSecret();
-            
-            // then
-            assertThat(result).isPresent();
-            assertThat(result.get()).isEqualTo(expectedSecret);
-        } finally {
-            System.clearProperty("jwt.secret");
-        }
-    }
-
-    @Test
-    @DisplayName("Should retrieve encryption key from environment variable when Vault is unavailable")
-    void getEncryptionKey_VaultUnavailable_ShouldFallbackToEnvironmentVariable() {
-        // given
-        String expectedKey = "test-encryption-key-from-env";
-        System.setProperty("hamalog.encryption.key", expectedKey);
-        
-        try {
-            // when
-            Optional<String> result = vaultKeyProvider.getEncryptionKey();
-            
-            // then
-            assertThat(result).isPresent();
-            assertThat(result.get()).isEqualTo(expectedKey);
-        } finally {
-            System.clearProperty("hamalog.encryption.key");
-        }
-    }
 
     @Test
     @DisplayName("Should return empty when no JWT secret available")
@@ -108,63 +71,6 @@ class VaultKeyProviderTest {
         assertThat(result).isFalse();
     }
 
-    @Test
-    @DisplayName("Should handle multiple environment variable sources")
-    void getJwtSecret_MultipleEnvironmentSources_ShouldPrioritizeSystemProperty() {
-        // given
-        String systemPropertyValue = "system-property-jwt-secret";
-        System.setProperty("jwt.secret", systemPropertyValue);
-        
-        try {
-            // when
-            Optional<String> result = vaultKeyProvider.getJwtSecret();
-            
-            // then
-            assertThat(result).isPresent();
-            assertThat(result.get()).isEqualTo(systemPropertyValue);
-        } finally {
-            System.clearProperty("jwt.secret");
-        }
-    }
-
-    @Test
-    @DisplayName("Should handle Base64 encoded keys correctly")
-    void getEncryptionKey_Base64EncodedKey_ShouldReturnCorrectValue() {
-        // given
-        String base64Key = "dGVzdC1lbmNyeXB0aW9uLWtleS1iYXNlNjQ="; // "test-encryption-key-base64" in Base64
-        System.setProperty("hamalog.encryption.key", base64Key);
-        
-        try {
-            // when
-            Optional<String> result = vaultKeyProvider.getEncryptionKey();
-            
-            // then
-            assertThat(result).isPresent();
-            assertThat(result.get()).isEqualTo(base64Key);
-        } finally {
-            System.clearProperty("hamalog.encryption.key");
-        }
-    }
-
-    @Test
-    @DisplayName("Should not expose sensitive information in logs")
-    void getJwtSecret_SensitiveData_ShouldNotExposeInExceptions() {
-        // given
-        String sensitiveSecret = "super-secret-jwt-key-should-not-appear-in-logs";
-        System.setProperty("jwt.secret", sensitiveSecret);
-        
-        try {
-            // when
-            Optional<String> result = vaultKeyProvider.getJwtSecret();
-            
-            // then
-            assertThat(result).isPresent();
-            // Verify the secret is returned but this test ensures no logging exposes it
-            // (actual logging behavior would need to be verified through log capture)
-        } finally {
-            System.clearProperty("jwt.secret");
-        }
-    }
 
     /**
      * Helper method to clear environment variables that might affect tests

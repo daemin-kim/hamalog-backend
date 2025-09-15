@@ -102,13 +102,7 @@ export SPRING_DATASOURCE_URL="jdbc:mysql://localhost:3306/hamalog"
 export SPRING_DATASOURCE_USERNAME="hamalog_user"
 export SPRING_DATASOURCE_PASSWORD="your_password"
 
-# 보안 키 설정 (Base64 인코딩된 256bit 키)
-export JWT_SECRET="your_jwt_secret_base64"
-export HAMALOG_ENCRYPTION_KEY="your_encryption_key_base64"
-
-# OAuth2 설정
-export KAKAO_CLIENT_ID="your_kakao_client_id"
-export KAKAO_CLIENT_SECRET="your_kakao_client_secret"
+# 보안 키 관리는 HashiCorp Vault를 통해 자동으로 처리됩니다
 
 # 애플리케이션 설정
 export FRONTEND_URL="https://your-frontend-domain.com"
@@ -126,15 +120,8 @@ export UPLOAD_DIR="/data/hamalog/images"
 export SPRING_PROFILES_ACTIVE="prod"
 ```
 
-### 보안 키 생성
-프로젝트에 포함된 키 생성 파일을 사용할 수 있습니다:
-```bash
-# 기존 키 재사용
-source .env.hamalog-keys
-
-# 새 키 생성 필요시 기존 파일 삭제 후 재배포
-rm .env.hamalog-keys
-```
+### 보안 키 관리
+모든 보안 키는 HashiCorp Vault를 통해 중앙 집중식으로 관리됩니다. 수동 키 관리가 필요하지 않습니다.
 
 ## 🏗 빌드 및 실행
 

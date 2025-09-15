@@ -16,8 +16,8 @@ import java.util.Optional;
 
 /**
  * Vault Key Provider Service for retrieving secrets from HashiCorp Vault.
- * This service provides a fallback mechanism for key management, supporting both
- * Vault-based secret retrieval and environment variable fallbacks.
+ * This service provides exclusive vault-based secret retrieval for all application keys.
+ * No fallback mechanisms are available - all keys must be stored in Vault.
  */
 @Service
 @ConditionalOnProperty(name = "hamalog.vault.enabled", havingValue = "true", matchIfMissing = false)
@@ -65,32 +65,26 @@ public class VaultKeyProvider {
     }
 
     /**
-     * Retrieves JWT secret from Vault or falls back to environment variable
+     * Retrieves JWT secret exclusively from Vault
      */
     public Optional<String> getJwtSecret() {
         try {
-            return getSecretFromVault("jwt-secret")
-                    .or(() -> Optional.ofNullable(System.getenv("JWT_SECRET")))
-                    .or(() -> Optional.ofNullable(System.getProperty("jwt.secret")));
+            return getSecretFromVault("jwt-secret");
         } catch (Exception e) {
-            log.warn("[VAULT_KEY_PROVIDER] Failed to retrieve JWT secret from Vault, using fallback: {}", e.getMessage());
-            return Optional.ofNullable(System.getenv("JWT_SECRET"))
-                    .or(() -> Optional.ofNullable(System.getProperty("jwt.secret")));
+            log.error("[VAULT_KEY_PROVIDER] Failed to retrieve JWT secret from Vault: {}", e.getMessage());
+            return Optional.empty();
         }
     }
 
     /**
-     * Retrieves encryption key from Vault or falls back to environment variable
+     * Retrieves encryption key exclusively from Vault
      */
     public Optional<String> getEncryptionKey() {
         try {
-            return getSecretFromVault("encryption-key")
-                    .or(() -> Optional.ofNullable(System.getenv("HAMALOG_ENCRYPTION_KEY")))
-                    .or(() -> Optional.ofNullable(System.getProperty("hamalog.encryption.key")));
+            return getSecretFromVault("encryption-key");
         } catch (Exception e) {
-            log.warn("[VAULT_KEY_PROVIDER] Failed to retrieve encryption key from Vault, using fallback: {}", e.getMessage());
-            return Optional.ofNullable(System.getenv("HAMALOG_ENCRYPTION_KEY"))
-                    .or(() -> Optional.ofNullable(System.getProperty("hamalog.encryption.key")));
+            log.error("[VAULT_KEY_PROVIDER] Failed to retrieve encryption key from Vault: {}", e.getMessage());
+            return Optional.empty();
         }
     }
 

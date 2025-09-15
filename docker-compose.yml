@@ -20,12 +20,12 @@ services:
       - vault-data:/vault/data
       - vault-logs:/vault/logs
       - ./vault-init:/vault/init:ro
-    healthcheck:
-      test: ["CMD", "vault", "status"]
-      interval: 30s
-      timeout: 10s
-      retries: 3
-      start_period: 30s
+    # healthcheck:
+    #   test: ["CMD", "wget", "--quiet", "--tries=1", "--spider", "http://localhost:8200/v1/sys/health"]
+    #   interval: 30s
+    #   timeout: 10s
+    #   retries: 3
+    #   start_period: 30s
     restart: unless-stopped
 
   vault-init:

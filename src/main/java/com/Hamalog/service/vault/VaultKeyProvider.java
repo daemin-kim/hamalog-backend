@@ -62,6 +62,8 @@ public class VaultKeyProvider {
                 
         log.info("[VAULT_KEY_PROVIDER] Initialized with URI: {}, Backend: {}, Context: {}", 
                 vaultUri, kvBackend, defaultContext);
+        log.info("[VAULT_KEY_PROVIDER] Token status: {}, URI accessible: checking...", 
+                vaultToken != null && !vaultToken.trim().isEmpty() ? "PRESENT" : "MISSING_OR_EMPTY");
     }
 
     /**

@@ -18,32 +18,43 @@ class DataEncryptionUtilTest {
     private Environment environment;
 
     @Test
-    @DisplayName("Should throw IllegalStateException when encryption key is empty in production")
-    void initializeSecretKey_EmptyKeyInProduction_ThrowsException() {
+    @DisplayName("Should start with disabled encryption when encryption key is empty in production")
+    void initializeSecretKey_EmptyKeyInProduction_StartsWithDisabledEncryption() {
         // given
         when(environment.getActiveProfiles()).thenReturn(new String[]{"prod"});
         String emptyKey = "";
 
-        // when & then
-        assertThatThrownBy(() -> new DataEncryptionUtil(emptyKey, environment, null))
+        // when
+        DataEncryptionUtil encryptionUtil = new DataEncryptionUtil(emptyKey, environment, null);
+
+        // then - Should not throw during initialization
+        assertThat(encryptionUtil).isNotNull();
+        
+        // But should throw when trying to encrypt
+        assertThatThrownBy(() -> encryptionUtil.encrypt("test data"))
                 .isInstanceOf(IllegalStateException.class)
-                .hasMessageContaining("데이터 암호화 키가 설정되지 않았습니다")
-                .hasMessageContaining("HAMALOG_ENCRYPTION_KEY 환경변수를 반드시 설정해야 합니다")
-                .hasMessageContaining("현재 키 상태: NOT_SET");
+                .hasMessageContaining("❌ 데이터 암호화가 비활성화되었습니다")
+                .hasMessageContaining("Vault 또는 환경변수에서 올바른 암호화 키를 설정하세요");
     }
 
     @Test
-    @DisplayName("Should throw IllegalStateException when encryption key is null in production")
-    void initializeSecretKey_NullKeyInProduction_ThrowsException() {
+    @DisplayName("Should start with disabled encryption when encryption key is null in production")
+    void initializeSecretKey_NullKeyInProduction_StartsWithDisabledEncryption() {
         // given
         when(environment.getActiveProfiles()).thenReturn(new String[]{"prod"});
         String nullKey = null;
 
-        // when & then
-        assertThatThrownBy(() -> new DataEncryptionUtil(nullKey, environment, null))
+        // when
+        DataEncryptionUtil encryptionUtil = new DataEncryptionUtil(nullKey, environment, null);
+
+        // then - Should not throw during initialization
+        assertThat(encryptionUtil).isNotNull();
+        
+        // But should throw when trying to decrypt
+        assertThatThrownBy(() -> encryptionUtil.decrypt("encrypted-data"))
                 .isInstanceOf(IllegalStateException.class)
-                .hasMessageContaining("데이터 암호화 키가 설정되지 않았습니다")
-                .hasMessageContaining("현재 키 상태: NOT_SET");
+                .hasMessageContaining("❌ 데이터 복호화가 비활성화되었습니다")
+                .hasMessageContaining("Vault 또는 환경변수에서 올바른 암호화 키를 설정하세요");
     }
 
     @Test

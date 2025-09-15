@@ -29,6 +29,7 @@ public class DataEncryptionUtil {
     private final SecretKey secretKey;
     private final Environment environment;
     private final VaultKeyProvider vaultKeyProvider;
+    private final boolean encryptionDisabled;
 
     public DataEncryptionUtil(
             @Value("${hamalog.encryption.key:}") String fallbackEncryptionKey,
@@ -36,10 +37,23 @@ public class DataEncryptionUtil {
             @Autowired(required = false) VaultKeyProvider vaultKeyProvider) {
         this.environment = environment;
         this.vaultKeyProvider = vaultKeyProvider;
-        this.secretKey = initializeSecretKey(fallbackEncryptionKey);
+        
+        KeyInitializationResult result = initializeSecretKey(fallbackEncryptionKey);
+        this.secretKey = result.secretKey;
+        this.encryptionDisabled = result.encryptionDisabled;
+    }
+    
+    private static class KeyInitializationResult {
+        final SecretKey secretKey;
+        final boolean encryptionDisabled;
+        
+        KeyInitializationResult(SecretKey secretKey, boolean encryptionDisabled) {
+            this.secretKey = secretKey;
+            this.encryptionDisabled = encryptionDisabled;
+        }
     }
 
-    private SecretKey initializeSecretKey(String fallbackEncryptionKey) {
+    private KeyInitializationResult initializeSecretKey(String fallbackEncryptionKey) {
         // Check if running in production profile
         boolean isProduction = environment.getActiveProfiles().length > 0 && 
                               java.util.Arrays.asList(environment.getActiveProfiles()).contains("prod");
@@ -54,6 +68,17 @@ public class DataEncryptionUtil {
         // Check VaultKeyProvider availability and configuration
         if (vaultKeyProvider != null) {
             log.info("[ENCRYPTION_UTIL] VaultKeyProvider is available, attempting to retrieve encryption key from Vault");
+            
+            // Check Vault availability before attempting key retrieval
+            boolean vaultAvailable = false;
+            try {
+                vaultAvailable = vaultKeyProvider.isVaultAvailable();
+                log.info("[ENCRYPTION_UTIL] Vault availability check: {}", vaultAvailable ? "ACCESSIBLE" : "NOT_ACCESSIBLE");
+            } catch (Exception e) {
+                log.error("[ENCRYPTION_UTIL] Failed to check Vault availability: {} - {}", 
+                         e.getClass().getSimpleName(), e.getMessage());
+            }
+            
             try {
                 Optional<String> vaultKey = vaultKeyProvider.getEncryptionKey();
                 if (vaultKey.isPresent() && !vaultKey.get().trim().isEmpty()) {
@@ -61,7 +86,8 @@ public class DataEncryptionUtil {
                     keySource = "VAULT";
                     log.info("[ENCRYPTION_UTIL] Successfully retrieved encryption key from Vault (length: {})", encryptionKey.length());
                 } else {
-                    log.warn("[ENCRYPTION_UTIL] Vault returned empty or null encryption key");
+                    log.warn("[ENCRYPTION_UTIL] Vault returned empty or null encryption key. Vault available: {}", vaultAvailable);
+                    log.warn("[ENCRYPTION_UTIL] This could indicate: 1) Missing vault token, 2) Key not found in Vault, 3) Vault connectivity issue");
                 }
             } catch (Exception e) {
                 log.error("[ENCRYPTION_UTIL] Failed to retrieve encryption key from Vault: {} - {}", 
@@ -144,7 +170,17 @@ public class DataEncryptionUtil {
                     vaultKeyProvider != null ? "YES" : "NO"
                 );
                 log.error("==================== 데이터 암호화 키 초기화 실패 ====================");
-                throw new IllegalStateException(errorMessage);
+                
+                // In production, allow the application to start but with a disabled encryption key
+                // This prevents application startup failures due to temporary Vault issues
+                log.error("⚠️ PRODUCTION WARNING: Starting application with disabled encryption due to missing key");
+                log.error("⚠️ All encryption operations will fail until the key is properly configured");
+                log.error("⚠️ This should be resolved immediately to ensure data security");
+                
+                // Return a special marker key that will cause encryption operations to fail gracefully
+                byte[] disabledKey = new byte[32]; // All zeros - invalid but allows startup
+                log.error("==================== 애플리케이션 시작 (암호화 비활성화) ====================");
+                return new KeyInitializationResult(new SecretKeySpec(disabledKey, ALGORITHM), true);
             }
             
             // Generate secure random key for development
@@ -155,7 +191,7 @@ public class DataEncryptionUtil {
             new SecureRandom().nextBytes(randomKey);
             log.info("✅ 개발용 임시 암호화 키가 생성되었습니다.");
             log.info("==================== 데이터 암호화 키 초기화 완료 (개발 모드) ====================");
-            return new SecretKeySpec(randomKey, ALGORITHM);
+            return new KeyInitializationResult(new SecretKeySpec(randomKey, ALGORITHM), false);
         }
         
         try {
@@ -171,7 +207,7 @@ public class DataEncryptionUtil {
             }
             
             log.info("==================== 데이터 암호화 키 초기화 완료 (제공된 키) ====================");
-            return new SecretKeySpec(decodedKey, ALGORITHM);
+            return new KeyInitializationResult(new SecretKeySpec(decodedKey, ALGORITHM), false);
         } catch (IllegalArgumentException e) {
             throw new IllegalStateException("데이터 암호화 키는 유효한 Base64 형식이어야 합니다. 올바른 Base64 형식의 256비트 키를 사용하세요.", e);
         } catch (Exception e) {
@@ -182,6 +218,17 @@ public class DataEncryptionUtil {
     public String encrypt(String plainText) {
         if (plainText == null || plainText.isEmpty()) {
             return plainText;
+        }
+
+        if (encryptionDisabled) {
+            throw new IllegalStateException(
+                "❌ 데이터 암호화가 비활성화되었습니다. Vault 또는 환경변수에서 올바른 암호화 키를 설정하세요.\n" +
+                "현재 상태: 암호화 키가 설정되지 않아 애플리케이션이 안전하지 않은 모드로 실행 중입니다.\n" +
+                "해결 방법:\n" +
+                "1. Vault에 encryption-key 시크릿이 올바르게 저장되어 있는지 확인\n" +
+                "2. HAMALOG_ENCRYPTION_KEY 환경변수를 Base64 인코딩된 256비트 키로 설정\n" +
+                "3. 애플리케이션을 재시작하여 키를 다시 로드"
+            );
         }
 
         try {
@@ -209,6 +256,17 @@ public class DataEncryptionUtil {
     public String decrypt(String encryptedText) {
         if (encryptedText == null || encryptedText.isEmpty()) {
             return encryptedText;
+        }
+
+        if (encryptionDisabled) {
+            throw new IllegalStateException(
+                "❌ 데이터 복호화가 비활성화되었습니다. Vault 또는 환경변수에서 올바른 암호화 키를 설정하세요.\n" +
+                "현재 상태: 암호화 키가 설정되지 않아 기존 암호화된 데이터를 복호화할 수 없습니다.\n" +
+                "해결 방법:\n" +
+                "1. Vault에 encryption-key 시크릿이 올바르게 저장되어 있는지 확인\n" +
+                "2. HAMALOG_ENCRYPTION_KEY 환경변수를 Base64 인코딩된 256비트 키로 설정\n" +
+                "3. 애플리케이션을 재시작하여 키를 다시 로드"
+            );
         }
 
         try {

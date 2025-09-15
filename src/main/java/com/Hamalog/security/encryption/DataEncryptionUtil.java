@@ -128,23 +128,25 @@ public class DataEncryptionUtil {
         if (encryptionKey == null || encryptionKey.trim().isEmpty()) {
             log.info("[ENCRYPTION_UTIL] Attempting fallback to environment variables/properties");
             
-            // Check multiple possible sources
+            // Check multiple possible sources - prioritize system environment variables over Spring properties
+            // This ensures Docker/production environment variables take precedence
             String[] possibleSources = {
-                fallbackEncryptionKey,
-                environment.getProperty("hamalog.encryption.key"),
+                System.getenv("HAMALOG_ENCRYPTION_KEY"),
                 environment.getProperty("HAMALOG_ENCRYPTION_KEY"),
-                System.getenv("HAMALOG_ENCRYPTION_KEY")
+                environment.getProperty("hamalog.encryption.key"),
+                fallbackEncryptionKey
+            };
+            
+            String[] sourceNames = {
+                "HAMALOG_ENCRYPTION_KEY system env",
+                "HAMALOG_ENCRYPTION_KEY property", 
+                "hamalog.encryption.key property",
+                "fallback parameter"
             };
             
             for (int i = 0; i < possibleSources.length; i++) {
                 String source = possibleSources[i];
-                String sourceName = switch (i) {
-                    case 0 -> "fallback parameter";
-                    case 1 -> "hamalog.encryption.key property";
-                    case 2 -> "HAMALOG_ENCRYPTION_KEY property";
-                    case 3 -> "HAMALOG_ENCRYPTION_KEY system env";
-                    default -> "unknown";
-                };
+                String sourceName = sourceNames[i];
                 
                 log.debug("[ENCRYPTION_UTIL] Checking {}: {}", sourceName, 
                          source == null ? "null" : (source.isEmpty() ? "empty" : "present (length: " + source.length() + ")"));

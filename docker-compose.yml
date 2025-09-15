@@ -64,7 +64,7 @@ services:
       # Vault configuration
       - HAMALOG_VAULT_ENABLED=${HAMALOG_VAULT_ENABLED:-true}
       - HAMALOG_VAULT_URI=http://vault:8200
-      - HAMALOG_VAULT_TOKEN=${VAULT_TOKEN:-hamalog-dev-token}
+      - HAMALOG_VAULT_TOKEN=hamalog-dev-token
       - HAMALOG_VAULT_KV_BACKEND=secret
       - HAMALOG_VAULT_KV_DEFAULT_CONTEXT=hamalog
       # Required environment variables (hardcoded for production stability)

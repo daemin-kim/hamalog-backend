@@ -29,19 +29,9 @@ public class VaultKeyProvider {
     private final WebClient webClient;
     private final String kvBackend;
     private final String defaultContext;
+    private final String vaultUri;
+    private final String vaultToken;
     private final ObjectMapper objectMapper = new ObjectMapper();
-
-    @Value("${hamalog.vault.uri:http://localhost:8200}")
-    private String vaultUri;
-
-    @Value("${hamalog.vault.token:}")
-    private String vaultToken;
-
-    @Value("${hamalog.vault.kv.backend:secret}")
-    private String kvBackendConfig;
-
-    @Value("${hamalog.vault.kv.default-context:hamalog}")
-    private String defaultContextConfig;
 
     public VaultKeyProvider(
             @Value("${hamalog.vault.uri:http://localhost:8200}") String vaultUri,

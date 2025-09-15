@@ -80,15 +80,41 @@ enable_kv_engine() {
 create_secrets() {
     log_info "Creating secrets in $KV_BACKEND/$CONTEXT..."
     
-    # Get secret values from environment or use defaults
-    JWT_SECRET=${JWT_SECRET:-"xcrVqYlPMcLeEoEX+h8vjxZ97lS6AETwQJXJSLJ/h8g="}
-    ENCRYPTION_KEY=${HAMALOG_ENCRYPTION_KEY:-""}
-    KAKAO_CLIENT_ID=${KAKAO_CLIENT_ID:-"dummy-client-id"}
-    KAKAO_CLIENT_SECRET=${KAKAO_CLIENT_SECRET:-"dummy-client-secret"}
+    # Get secret values from environment (no fallback to dummy values)
+    JWT_SECRET=${JWT_SECRET}
+    ENCRYPTION_KEY=${HAMALOG_ENCRYPTION_KEY}
+    KAKAO_CLIENT_ID=${KAKAO_CLIENT_ID}
+    KAKAO_CLIENT_SECRET=${KAKAO_CLIENT_SECRET}
     
-    # Validate required secrets
+    # Validate all required secrets are provided
     if [ -z "$JWT_SECRET" ]; then
-        log_error "JWT_SECRET is required but not provided"
+        log_error "JWT_SECRET is required but not provided. Set JWT_SECRET environment variable."
+        exit 1
+    fi
+    
+    if [ -z "$ENCRYPTION_KEY" ]; then
+        log_error "HAMALOG_ENCRYPTION_KEY is required but not provided. Set HAMALOG_ENCRYPTION_KEY environment variable."
+        exit 1
+    fi
+    
+    if [ -z "$KAKAO_CLIENT_ID" ]; then
+        log_error "KAKAO_CLIENT_ID is required but not provided. Set KAKAO_CLIENT_ID environment variable."
+        exit 1
+    fi
+    
+    if [ -z "$KAKAO_CLIENT_SECRET" ]; then
+        log_error "KAKAO_CLIENT_SECRET is required but not provided. Set KAKAO_CLIENT_SECRET environment variable."
+        exit 1
+    fi
+    
+    # Validate no dummy values are being used
+    if [[ "$KAKAO_CLIENT_ID" == *"dummy"* ]]; then
+        log_error "KAKAO_CLIENT_ID contains dummy value. Use real Kakao client ID."
+        exit 1
+    fi
+    
+    if [[ "$KAKAO_CLIENT_SECRET" == *"dummy"* ]]; then
+        log_error "KAKAO_CLIENT_SECRET contains dummy value. Use real Kakao client secret."
         exit 1
     fi
     

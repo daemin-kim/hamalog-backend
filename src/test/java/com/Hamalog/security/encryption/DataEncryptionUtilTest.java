@@ -29,7 +29,7 @@ class DataEncryptionUtilTest {
                 .isInstanceOf(IllegalStateException.class)
                 .hasMessageContaining("데이터 암호화 키가 설정되지 않았습니다")
                 .hasMessageContaining("HAMALOG_ENCRYPTION_KEY 환경변수를 반드시 설정해야 합니다")
-                .hasMessageContaining("현재 HAMALOG_ENCRYPTION_KEY 상태: EMPTY_OR_INVALID");
+                .hasMessageContaining("현재 키 상태: NOT_SET");
     }
 
     @Test
@@ -43,7 +43,7 @@ class DataEncryptionUtilTest {
         assertThatThrownBy(() -> new DataEncryptionUtil(nullKey, environment, null))
                 .isInstanceOf(IllegalStateException.class)
                 .hasMessageContaining("데이터 암호화 키가 설정되지 않았습니다")
-                .hasMessageContaining("현재 HAMALOG_ENCRYPTION_KEY 상태: NOT_SET");
+                .hasMessageContaining("현재 키 상태: NOT_SET");
     }
 
     @Test

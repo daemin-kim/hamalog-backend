@@ -2,6 +2,11 @@ services:
   vault:
     image: hashicorp/vault:1.15.2
     container_name: hamalog-vault
+    labels:
+      - "com.hamalog.service=vault"
+      - "com.hamalog.description=HashiCorp Vault for secure secret management"
+      - "com.hamalog.version=1.15.2"
+      - "com.hamalog.component=security"
     ports:
       - "8200:8200"
     environment:

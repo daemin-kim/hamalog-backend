@@ -191,10 +191,13 @@
         <appender-ref ref="ASYNC_ERROR"/>
     </root>
 
-    <!-- JVM Shutdown Hook to ensure logs are flushed -->
-    <shutdownHook class="ch.qos.logback.core.hook.DelayingShutdownHook"/>
-
-    <!-- Status Listener for debugging logback configuration issues -->
-    <statusListener class="ch.qos.logback.core.status.OnConsoleStatusListener"/>
+    <!-- JVM Shutdown Hook removed to prevent conflicts with Spring Boot's shutdown mechanism -->
+    <!-- Spring Boot handles graceful shutdown of logging context automatically -->
+    
+    <!-- Status Listener removed for production to reduce shutdown noise -->
+    <!-- Enable only for debugging logback configuration issues in development -->
+    <springProfile name="local,dev">
+        <statusListener class="ch.qos.logback.core.status.OnConsoleStatusListener"/>
+    </springProfile>
 
 </configuration>

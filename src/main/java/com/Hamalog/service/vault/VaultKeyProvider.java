@@ -93,12 +93,15 @@ public class VaultKeyProvider {
      */
     private Optional<String> getSecretFromVault(String secretKey) {
         if (vaultToken == null || vaultToken.trim().isEmpty()) {
-            log.debug("[VAULT_KEY_PROVIDER] Vault token not configured, skipping Vault lookup for: {}", secretKey);
+            log.warn("[VAULT_KEY_PROVIDER] Vault token not configured, skipping Vault lookup for: {} (Token present: {}, URI: {})", 
+                    secretKey, vaultToken != null, vaultUri);
             return Optional.empty();
         }
 
         try {
             String path = String.format("/v1/%s/data/%s", kvBackend, defaultContext);
+            log.debug("[VAULT_KEY_PROVIDER] Attempting to retrieve secret '{}' from path '{}' at URI '{}'", 
+                     secretKey, path, vaultUri);
             
             String response = webClient.get()
                     .uri(path)
@@ -112,19 +115,35 @@ public class VaultKeyProvider {
                 JsonNode jsonNode = objectMapper.readTree(response);
                 JsonNode dataNode = jsonNode.path("data").path("data");
                 
+                log.debug("[VAULT_KEY_PROVIDER] Response received from Vault for secret '{}'. Available keys: {}", 
+                         secretKey, dataNode.fieldNames());
+                
                 if (dataNode.has(secretKey)) {
                     String secretValue = dataNode.path(secretKey).asText();
-                    log.info("[VAULT_KEY_PROVIDER] Successfully retrieved secret: {} from Vault", secretKey);
-                    return Optional.of(secretValue);
+                    if (secretValue != null && !secretValue.trim().isEmpty()) {
+                        log.info("[VAULT_KEY_PROVIDER] Successfully retrieved secret: {} from Vault (length: {})", 
+                                secretKey, secretValue.length());
+                        return Optional.of(secretValue);
+                    } else {
+                        log.warn("[VAULT_KEY_PROVIDER] Secret {} found in Vault but is empty or null", secretKey);
+                        return Optional.empty();
+                    }
+                } else {
+                    log.warn("[VAULT_KEY_PROVIDER] Secret {} not found in Vault response. Available keys: {}", 
+                            secretKey, dataNode.fieldNames());
+                    return Optional.empty();
                 }
+            } else {
+                log.warn("[VAULT_KEY_PROVIDER] Received null response from Vault for secret: {}", secretKey);
+                return Optional.empty();
             }
             
-            log.debug("[VAULT_KEY_PROVIDER] Secret {} not found in Vault", secretKey);
-            return Optional.empty();
-            
         } catch (Exception e) {
-            log.error("[VAULT_KEY_PROVIDER] Error retrieving secret {} from Vault: {}", secretKey, e.getMessage());
-            throw new RuntimeException("Failed to retrieve secret from Vault", e);
+            log.error("[VAULT_KEY_PROVIDER] Error retrieving secret {} from Vault. URI: {}, Path: /v1/{}/data/{}, Error: {} - {}", 
+                     secretKey, vaultUri, kvBackend, defaultContext, e.getClass().getSimpleName(), e.getMessage());
+            
+            // Don't throw exception, return empty to allow fallback
+            return Optional.empty();
         }
     }
 

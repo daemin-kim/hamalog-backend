@@ -15,6 +15,7 @@ import javax.crypto.spec.GCMParameterSpec;
 import javax.crypto.spec.SecretKeySpec;
 import java.security.SecureRandom;
 import java.util.Base64;
+import java.util.Optional;
 
 @Component
 public class DataEncryptionUtil {
@@ -43,50 +44,104 @@ public class DataEncryptionUtil {
         boolean isProduction = environment.getActiveProfiles().length > 0 && 
                               java.util.Arrays.asList(environment.getActiveProfiles()).contains("prod");
         
+        log.info("[ENCRYPTION_UTIL] Starting encryption key initialization. Production mode: {}, Active profiles: {}", 
+                isProduction, java.util.Arrays.toString(environment.getActiveProfiles()));
+        
         // Try to get encryption key from Vault first, then fallback to environment variables
         String encryptionKey = null;
+        String keySource = "NONE";
         
+        // Check VaultKeyProvider availability and configuration
         if (vaultKeyProvider != null) {
+            log.info("[ENCRYPTION_UTIL] VaultKeyProvider is available, attempting to retrieve encryption key from Vault");
             try {
-                encryptionKey = vaultKeyProvider.getEncryptionKey().orElse(null);
-                if (encryptionKey != null) {
-                    log.info("[ENCRYPTION_UTIL] Using encryption key from Vault");
+                Optional<String> vaultKey = vaultKeyProvider.getEncryptionKey();
+                if (vaultKey.isPresent() && !vaultKey.get().trim().isEmpty()) {
+                    encryptionKey = vaultKey.get();
+                    keySource = "VAULT";
+                    log.info("[ENCRYPTION_UTIL] Successfully retrieved encryption key from Vault (length: {})", encryptionKey.length());
+                } else {
+                    log.warn("[ENCRYPTION_UTIL] Vault returned empty or null encryption key");
                 }
             } catch (Exception e) {
-                log.warn("[ENCRYPTION_UTIL] Failed to retrieve encryption key from Vault: {}", e.getMessage());
+                log.error("[ENCRYPTION_UTIL] Failed to retrieve encryption key from Vault: {} - {}", 
+                         e.getClass().getSimpleName(), e.getMessage());
             }
+        } else {
+            log.warn("[ENCRYPTION_UTIL] VaultKeyProvider is not available (null). Vault integration disabled or failed to initialize.");
         }
         
         // Fallback to direct environment/property injection
-        if (encryptionKey == null) {
-            encryptionKey = fallbackEncryptionKey;
-            if (encryptionKey != null && !encryptionKey.trim().isEmpty()) {
-                log.info("[ENCRYPTION_UTIL] Using encryption key from environment variables");
+        if (encryptionKey == null || encryptionKey.trim().isEmpty()) {
+            log.info("[ENCRYPTION_UTIL] Attempting fallback to environment variables/properties");
+            
+            // Check multiple possible sources
+            String[] possibleSources = {
+                fallbackEncryptionKey,
+                environment.getProperty("hamalog.encryption.key"),
+                environment.getProperty("HAMALOG_ENCRYPTION_KEY"),
+                System.getenv("HAMALOG_ENCRYPTION_KEY")
+            };
+            
+            for (int i = 0; i < possibleSources.length; i++) {
+                String source = possibleSources[i];
+                String sourceName = switch (i) {
+                    case 0 -> "fallback parameter";
+                    case 1 -> "hamalog.encryption.key property";
+                    case 2 -> "HAMALOG_ENCRYPTION_KEY property";
+                    case 3 -> "HAMALOG_ENCRYPTION_KEY system env";
+                    default -> "unknown";
+                };
+                
+                log.debug("[ENCRYPTION_UTIL] Checking {}: {}", sourceName, 
+                         source == null ? "null" : (source.isEmpty() ? "empty" : "present (length: " + source.length() + ")"));
+                
+                if (source != null && !source.trim().isEmpty()) {
+                    encryptionKey = source;
+                    keySource = sourceName.toUpperCase().replace(" ", "_");
+                    log.info("[ENCRYPTION_UTIL] Using encryption key from {}", sourceName);
+                    break;
+                }
             }
         }
         
         // Check encryption key configuration status (production-safe logging)
-        String directEnvValue = environment.getProperty("hamalog.encryption.key");
-        log.info("Encryption key configuration status - Key present: {}, Length: {}", 
+        log.info("[ENCRYPTION_UTIL] Encryption key configuration status - Key present: {}, Length: {}, Source: {}", 
                 encryptionKey != null && !encryptionKey.trim().isEmpty(), 
-                encryptionKey == null ? 0 : encryptionKey.length());
+                encryptionKey == null ? 0 : encryptionKey.length(),
+                keySource);
         
         if (encryptionKey == null || encryptionKey.trim().isEmpty()) {
             log.error("❌ 프로덕션 환경에서 데이터 암호화 키가 비어있습니다!");
+            
+            // Log detailed diagnostic information
+            log.error("[ENCRYPTION_UTIL] Detailed diagnostics:");
+            log.error("  - VaultKeyProvider available: {}", vaultKeyProvider != null);
+            log.error("  - Key source attempted: {}", keySource);
+            log.error("  - Fallback parameter: {}", fallbackEncryptionKey == null ? "null" : "present");
+            log.error("  - Environment property 'hamalog.encryption.key': {}", 
+                     environment.getProperty("hamalog.encryption.key") == null ? "null" : "present");
+            log.error("  - Environment property 'HAMALOG_ENCRYPTION_KEY': {}", 
+                     environment.getProperty("HAMALOG_ENCRYPTION_KEY") == null ? "null" : "present");
+            log.error("  - System environment 'HAMALOG_ENCRYPTION_KEY': {}", 
+                     System.getenv("HAMALOG_ENCRYPTION_KEY") == null ? "null" : "present");
+            
             if (isProduction) {
                 String errorMessage = String.format(
                     "데이터 암호화 키가 설정되지 않았습니다. 프로덕션 환경에서는 HAMALOG_ENCRYPTION_KEY 환경변수를 반드시 설정해야 합니다.\n" +
-                    "현재 HAMALOG_ENCRYPTION_KEY 상태: %s\n" +
-                    "현재 HAMALOG_ENCRYPTION_KEY 길이: %d\n" +
-                    "Environment 키 존재 여부: %s\n" +
+                    "현재 키 상태: %s\n" +
+                    "시도된 키 소스: %s\n" +
                     "활성 프로필: %s\n" +
-                    "해결 방법: HAMALOG_ENCRYPTION_KEY 환경변수를 Base64 인코딩된 256비트 키로 설정하세요.\n" +
+                    "VaultKeyProvider 사용 가능: %s\n" +
+                    "해결 방법:\n" +
+                    "1. Vault를 사용하는 경우: Vault에 encryption-key 시크릿이 올바르게 저장되었는지 확인\n" +
+                    "2. 환경변수를 사용하는 경우: HAMALOG_ENCRYPTION_KEY를 Base64 인코딩된 256비트 키로 설정\n" +
                     "키 생성 예시: openssl rand -base64 32\n" +
                     "Docker 실행 예시: docker run -e HAMALOG_ENCRYPTION_KEY=$(openssl rand -base64 32) your-image",
                     encryptionKey == null ? "NOT_SET" : "EMPTY_OR_INVALID",
-                    encryptionKey == null ? 0 : encryptionKey.length(),
-                    directEnvValue != null && !directEnvValue.trim().isEmpty() ? "PRESENT" : "NOT_SET",
-                    java.util.Arrays.toString(environment.getActiveProfiles())
+                    keySource,
+                    java.util.Arrays.toString(environment.getActiveProfiles()),
+                    vaultKeyProvider != null ? "YES" : "NO"
                 );
                 log.error("==================== 데이터 암호화 키 초기화 실패 ====================");
                 throw new IllegalStateException(errorMessage);

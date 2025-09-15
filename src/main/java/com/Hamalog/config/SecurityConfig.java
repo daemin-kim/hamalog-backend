@@ -1,6 +1,7 @@
 package com.Hamalog.config;
 
 import com.Hamalog.security.CustomUserDetailsService;
+import com.Hamalog.security.filter.CsrfValidationFilter;
 import com.Hamalog.security.filter.RateLimitingFilter;
 import com.Hamalog.security.filter.RequestSizeMonitoringFilter;
 import com.Hamalog.security.jwt.JwtAuthenticationFilter;
@@ -36,6 +37,7 @@ public class SecurityConfig {
     private final OAuth2AuthenticationSuccessHandler oAuth2AuthenticationSuccessHandler;
     private final RateLimitingFilter rateLimitingFilter;
     private final RequestSizeMonitoringFilter requestSizeMonitoringFilter;
+    private final CsrfValidationFilter csrfValidationFilter;
 
     public SecurityConfig(
             CustomUserDetailsService customUserDetailsService,
@@ -43,7 +45,8 @@ public class SecurityConfig {
             JwtTokenProvider jwtTokenProvider,
             OAuth2AuthenticationSuccessHandler oAuth2AuthenticationSuccessHandler,
             @Autowired(required = false) RateLimitingFilter rateLimitingFilter,
-            RequestSizeMonitoringFilter requestSizeMonitoringFilter
+            RequestSizeMonitoringFilter requestSizeMonitoringFilter,
+            CsrfValidationFilter csrfValidationFilter
     ) {
         this.customUserDetailsService = customUserDetailsService;
         this.kakaoOAuth2UserService = kakaoOAuth2UserService;
@@ -51,6 +54,7 @@ public class SecurityConfig {
         this.oAuth2AuthenticationSuccessHandler = oAuth2AuthenticationSuccessHandler;
         this.rateLimitingFilter = rateLimitingFilter;
         this.requestSizeMonitoringFilter = requestSizeMonitoringFilter;
+        this.csrfValidationFilter = csrfValidationFilter;
     }
 
     @Bean
@@ -97,10 +101,11 @@ public class SecurityConfig {
             http.addFilterBefore(rateLimitingFilter, UsernamePasswordAuthenticationFilter.class);
         }
         
-        http.addFilterBefore(
+        http.addFilterBefore(csrfValidationFilter, UsernamePasswordAuthenticationFilter.class)
+            .addFilterBefore(
                 new JwtAuthenticationFilter(jwtTokenProvider, customUserDetailsService),
                 UsernamePasswordAuthenticationFilter.class
-        );
+            );
 
         return http.build();
     }

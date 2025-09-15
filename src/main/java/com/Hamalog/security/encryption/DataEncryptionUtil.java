@@ -50,14 +50,9 @@ public class DataEncryptionUtil {
         boolean isProduction = environment.getActiveProfiles().length > 0 && 
                               java.util.Arrays.asList(environment.getActiveProfiles()).contains("prod");
         
-        log.info("[ENCRYPTION_UTIL] Starting encryption key initialization. Production mode: {}, Active profiles: {}", 
-                isProduction, java.util.Arrays.toString(environment.getActiveProfiles()));
-        
         // Get encryption key from environment variables and properties
         String encryptionKey = null;
         String keySource = "NONE";
-        
-        log.info("[ENCRYPTION_UTIL] Retrieving encryption key from environment variables/properties");
         
         // Check multiple possible sources - prioritize system environment variables over Spring properties
         // This ensures Docker/production environment variables take precedence
@@ -79,73 +74,31 @@ public class DataEncryptionUtil {
             String source = possibleSources[i];
             String sourceName = sourceNames[i];
             
-            log.debug("[ENCRYPTION_UTIL] Checking {}: {}", sourceName, 
-                     source == null ? "null" : (source.isEmpty() ? "empty" : "present (length: " + source.length() + ")"));
-            
             if (source != null && !source.trim().isEmpty()) {
                 encryptionKey = source;
                 keySource = sourceName.toUpperCase().replace(" ", "_");
-                log.info("[ENCRYPTION_UTIL] Using encryption key from {}", sourceName);
+                log.debug("Using encryption key from {}", sourceName);
                 break;
             }
         }
         
-        // Check encryption key configuration status (production-safe logging)
-        log.info("[ENCRYPTION_UTIL] Encryption key configuration status - Key present: {}, Length: {}, Source: {}", 
-                encryptionKey != null && !encryptionKey.trim().isEmpty(), 
-                encryptionKey == null ? 0 : encryptionKey.length(),
-                keySource);
-        
         if (encryptionKey == null || encryptionKey.trim().isEmpty()) {
-            log.error("❌ 데이터 암호화 키가 비어있습니다!");
-            
-            // Log detailed diagnostic information
-            log.error("[ENCRYPTION_UTIL] Detailed diagnostics:");
-            log.error("  - Key source attempted: {}", keySource);
-            log.error("  - Fallback parameter: {}", fallbackEncryptionKey == null ? "null" : "present");
-            log.error("  - Environment property 'hamalog.encryption.key': {}", 
-                     environment.getProperty("hamalog.encryption.key") == null ? "null" : "present");
-            log.error("  - Environment property 'HAMALOG_ENCRYPTION_KEY': {}", 
-                     environment.getProperty("HAMALOG_ENCRYPTION_KEY") == null ? "null" : "present");
-            log.error("  - System environment 'HAMALOG_ENCRYPTION_KEY': {}", 
-                     System.getenv("HAMALOG_ENCRYPTION_KEY") == null ? "null" : "present");
+            log.error("데이터 암호화 키가 설정되지 않았습니다. 키 소스: {}", keySource);
             
             if (isProduction) {
-                String errorMessage = String.format(
-                    "데이터 암호화 키가 설정되지 않았습니다. 프로덕션 환경에서는 HAMALOG_ENCRYPTION_KEY 환경변수를 반드시 설정해야 합니다.\n" +
-                    "현재 키 상태: %s\n" +
-                    "시도된 키 소스: %s\n" +
-                    "활성 프로필: %s\n" +
-                    "해결 방법:\n" +
-                    "1. 환경변수를 사용하는 경우: HAMALOG_ENCRYPTION_KEY를 Base64 인코딩된 256비트 키로 설정\n" +
-                    "키 생성 예시: openssl rand -base64 32\n" +
-                    "Docker 실행 예시: docker run -e HAMALOG_ENCRYPTION_KEY=$(openssl rand -base64 32) your-image",
-                    encryptionKey == null ? "NOT_SET" : "EMPTY_OR_INVALID",
-                    keySource,
-                    java.util.Arrays.toString(environment.getActiveProfiles())
-                );
-                log.error("==================== 데이터 암호화 키 초기화 실패 ====================");
-                
-                // In production, allow the application to start but with a disabled encryption key
-                // This prevents application startup failures due to temporary configuration issues
-                log.error("⚠️ PRODUCTION WARNING: Starting application with disabled encryption due to missing key");
-                log.error("⚠️ All encryption operations will fail until the key is properly configured");
-                log.error("⚠️ This should be resolved immediately to ensure data security");
+                log.error("프로덕션 환경에서 암호화 키 누락. HAMALOG_ENCRYPTION_KEY 환경변수를 Base64 인코딩된 256비트 키로 설정하세요. 키 생성: openssl rand -base64 32");
+                log.warn("암호화가 비활성화된 상태로 애플리케이션을 시작합니다. 보안을 위해 즉시 키를 설정해야 합니다.");
                 
                 // Return a special marker key that will cause encryption operations to fail gracefully
                 byte[] disabledKey = new byte[32]; // All zeros - invalid but allows startup
-                log.error("==================== 애플리케이션 시작 (암호화 비활성화) ====================");
                 return new KeyInitializationResult(new SecretKeySpec(disabledKey, ALGORITHM), true);
             }
             
             // Generate secure random key for development
-            log.warn("⚠️ WARNING: 데이터 암호화 키가 설정되지 않았습니다. 개발용 임시 키를 생성합니다.");
-            log.warn("이 키는 재시작마다 변경됩니다. HAMALOG_ENCRYPTION_KEY 환경변수를 설정하여 영구적인 암호화를 사용하세요.");
+            log.warn("개발용 임시 암호화 키를 생성합니다. 재시작 시마다 변경됩니다.");
             
             byte[] randomKey = new byte[32]; // 256 bits
             new SecureRandom().nextBytes(randomKey);
-            log.info("✅ 개발용 임시 암호화 키가 생성되었습니다.");
-            log.info("==================== 데이터 암호화 키 초기화 완료 (개발 모드) ====================");
             return new KeyInitializationResult(new SecretKeySpec(randomKey, ALGORITHM), false);
         }
         
@@ -155,13 +108,7 @@ public class DataEncryptionUtil {
                 throw new IllegalStateException("데이터 암호화 키는 정확히 256비트(32바이트)여야 합니다. 현재 키 길이: " + (decodedKey.length * 8) + "비트");
             }
             
-            if (!isProduction) {
-                log.info("✅ 데이터 암호화가 제공된 키로 구성되었습니다.");
-            } else {
-                log.info("✅ 프로덕션 환경에서 데이터 암호화 키가 성공적으로 설정되었습니다.");
-            }
-            
-            log.info("==================== 데이터 암호화 키 초기화 완료 (제공된 키) ====================");
+            log.debug("데이터 암호화 키 초기화 완료");
             return new KeyInitializationResult(new SecretKeySpec(decodedKey, ALGORITHM), false);
         } catch (IllegalArgumentException e) {
             throw new IllegalStateException("데이터 암호화 키는 유효한 Base64 형식이어야 합니다. 올바른 Base64 형식의 256비트 키를 사용하세요.", e);

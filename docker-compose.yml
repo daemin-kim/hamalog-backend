@@ -42,10 +42,10 @@ services:
       vault secrets enable -path=secret kv-v2 || echo 'KV v2 already enabled';
       echo 'Creating hamalog secret context...';
       vault kv put secret/hamalog 
-        jwt-secret='$${JWT_SECRET}'
-        encryption-key='$${HAMALOG_ENCRYPTION_KEY}'
-        kakao-client-id='$${KAKAO_CLIENT_ID}'
-        kakao-client-secret='$${KAKAO_CLIENT_SECRET}';
+        jwt-secret='EzUuJwKK4vLnvk5r7yAgdNP/sa1dL87febZhlayPGjI='
+        encryption-key='7u+EyAhNyWu2hebIO0XoqUH1gwdoyyHKxcIKC2+A6aM='
+        kakao-client-id='86f21dfff5d2e9e3e1f76167df979268'
+        kakao-client-secret='ScyrNoUeoFLrCNS5MB7CF2kKxUVzaymx';
       echo 'Vault initialization complete';
       "
     restart: "no"
@@ -67,12 +67,12 @@ services:
       - HAMALOG_VAULT_TOKEN=${VAULT_TOKEN:-hamalog-dev-token}
       - HAMALOG_VAULT_KV_BACKEND=secret
       - HAMALOG_VAULT_KV_DEFAULT_CONTEXT=hamalog
-      # Required environment variables (no fallback to dummy values)
-      - JWT_SECRET=${JWT_SECRET}
-      - JWT_EXPIRY=${JWT_EXPIRY:-3600000}
-      - HAMALOG_ENCRYPTION_KEY=${HAMALOG_ENCRYPTION_KEY}
-      - KAKAO_CLIENT_ID=${KAKAO_CLIENT_ID}
-      - KAKAO_CLIENT_SECRET=${KAKAO_CLIENT_SECRET}
+      # Required environment variables (hardcoded for production stability)
+      - JWT_SECRET=EzUuJwKK4vLnvk5r7yAgdNP/sa1dL87febZhlayPGjI=
+      - JWT_EXPIRY=3600000
+      - HAMALOG_ENCRYPTION_KEY=7u+EyAhNyWu2hebIO0XoqUH1gwdoyyHKxcIKC2+A6aM=
+      - KAKAO_CLIENT_ID=86f21dfff5d2e9e3e1f76167df979268
+      - KAKAO_CLIENT_SECRET=ScyrNoUeoFLrCNS5MB7CF2kKxUVzaymx
     depends_on:
       mysql-hamalog:
         condition: service_healthy

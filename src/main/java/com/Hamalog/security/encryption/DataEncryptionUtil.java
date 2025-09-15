@@ -73,28 +73,55 @@ public class DataEncryptionUtil {
             boolean vaultAvailable = false;
             try {
                 vaultAvailable = vaultKeyProvider.isVaultAvailable();
-                log.info("[ENCRYPTION_UTIL] Vault availability check: {}", vaultAvailable ? "ACCESSIBLE" : "NOT_ACCESSIBLE");
-            } catch (Exception e) {
-                log.error("[ENCRYPTION_UTIL] Failed to check Vault availability: {} - {}", 
-                         e.getClass().getSimpleName(), e.getMessage());
-            }
-            
-            try {
-                Optional<String> vaultKey = vaultKeyProvider.getEncryptionKey();
-                if (vaultKey.isPresent() && !vaultKey.get().trim().isEmpty()) {
-                    encryptionKey = vaultKey.get();
-                    keySource = "VAULT";
-                    log.info("[ENCRYPTION_UTIL] Successfully retrieved encryption key from Vault (length: {})", encryptionKey.length());
+                if (vaultAvailable) {
+                    log.info("[ENCRYPTION_UTIL] Vault availability check: ACCESSIBLE");
                 } else {
-                    log.warn("[ENCRYPTION_UTIL] Vault returned empty or null encryption key. Vault available: {}", vaultAvailable);
-                    log.warn("[ENCRYPTION_UTIL] This could indicate: 1) Missing vault token, 2) Key not found in Vault, 3) Vault connectivity issue");
+                    if (isProduction) {
+                        log.warn("[ENCRYPTION_UTIL] Vault availability check: NOT_ACCESSIBLE - falling back to environment variables in production");
+                    } else {
+                        log.info("[ENCRYPTION_UTIL] Vault availability check: NOT_ACCESSIBLE");
+                    }
                 }
             } catch (Exception e) {
-                log.error("[ENCRYPTION_UTIL] Failed to retrieve encryption key from Vault: {} - {}", 
-                         e.getClass().getSimpleName(), e.getMessage());
+                if (isProduction) {
+                    log.warn("[ENCRYPTION_UTIL] Vault availability check failed: {} - {} (falling back to environment variables)", 
+                             e.getClass().getSimpleName(), e.getMessage());
+                } else {
+                    log.error("[ENCRYPTION_UTIL] Failed to check Vault availability: {} - {}", 
+                             e.getClass().getSimpleName(), e.getMessage());
+                }
+            }
+            
+            // Only attempt vault key retrieval if vault is available
+            if (vaultAvailable) {
+                try {
+                    Optional<String> vaultKey = vaultKeyProvider.getEncryptionKey();
+                    if (vaultKey.isPresent() && !vaultKey.get().trim().isEmpty()) {
+                        encryptionKey = vaultKey.get();
+                        keySource = "VAULT";
+                        log.info("[ENCRYPTION_UTIL] Successfully retrieved encryption key from Vault (length: {})", encryptionKey.length());
+                    } else {
+                        log.warn("[ENCRYPTION_UTIL] Vault returned empty or null encryption key despite being available");
+                        log.warn("[ENCRYPTION_UTIL] This could indicate: 1) Missing vault token, 2) Key not found in Vault, 3) Vault authentication issue");
+                    }
+                } catch (Exception e) {
+                    if (isProduction) {
+                        log.warn("[ENCRYPTION_UTIL] Failed to retrieve encryption key from Vault: {} - {} (falling back to environment variables)", 
+                                 e.getClass().getSimpleName(), e.getMessage());
+                    } else {
+                        log.error("[ENCRYPTION_UTIL] Failed to retrieve encryption key from Vault: {} - {}", 
+                                 e.getClass().getSimpleName(), e.getMessage());
+                    }
+                }
+            } else {
+                log.info("[ENCRYPTION_UTIL] Skipping vault key retrieval due to unavailability, proceeding with environment variable fallback");
             }
         } else {
-            log.warn("[ENCRYPTION_UTIL] VaultKeyProvider is not available (null). Vault integration disabled or failed to initialize.");
+            if (isProduction) {
+                log.info("[ENCRYPTION_UTIL] VaultKeyProvider not available - using environment variables for production deployment");
+            } else {
+                log.warn("[ENCRYPTION_UTIL] VaultKeyProvider is not available (null). Vault integration disabled or failed to initialize.");
+            }
         }
         
         // Fallback to direct environment/property injection

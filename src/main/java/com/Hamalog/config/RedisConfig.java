@@ -13,10 +13,8 @@ import org.springframework.data.redis.serializer.StringRedisSerializer;
 @ConditionalOnProperty(name = "spring.data.redis.host")
 public class RedisConfig {
 
-    @Bean
-    public RedisConnectionFactory redisConnectionFactory() {
-        return new LettuceConnectionFactory();
-    }
+    // Let Spring Boot auto-configuration handle RedisConnectionFactory
+    // This ensures that application properties are properly used
 
     @Bean
     public RedisTemplate<String, Object> redisTemplate(RedisConnectionFactory connectionFactory) {

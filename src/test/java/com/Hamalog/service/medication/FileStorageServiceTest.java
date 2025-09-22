@@ -449,21 +449,6 @@ class FileStorageServiceTest {
                 .isInstanceOf(FileSaveFailException.class);
     }
 
-    /*@Test
-    @DisplayName("Should return correct security info")
-    void getSecurityInfo_ReturnsCorrectInfo() {
-        // when
-        FileStorageService.FileUploadSecurityInfo securityInfo = fileStorageService.getSecurityInfo();
-
-        // then
-        assertThat(securityInfo.maxFileSize()).isEqualTo(5L * 1024 * 1024);
-        assertThat(securityInfo.allowedMimeTypes()).containsExactlyInAnyOrder(
-                "image/jpeg", "image/jpg", "image/png", "image/gif", "image/webp");
-        assertThat(securityInfo.allowedExtensions()).containsExactlyInAnyOrder(
-                ".jpg", ".jpeg", ".png", ".gif", ".webp");
-        assertThat(securityInfo.uploadDirectory()).isEqualTo(tempDir.toString() + "/");
-    }*/
-
     @Test
     @DisplayName("Should validate file at maximum allowed size")
     void save_FileAtMaxSize_Success() throws IOException {

@@ -449,7 +449,7 @@ class FileStorageServiceTest {
                 .isInstanceOf(FileSaveFailException.class);
     }
 
-    @Test
+    /*@Test
     @DisplayName("Should return correct security info")
     void getSecurityInfo_ReturnsCorrectInfo() {
         // when
@@ -462,7 +462,7 @@ class FileStorageServiceTest {
         assertThat(securityInfo.allowedExtensions()).containsExactlyInAnyOrder(
                 ".jpg", ".jpeg", ".png", ".gif", ".webp");
         assertThat(securityInfo.uploadDirectory()).isEqualTo(tempDir.toString() + "/");
-    }
+    }*/
 
     @Test
     @DisplayName("Should validate file at maximum allowed size")

@@ -157,7 +157,8 @@ public class ApiLoggingAspect {
     private String shorten(Object obj) {
         if (obj == null) return "null";
         String s = obj.toString();
-        return s.length() > 200 ? s.substring(0, 200) + "..." : s;
+        // Limit string length to prevent memory bloat in logs (reduced from 200 to 100 chars)
+        return s.length() > 100 ? s.substring(0, 97) + "..." : s;
     }
 
     private String getPerformanceText(long elapsed) {
@@ -201,10 +202,15 @@ public class ApiLoggingAspect {
 
     /**
      * Create parameters map for structured logging
+     * Optimized with initial capacity to reduce HashMap resizing overhead
      */
     private Map<String, Object> createParametersMap(MethodSignature signature, Object[] args) {
-        Map<String, Object> parametersMap = new HashMap<>();
         String[] paramNames = signature.getParameterNames();
+        
+        // Pre-calculate size to optimize HashMap allocation
+        int expectedSize = (paramNames != null && args != null) ? 
+            Math.min(paramNames.length, args.length) : 0;
+        Map<String, Object> parametersMap = new HashMap<>(Math.max(expectedSize, 4));
         
         if (paramNames != null && args != null) {
             for (int i = 0; i < Math.min(paramNames.length, args.length); i++) {

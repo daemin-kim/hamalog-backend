@@ -24,13 +24,15 @@ public class DataEncryptionUtil {
     private final SecretKeySpec secretKey;
     private final Environment environment;
     private final boolean encryptionDisabled;
+    private final SecureRandom secureRandom;
 
     public DataEncryptionUtil(
             @Value("${hamalog.encryption.key:${HAMALOG_ENCRYPTION_KEY:}}") String fallbackEncryptionKey,
             Environment environment) {
         this.environment = environment;
+        this.secureRandom = new SecureRandom();
         
-        KeyInitializationResult result = initializeSecretKey(fallbackEncryptionKey);
+        KeyInitializationResult result = initializeSecretKey(fallbackEncryptionKey, this.secureRandom);
         this.secretKey = result.secretKey;
         this.encryptionDisabled = result.encryptionDisabled;
     }
@@ -45,7 +47,7 @@ public class DataEncryptionUtil {
         }
     }
 
-    private KeyInitializationResult initializeSecretKey(String fallbackEncryptionKey) {
+    private KeyInitializationResult initializeSecretKey(String fallbackEncryptionKey, SecureRandom secureRandom) {
         // Check if running in production profile
         boolean isProduction = environment.getActiveProfiles().length > 0 && 
                               java.util.Arrays.asList(environment.getActiveProfiles()).contains("prod");
@@ -98,7 +100,7 @@ public class DataEncryptionUtil {
             log.warn("개발용 임시 암호화 키를 생성합니다. 재시작 시마다 변경됩니다.");
             
             byte[] randomKey = new byte[32]; // 256 bits
-            new SecureRandom().nextBytes(randomKey);
+            secureRandom.nextBytes(randomKey);
             return new KeyInitializationResult(new SecretKeySpec(randomKey, ALGORITHM), false);
         }
         
@@ -138,7 +140,7 @@ public class DataEncryptionUtil {
 
             // Generate random IV
             byte[] iv = new byte[GCM_IV_LENGTH];
-            new SecureRandom().nextBytes(iv);
+            secureRandom.nextBytes(iv);
 
             GCMParameterSpec gcmParameterSpec = new GCMParameterSpec(GCM_TAG_LENGTH * 8, iv);
             cipher.init(Cipher.ENCRYPT_MODE, secretKey, gcmParameterSpec);

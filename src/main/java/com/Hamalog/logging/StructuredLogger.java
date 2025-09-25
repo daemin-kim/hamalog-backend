@@ -202,9 +202,10 @@ public class StructuredLogger {
 
     /**
      * Create base context with common fields
+     * Optimized with initial capacity to reduce HashMap resizing overhead
      */
     private Map<String, Object> createBaseContext(String logType) {
-        Map<String, Object> context = new HashMap<>();
+        Map<String, Object> context = new HashMap<>(8); // Initial capacity to avoid resizing
         context.put("log_type", logType);
         context.put("timestamp", ISO_FORMATTER.format(Instant.now()));
         context.put("correlation_id", MDC.get("requestId"));
@@ -224,12 +225,16 @@ public class StructuredLogger {
     }
 
     /**
-     * Clear all MDC context
+     * Clear all MDC context except preserved keys
      */
     private void clearMDCContext() {
-        MDC.clear();
-        // Preserve requestId if it exists
+        // Preserve requestId before clearing
         String requestId = MDC.get("requestId");
+        
+        // Clear all MDC context
+        MDC.clear();
+        
+        // Restore preserved requestId if it existed
         if (requestId != null) {
             MDC.put("requestId", requestId);
         }

@@ -119,12 +119,15 @@ public class CachingAspect {
         String methodName = getMethodName(joinPoint);
         
         try {
-            Object result = joinPoint.proceed();
-            
-            // 메서드 실행 후 캐시 무효화
+            // beforeInvocation이 true인 경우 메서드 실행 전에 캐시 무효화
             if (cacheEvict.beforeInvocation()) {
                 evictCache(joinPoint, cacheEvict, "BEFORE");
-            } else {
+            }
+            
+            Object result = joinPoint.proceed();
+            
+            // beforeInvocation이 false인 경우 메서드 실행 후 캐시 무효화
+            if (!cacheEvict.beforeInvocation()) {
                 evictCache(joinPoint, cacheEvict, "AFTER");
             }
             
@@ -132,8 +135,8 @@ public class CachingAspect {
             
         } catch (Exception e) {
             // beforeInvocation이 false인 경우 예외 발생 시에도 캐시 무효화하지 않음
-            if (cacheEvict.beforeInvocation()) {
-                evictCache(joinPoint, cacheEvict, "AFTER_EXCEPTION");
+            if (!cacheEvict.beforeInvocation()) {
+                // 예외가 발생해도 캐시 무효화하지 않음
             }
             throw e;
         }

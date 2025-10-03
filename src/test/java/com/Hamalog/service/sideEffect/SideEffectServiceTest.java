@@ -2,7 +2,6 @@ package com.Hamalog.service.sideEffect;
 
 import com.Hamalog.domain.member.Member;
 import com.Hamalog.domain.sideEffect.SideEffect;
-import com.Hamalog.domain.sideEffect.SideEffectDegree;
 import com.Hamalog.domain.sideEffect.SideEffectRecord;
 import com.Hamalog.domain.sideEffect.SideEffectSideEffectRecord;
 import com.Hamalog.dto.sideEffect.request.SideEffectRecordRequest;

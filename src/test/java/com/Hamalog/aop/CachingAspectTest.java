@@ -48,21 +48,21 @@ class CachingAspectTest {
 
     @BeforeEach
     void setUp() {
-        when(redisTemplate.opsForValue()).thenReturn(valueOperations);
+        lenient().when(redisTemplate.opsForValue()).thenReturn(valueOperations);
 
         // Setup basic method signature mocking
-        when(methodSignature.getDeclaringType()).thenReturn(TestService.class);
-        when(methodSignature.getMethod()).thenReturn(method);
-        when(method.getName()).thenReturn("testMethod");
+        lenient().when(methodSignature.getDeclaringType()).thenReturn(TestService.class);
+        lenient().when(methodSignature.getMethod()).thenReturn(method);
+        lenient().when(method.getName()).thenReturn("testMethod");
 
         // Create mock annotations
         cacheableAnnotation = mock(CachingAspect.Cacheable.class);
-        when(cacheableAnnotation.value()).thenReturn("testCache");
-        when(cacheableAnnotation.key()).thenReturn("");
-        when(cacheableAnnotation.ttl()).thenReturn(3600L);
-        when(cacheableAnnotation.cacheNull()).thenReturn(false);
-        when(cacheableAnnotation.condition()).thenReturn("");
-        when(cacheableAnnotation.useLocalFallback()).thenReturn(true);
+        lenient().when(cacheableAnnotation.value()).thenReturn("testCache");
+        lenient().when(cacheableAnnotation.key()).thenReturn("");
+        lenient().when(cacheableAnnotation.ttl()).thenReturn(3600L);
+        lenient().when(cacheableAnnotation.cacheNull()).thenReturn(false);
+        lenient().when(cacheableAnnotation.condition()).thenReturn("");
+        lenient().when(cacheableAnnotation.useLocalFallback()).thenReturn(true);
 
         cacheEvictAnnotation = mock(CachingAspect.CacheEvict.class);
     }
@@ -184,7 +184,7 @@ class CachingAspectTest {
 
         when(cacheableAnnotation.key()).thenReturn(customKey);
         when(proceedingJoinPoint.getSignature()).thenReturn(methodSignature);
-        when(proceedingJoinPoint.getArgs()).thenReturn(new Object[0]);
+        lenient().when(proceedingJoinPoint.getArgs()).thenReturn(new Object[0]);
 
         when(valueOperations.get(expectedCacheKey)).thenReturn(null);
         when(proceedingJoinPoint.proceed()).thenReturn(expectedResult);

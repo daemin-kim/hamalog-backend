@@ -141,4 +141,109 @@ class DataEncryptionUtilTest {
         assertThat(encryptionUtil.decrypt(null)).isNull();
         assertThat(encryptionUtil.decrypt("")).isEmpty();
     }
+
+    @Test
+    @DisplayName("Should generate different encrypted text for same input due to random IV")
+    void encrypt_SameInput_ShouldGenerateDifferentEncryptedText() {
+        // given
+        when(environment.getActiveProfiles()).thenReturn(new String[]{"prod"});
+        String validKey = "4MoGUKm/b9RXqFtUgxwK3BpVQF/RtZFMb4EwdzaRSlg=";
+        DataEncryptionUtil encryptionUtil = new DataEncryptionUtil(validKey, environment);
+        String plainText = "Same text for encryption";
+
+        // when
+        String encrypted1 = encryptionUtil.encrypt(plainText);
+        String encrypted2 = encryptionUtil.encrypt(plainText);
+
+        // then
+        assertThat(encrypted1).isNotEqualTo(encrypted2);
+        assertThat(encryptionUtil.decrypt(encrypted1)).isEqualTo(plainText);
+        assertThat(encryptionUtil.decrypt(encrypted2)).isEqualTo(plainText);
+    }
+
+    @Test
+    @DisplayName("Should encrypt and decrypt Korean characters correctly")
+    void encryptAndDecrypt_WithKoreanText_ShouldWorkCorrectly() {
+        // given
+        when(environment.getActiveProfiles()).thenReturn(new String[]{"prod"});
+        String validKey = "4MoGUKm/b9RXqFtUgxwK3BpVQF/RtZFMb4EwdzaRSlg=";
+        DataEncryptionUtil encryptionUtil = new DataEncryptionUtil(validKey, environment);
+        String koreanText = "한글 데이터 암호화 테스트 🔐";
+
+        // when
+        String encrypted = encryptionUtil.encrypt(koreanText);
+        String decrypted = encryptionUtil.decrypt(encrypted);
+
+        // then
+        assertThat(decrypted).isEqualTo(koreanText);
+    }
+
+    @Test
+    @DisplayName("Should encrypt and decrypt special characters correctly")
+    void encryptAndDecrypt_WithSpecialCharacters_ShouldWorkCorrectly() {
+        // given
+        when(environment.getActiveProfiles()).thenReturn(new String[]{"prod"});
+        String validKey = "4MoGUKm/b9RXqFtUgxwK3BpVQF/RtZFMb4EwdzaRSlg=";
+        DataEncryptionUtil encryptionUtil = new DataEncryptionUtil(validKey, environment);
+        String specialText = "!@#$%^&*()_+-=[]{}|;:,.<>?/~`\"'\\";
+
+        // when
+        String encrypted = encryptionUtil.encrypt(specialText);
+        String decrypted = encryptionUtil.decrypt(encrypted);
+
+        // then
+        assertThat(decrypted).isEqualTo(specialText);
+    }
+
+    @Test
+    @DisplayName("Should encrypt and decrypt long text correctly")
+    void encryptAndDecrypt_WithLongText_ShouldWorkCorrectly() {
+        // given
+        when(environment.getActiveProfiles()).thenReturn(new String[]{"prod"});
+        String validKey = "4MoGUKm/b9RXqFtUgxwK3BpVQF/RtZFMb4EwdzaRSlg=";
+        DataEncryptionUtil encryptionUtil = new DataEncryptionUtil(validKey, environment);
+        StringBuilder longText = new StringBuilder();
+        for (int i = 0; i < 100; i++) {
+            longText.append("Long patient medical record data item ").append(i).append(" ");
+        }
+
+        // when
+        String encrypted = encryptionUtil.encrypt(longText.toString());
+        String decrypted = encryptionUtil.decrypt(encrypted);
+
+        // then
+        assertThat(decrypted).isEqualTo(longText.toString());
+    }
+
+    @Test
+    @DisplayName("Should handle invalid encrypted data during decryption")
+    void decrypt_WithInvalidData_ShouldThrowException() {
+        // given
+        when(environment.getActiveProfiles()).thenReturn(new String[]{"prod"});
+        String validKey = "4MoGUKm/b9RXqFtUgxwK3BpVQF/RtZFMb4EwdzaRSlg=";
+        DataEncryptionUtil encryptionUtil = new DataEncryptionUtil(validKey, environment);
+
+        // when & then
+        assertThatThrownBy(() -> encryptionUtil.decrypt("invalid-encrypted-data"))
+                .isInstanceOf(RuntimeException.class)
+                .hasMessageContaining("Decryption failed");
+    }
+
+    @Test
+    @DisplayName("Should prioritize environment property over fallback key")
+    void constructor_WithEnvironmentProperty_ShouldUseEnvironmentKey() {
+        // given
+        when(environment.getActiveProfiles()).thenReturn(new String[]{"prod"});
+        when(environment.getProperty("HAMALOG_ENCRYPTION_KEY")).thenReturn("4MoGUKm/b9RXqFtUgxwK3BpVQF/RtZFMb4EwdzaRSlg=");
+        when(environment.getProperty("hamalog.encryption.key")).thenReturn(null);
+        String fallbackKey = "different-fallback-key";
+
+        // when
+        DataEncryptionUtil encryptionUtil = new DataEncryptionUtil(fallbackKey, environment);
+
+        // then - should work without exception, indicating valid key was used
+        String encrypted = encryptionUtil.encrypt("test data");
+        String decrypted = encryptionUtil.decrypt(encrypted);
+        assertThat(decrypted).isEqualTo("test data");
+    }
 }

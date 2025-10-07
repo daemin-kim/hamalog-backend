@@ -1,5 +1,6 @@
 package com.Hamalog.repository.medication;
 
+import com.Hamalog.config.TestEncryptionConfig;
 import com.Hamalog.domain.member.Member;
 import com.Hamalog.domain.medication.AlarmType;
 import com.Hamalog.domain.medication.MedicationSchedule;
@@ -10,6 +11,7 @@ import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.autoconfigure.orm.jpa.DataJpaTest;
 import org.springframework.boot.test.autoconfigure.orm.jpa.TestEntityManager;
+import org.springframework.context.annotation.Import;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.PageRequest;
 import org.springframework.data.domain.Pageable;
@@ -24,6 +26,7 @@ import static org.assertj.core.api.Assertions.assertThat;
 
 @DataJpaTest
 @ActiveProfiles("test")
+@Import(TestEncryptionConfig.class)
 @DisplayName("MedicationScheduleRepository Tests")
 class MedicationScheduleRepositoryTest {
 
@@ -215,7 +218,7 @@ class MedicationScheduleRepositoryTest {
     void save_ConcurrentUpdate_HandlesVersionControl() {
         // given
         MedicationSchedule schedule = createTestMedicationSchedule(testMember, "Version Test");
-        MedicationSchedule savedSchedule = medicationScheduleRepository.save(schedule);
+        MedicationSchedule savedSchedule = entityManager.persistAndFlush(schedule);
         Long initialVersion = savedSchedule.getVersion();
 
         // when
@@ -230,6 +233,7 @@ class MedicationScheduleRepositoryTest {
                 savedSchedule.getAlarmType()
         );
         MedicationSchedule updatedSchedule = medicationScheduleRepository.save(savedSchedule);
+        entityManager.flush(); // Ensure version increment is triggered
 
         // then
         assertThat(updatedSchedule.getVersion()).isGreaterThan(initialVersion);

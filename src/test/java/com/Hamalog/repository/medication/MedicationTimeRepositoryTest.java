@@ -261,7 +261,7 @@ class MedicationTimeRepositoryTest {
         assertThat(medicationTimes).hasSize(4);
         assertThat(medicationTimes).allMatch(time -> time.getMedicationSchedule().equals(testSchedule));
         assertThat(medicationTimes).extracting("takeTime")
-            .containsExactlyInAnyOrder(times);
+            .containsExactlyInAnyOrder((Object[]) times);
     }
 
     private Member createTestMember(String loginId) {

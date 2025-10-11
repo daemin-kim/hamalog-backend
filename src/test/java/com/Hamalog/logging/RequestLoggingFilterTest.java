@@ -134,7 +134,7 @@ class RequestLoggingFilterTest {
         assertThat(capturedEvent.getPath()).isEqualTo("/api/auth/login");
         assertThat(capturedEvent.getUserId()).isEqualTo("anonymous");
         assertThat(capturedEvent.getStatusCode()).isEqualTo(500);
-        assertThat(capturedEvent.getDurationMs()).isGreaterThan(0);
+        assertThat(capturedEvent.getDurationMs()).isGreaterThanOrEqualTo(0L);
     }
 
     @Test

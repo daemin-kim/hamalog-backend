@@ -176,6 +176,11 @@ public class ResourceOwnershipValidator {
             }
 
             Object principal = authentication.getPrincipal();
+            if (principal == null) {
+                log.debug("Principal이 null");
+                return null;
+            }
+            
             if (principal instanceof String) {
                 return (String) principal;
             }
@@ -203,6 +208,7 @@ public class ResourceOwnershipValidator {
             Authentication authentication = SecurityContextHolder.getContext().getAuthentication();
             boolean authenticated = authentication != null && 
                                   authentication.isAuthenticated() && 
+                                  authentication.getPrincipal() != null &&
                                   !"anonymousUser".equals(authentication.getPrincipal().toString());
             
             if (!authenticated) {

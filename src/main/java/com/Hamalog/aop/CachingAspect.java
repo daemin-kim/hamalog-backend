@@ -23,10 +23,6 @@ import java.util.Arrays;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.atomic.LongAdder;
 
-/**
- * 메서드 레벨 캐싱을 위한 AOP Aspect
- * @Cacheable 어노테이션이 적용된 메서드의 결과를 자동으로 캐시하고 관리합니다.
- */
 @Slf4j
 @Aspect
 @Component

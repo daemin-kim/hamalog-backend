@@ -21,10 +21,6 @@ import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.atomic.AtomicLong;
 import java.util.concurrent.atomic.LongAdder;
 
-/**
- * 성능 모니터링을 위한 AOP Aspect
- * 메서드 실행 시간, 호출 횟수, 평균 응답 시간 등을 추적하고 모니터링합니다.
- */
 @Slf4j
 @Aspect
 @Component

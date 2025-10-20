@@ -20,14 +20,9 @@ import org.springframework.web.context.request.RequestContextHolder;
 import org.springframework.web.context.request.ServletRequestAttributes;
 
 import jakarta.servlet.http.HttpServletRequest;
-import java.lang.reflect.Method;
 import java.time.LocalDateTime;
 import java.time.format.DateTimeFormatter;
 
-/**
- * 비즈니스 감사 로깅을 위한 AOP Aspect
- * 중요한 비즈니스 작업(생성, 수정, 삭제)에 대한 감사 로그를 자동으로 생성합니다.
- */
 @Slf4j
 @Aspect
 @Component

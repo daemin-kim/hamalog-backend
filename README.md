@@ -18,10 +18,25 @@ Hamalog는 개인의 복약 스케줄을 체계적으로 관리하고 복약 기
 - **이미지 업로드**: 처방전 및 약물 사진 첨부 지원
 
 ### 시스템 특징
-- **AOP 기반 횡단 관심사**: 로깅, 성능 모니터링, 감사, 캐싱, 재시도
-- **구조화된 로깅**: JSON 형태의 체계적인 로그 관리
-- **성능 최적화**: Redis 캐싱 및 N+1 쿼리 방지
-- **레이트 리미팅**: Redis 기반 API 호출 제한
+- **AOP 기반 횡단 관심사**:
+  - API 로깅 (ApiLoggingAspect)
+  - 비즈니스 감사 (BusinessAuditAspect)
+  - 캐싱 관리 (CachingAspect)
+  - 성능 모니터링 (PerformanceMonitoringAspect)
+  - 재시도 로직 (RetryAspect)
+- **구조화된 로깅**: 
+  - MDC 기반 로그 추적
+  - JSON 형태의 체계적인 로그 관리
+  - 비즈니스 이벤트 로깅
+  - 보안 감사 로깅
+- **성능 최적화**: 
+  - Redis 캐싱
+  - N+1 쿼리 최적화
+  - 성능 메트릭 수집
+- **보안 강화**:
+  - CSRF 보호
+  - 사용자 정의 보안 처리
+  - 암호화 구현
 
 ## 🛠 기술 스택
 
@@ -44,7 +59,12 @@ Hamalog는 개인의 복약 스케줄을 체계적으로 관리하고 복약 기
 ### Monitoring & Logging
 - **Logback**: 구조화된 로깅 시스템
 - **Logstash Encoder**: JSON 형태 로그 출력
-- **AOP**: 성능 모니터링 및 비즈니스 감사
+- **MDC (Mapped Diagnostic Context)**: 요청 추적 및 로그 상관관계
+- **AOP**: 
+  - API 호출 로깅
+  - 성능 모니터링
+  - 비즈니스 감사
+  - 보안 이벤트 추적
 
 ### Build & DevOps
 - **Gradle**: 빌드 및 의존성 관리
@@ -94,11 +114,52 @@ docker-compose up -d
 - **프로필**: `default` (별도 설정 없음)
 
 ### 프로덕션 환경
-프로덕션 배포 시 다음 환경변수가 필요합니다:
+프로덕션 배포 시 다음 프로필과 환경변수 설정이 필요합니다:
 
 ```bash
+# 프로필 설정
+export SPRING_PROFILES_ACTIVE=prod
+
 # 데이터베이스 설정
-export SPRING_DATASOURCE_URL="jdbc:mysql://localhost:3306/hamalog"
+export SPRING_DATASOURCE_URL=jdbc:mysql://localhost:3306/hamalog
+export SPRING_DATASOURCE_USERNAME=your_username
+export SPRING_DATASOURCE_PASSWORD=your_password
+
+# Redis 설정
+export SPRING_REDIS_HOST=localhost
+export SPRING_REDIS_PORT=6379
+
+# JWT 설정
+export JWT_SECRET=your_jwt_secret_key
+export JWT_EXPIRATION=3600000
+
+# OAuth2 설정 (카카오)
+export OAUTH2_KAKAO_CLIENT_ID=your_kakao_client_id
+export OAUTH2_KAKAO_CLIENT_SECRET=your_kakao_client_secret
+```
+
+### 테스트 환경
+테스트 실행을 위한 설정:
+
+```bash
+# 테스트 프로필 활성화
+export SPRING_PROFILES_ACTIVE=test
+
+# 테스트 실행
+./gradlew test
+```
+
+## 📊 코드 품질 및 테스트
+
+### 테스트 커버리지 확인
+```bash
+./gradlew test jacocoTestReport
+```
+
+### 정적 코드 분석
+```bash
+./gradlew check
+```
 export SPRING_DATASOURCE_USERNAME="hamalog_user"
 export SPRING_DATASOURCE_PASSWORD="your_password"
 

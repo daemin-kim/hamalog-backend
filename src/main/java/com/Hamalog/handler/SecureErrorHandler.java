@@ -242,64 +242,27 @@ public class SecureErrorHandler {
      * 안전한 에러 응답 생성
      */
     private ResponseEntity<Map<String, Object>> createErrorResponse(
-            HttpStatus status, String errorCode, String message, String errorId, HttpServletRequest request) {
-        
-        Map<String, Object> errorResponse = new HashMap<>();
-        errorResponse.put("error", errorCode);
-        errorResponse.put("message", message);
-        errorResponse.put("timestamp", Instant.now().toString());
-        errorResponse.put("path", inputValidationUtil.sanitizeForLog(request.getRequestURI()));
-        
-        // 개발 환경에서만 에러 ID 포함 (디버깅용)
-        if (isDevelopmentMode()) {
-            errorResponse.put("errorId", errorId);
-        }
-        
-        // 프로덕션에서는 스택 트레이스나 내부 정보 제외
-        // 개발 환경에서도 민감한 정보는 로그에만 기록
-        
-        return ResponseEntity.status(status).body(errorResponse);
+            HttpStatus status, String code, String message, String errorId, HttpServletRequest request) {
+        Map<String, Object> body = new HashMap<>();
+        body.put("timestamp", Instant.now().toString());
+        body.put("status", status.value());
+        body.put("code", code);
+        body.put("message", message);
+        body.put("path", request.getRequestURI());
+        body.put("errorId", errorId);
+
+        return ResponseEntity.status(status).body(body);
     }
 
     /**
      * 클라이언트 IP 주소 추출
      */
     private String getClientIp(HttpServletRequest request) {
-        String xForwardedFor = request.getHeader("X-Forwarded-For");
-        if (xForwardedFor != null && !xForwardedFor.isEmpty()) {
-            return inputValidationUtil.sanitizeForLog(xForwardedFor.split(",")[0].trim());
+        String forwardedFor = request.getHeader("X-Forwarded-For");
+        if (forwardedFor != null && !forwardedFor.isEmpty()) {
+            return forwardedFor.split(",")[0].trim();
         }
-        
-        String xRealIp = request.getHeader("X-Real-IP");
-        if (xRealIp != null && !xRealIp.isEmpty()) {
-            return inputValidationUtil.sanitizeForLog(xRealIp);
-        }
-        
-        return inputValidationUtil.sanitizeForLog(request.getRemoteAddr());
-    }
-
-    /**
-     * 개발 모드 확인
-     */
-    private boolean isDevelopmentMode() {
-        String[] activeProfiles = environment.getActiveProfiles();
-        if (activeProfiles.length == 0) {
-            return true; // 기본값은 개발 모드
-        }
-        
-        for (String profile : activeProfiles) {
-            if ("prod".equals(profile) || "production".equals(profile)) {
-                return false;
-            }
-        }
-        return true;
-    }
-
-    /**
-     * 에러 응답에 추가 보안 헤더 설정
-     */
-    private void addSecurityHeaders(HttpServletRequest request) {
-        // 이미 SecurityConfig에서 대부분의 보안 헤더를 설정했으므로
-        // 필요시 추가적인 에러 전용 헤더를 여기서 설정 가능
+        return request.getRemoteAddr();
     }
 }
+

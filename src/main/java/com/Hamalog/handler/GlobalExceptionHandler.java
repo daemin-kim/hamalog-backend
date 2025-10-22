@@ -323,24 +323,44 @@ public class GlobalExceptionHandler {
                ex instanceof AccessDeniedException;
     }
     
+    public static class ErrorResponse {
+        private final String code;
+        private final String message;
+        private final String path;
+        private final Map<String, String> violations;
+
+        private ErrorResponse(HttpStatus status, String code, String message, String path, Map<String, String> violations) {
+            this.code = code;
+            this.message = message;
+            this.path = path;
+            this.violations = violations;
+        }
+
+        public static ErrorResponse of(HttpStatus status, String code, String message, String path, Map<String, String> violations) {
+            return new ErrorResponse(status, code, message, path, violations);
+        }
+
+        public String getCode() {
+            return code;
+        }
+
+        public String getMessage() {
+            return message;
+        }
+
+        public String getPath() {
+            return path;
+        }
+
+        public Map<String, String> getViolations() {
+            return violations;
+        }
+    }
+
     private void cleanupErrorMDC() {
         MDC.remove("error.type");
         MDC.remove("error.code");
         MDC.remove("error.httpStatus");
         MDC.remove("error.violationCount");
-        MDC.remove("error.exception");
-    }
-
-    public record ErrorResponse(
-            int status,
-            String code,
-            String message,
-            String path,
-            OffsetDateTime timestamp,
-            Map<String, String> details
-    ) {
-        public static ErrorResponse of(HttpStatus status, String code, String message, String path, Map<String, String> details) {
-            return new ErrorResponse(status.value(), code, message, path, OffsetDateTime.now(), details);
-        }
     }
 }

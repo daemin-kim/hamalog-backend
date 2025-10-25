@@ -26,7 +26,7 @@ public class InputValidationUtil {
 
     // Command Injection 패턴
     private static final Pattern COMMAND_INJECTION_PATTERN = Pattern.compile(
-        "(?i).*(;|\\||&|\\$|`|\\\\|<|>|\\{|\\}|\\[|\\]|\\(|\\)|cmd|powershell|bash|sh|cat|ls|dir|type|copy|move|del|rm|chmod|chown|wget|curl|ping|netstat|ps|kill|sudo|su).*",
+        "(?i)(^|\\s+)(cat|ls|dir|type|copy|move|del|rm|chmod|chown|wget|curl|ping|netstat|ps|kill|sudo|su)(\\s+.*|$)|[;&|`]",
         Pattern.CASE_INSENSITIVE
     );
 
@@ -245,4 +245,6 @@ public class InputValidationUtil {
             throw new InputValidationException("유효하지 않은 전화번호입니다");
         }
     }
+
+
 }

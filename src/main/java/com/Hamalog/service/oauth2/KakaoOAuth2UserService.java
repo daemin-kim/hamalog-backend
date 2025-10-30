@@ -22,7 +22,7 @@ public class KakaoOAuth2UserService extends DefaultOAuth2UserService {
 
     private static final Logger log = LoggerFactory.getLogger(KakaoOAuth2UserService.class);
 
-    private final MemberRepository memberRepository;
+    protected final MemberRepository memberRepository;
 
     public KakaoOAuth2UserService(MemberRepository memberRepository) {
         this.memberRepository = memberRepository;
@@ -31,14 +31,17 @@ public class KakaoOAuth2UserService extends DefaultOAuth2UserService {
     @Override
     @Transactional
     public OAuth2User loadUser(OAuth2UserRequest userRequest) throws OAuth2AuthenticationException {
-        OAuth2User oAuth2User = super.loadUser(userRequest);
-
-        String registrationId = userRequest.getClientRegistration().getRegistrationId();
-        if (!"kakao".equalsIgnoreCase(registrationId)) {
+        if (!"kakao".equalsIgnoreCase(userRequest.getClientRegistration().getRegistrationId())) {
             throw new OAuth2AuthenticationException(new OAuth2Error("invalid_request"),
-                    "지원하지 않는 OAuth2 제공자입니다: " + registrationId);
+                    "지원하지 않는 OAuth2 제공자입니다: " + userRequest.getClientRegistration().getRegistrationId());
         }
 
+        OAuth2User oAuth2User = super.loadUser(userRequest);
+        createOrUpdateMemberFromKakao(oAuth2User);
+        return oAuth2User;
+    }
+
+    protected void createOrUpdateMemberFromKakao(OAuth2User oAuth2User) {
         Map<String, Object> attributes = safeAsMap(oAuth2User.getAttributes(), "root attributes");
 
         Long kakaoId = safeAsLong(attributes.get("id"), "id")
@@ -50,7 +53,10 @@ public class KakaoOAuth2UserService extends DefaultOAuth2UserService {
 
         String nickname = safeAsString(profile.get("nickname")).orElse(null);
 
+        createOrUpdateMember(kakaoId, nickname);
+    }
 
+    protected void createOrUpdateMember(Long kakaoId, String nickname) {
         String loginId = "kakao_" + kakaoId + "@oauth2.internal";
         Optional<Member> optionalMember = memberRepository.findByLoginId(loginId);
         if (optionalMember.isEmpty()) {
@@ -80,11 +86,9 @@ public class KakaoOAuth2UserService extends DefaultOAuth2UserService {
                 log.debug("Nickname provided '{}' differs from stored name '{}', but Member is immutable; skipping update.", nickname, existing.getName());
             }
         }
-
-        return oAuth2User;
     }
 
-    private Map<String, Object> safeAsMap(Object obj, String fieldName) {
+    protected Map<String, Object> safeAsMap(Object obj, String fieldName) {
         if (obj instanceof Map<?, ?> map) {
             java.util.Map<String, Object> result = new java.util.HashMap<>();
             for (java.util.Map.Entry<?, ?> entry : map.entrySet()) {
@@ -102,13 +106,13 @@ public class KakaoOAuth2UserService extends DefaultOAuth2UserService {
         return Map.of();
     }
 
-    private Optional<String> safeAsString(Object obj) {
+    protected Optional<String> safeAsString(Object obj) {
         if (obj == null) return Optional.empty();
         if (obj instanceof String s) return Optional.of(s);
         return Optional.ofNullable(String.valueOf(obj));
     }
 
-    private Optional<Long> safeAsLong(Object obj, String fieldName) {
+    protected Optional<Long> safeAsLong(Object obj, String fieldName) {
         if (obj == null) return Optional.empty();
         if (obj instanceof Number n) return Optional.of(n.longValue());
         if (obj instanceof String s) {
@@ -124,7 +128,7 @@ public class KakaoOAuth2UserService extends DefaultOAuth2UserService {
     }
 
     @SuppressWarnings("unused")
-    private Optional<Boolean> safeAsBoolean(Object obj) {
+    protected Optional<Boolean> safeAsBoolean(Object obj) {
         if (obj == null) return Optional.empty();
         if (obj instanceof Boolean b) return Optional.of(b);
         if (obj instanceof String s) return Optional.of(Boolean.parseBoolean(s));

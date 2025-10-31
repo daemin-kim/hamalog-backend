@@ -147,102 +147,75 @@ public class JVMMetricsLogger {
      */
     private Map<String, Object> collectJVMMetrics() {
         Map<String, Object> metrics = new HashMap<>();
-        
+
         // Memory metrics
         MemoryUsage heapUsage = memoryBean.getHeapMemoryUsage();
         MemoryUsage nonHeapUsage = memoryBean.getNonHeapMemoryUsage();
         
-        metrics.put("heap_used", heapUsage.getUsed());
-        metrics.put("heap_max", heapUsage.getMax());
-        metrics.put("heap_committed", heapUsage.getCommitted());
-        metrics.put("heap_used_percent", (double) heapUsage.getUsed() / heapUsage.getMax() * 100);
-        
-        metrics.put("non_heap_used", nonHeapUsage.getUsed());
-        metrics.put("non_heap_max", nonHeapUsage.getMax());
-        metrics.put("non_heap_committed", nonHeapUsage.getCommitted());
-        
+        metrics.put("heapMemoryUsage", formatMemoryUsage(heapUsage));
+        metrics.put("nonHeapMemoryUsage", formatMemoryUsage(nonHeapUsage));
+
+        double heapUsedPercent = (double) heapUsage.getUsed() / heapUsage.getMax();
+        if (heapUsedPercent > HIGH_MEMORY_THRESHOLD) {
+            metrics.put("memoryAlertLevel", heapUsedPercent > CRITICAL_MEMORY_THRESHOLD ? "CRITICAL" : "WARNING");
+        }
+
         // Thread metrics
-        metrics.put("thread_count", threadBean.getThreadCount());
-        metrics.put("thread_peak_count", threadBean.getPeakThreadCount());
-        metrics.put("thread_daemon_count", threadBean.getDaemonThreadCount());
-        metrics.put("thread_total_started", threadBean.getTotalStartedThreadCount());
-        
+        metrics.put("threadCount", threadBean.getThreadCount());
+        metrics.put("peakThreadCount", threadBean.getPeakThreadCount());
+        metrics.put("daemonThreadCount", threadBean.getDaemonThreadCount());
+
         // GC metrics
         long totalGcTime = 0;
         long totalGcCollections = 0;
-        Map<String, Object> gcMetrics = new HashMap<>();
-        
         for (GarbageCollectorMXBean gcBean : gcBeans) {
-            long collections = gcBean.getCollectionCount();
-            long time = gcBean.getCollectionTime();
-            totalGcCollections += collections;
-            totalGcTime += time;
-            
-            gcMetrics.put(gcBean.getName() + "_collections", collections);
-            gcMetrics.put(gcBean.getName() + "_time_ms", time);
+            totalGcTime += gcBean.getCollectionTime();
+            totalGcCollections += gcBean.getCollectionCount();
         }
-        
-        metrics.put("gc_total_collections", totalGcCollections);
-        metrics.put("gc_total_time_ms", totalGcTime);
-        metrics.put("gc_details", gcMetrics);
-        
+        metrics.put("gcCollectionTime", totalGcTime);
+        metrics.put("gcCollectionCount", totalGcCollections);
+
+        // CPU metrics
+        metrics.put("cpuLoad", osBean.getSystemLoadAverage());
+
         // Runtime metrics
-        metrics.put("uptime_ms", runtimeBean.getUptime());
-        metrics.put("start_time", runtimeBean.getStartTime());
-        metrics.put("jvm_name", runtimeBean.getVmName());
-        metrics.put("jvm_version", runtimeBean.getVmVersion());
-        
+        metrics.put("uptime", runtimeBean.getUptime());
+        metrics.put("startTime", runtimeBean.getStartTime());
+
         // Class loading metrics
-        metrics.put("classes_loaded", classLoadingBean.getLoadedClassCount());
-        metrics.put("classes_total_loaded", classLoadingBean.getTotalLoadedClassCount());
-        metrics.put("classes_unloaded", classLoadingBean.getUnloadedClassCount());
-        
-        // OS metrics
-        metrics.put("available_processors", osBean.getAvailableProcessors());
-        metrics.put("system_load_average", osBean.getSystemLoadAverage());
-        
-        // Additional OS metrics if available
-        if (osBean instanceof com.sun.management.OperatingSystemMXBean) {
-            com.sun.management.OperatingSystemMXBean sunOsBean = (com.sun.management.OperatingSystemMXBean) osBean;
-            metrics.put("process_cpu_load", sunOsBean.getProcessCpuLoad());
-            metrics.put("system_cpu_load", sunOsBean.getSystemCpuLoad());
-            metrics.put("free_physical_memory", sunOsBean.getFreePhysicalMemorySize());
-            metrics.put("total_physical_memory", sunOsBean.getTotalPhysicalMemorySize());
-            metrics.put("free_swap_space", sunOsBean.getFreeSwapSpaceSize());
-            metrics.put("total_swap_space", sunOsBean.getTotalSwapSpaceSize());
-        }
-        
+        metrics.put("loadedClassCount", classLoadingBean.getLoadedClassCount());
+        metrics.put("totalLoadedClassCount", classLoadingBean.getTotalLoadedClassCount());
+        metrics.put("unloadedClassCount", classLoadingBean.getUnloadedClassCount());
+
         return metrics;
+    }
+
+    private Map<String, Long> formatMemoryUsage(MemoryUsage usage) {
+        Map<String, Long> formattedUsage = new HashMap<>();
+        formattedUsage.put("init", usage.getInit());
+        formattedUsage.put("used", usage.getUsed());
+        formattedUsage.put("committed", usage.getCommitted());
+        formattedUsage.put("max", usage.getMax());
+        return formattedUsage;
     }
 
     /**
      * Determine overall performance level based on metrics
      */
     private String determinePerformanceLevel(Map<String, Object> metrics) {
-        double heapUsedPercent = (Double) metrics.get("heap_used_percent");
-        int threadCount = (Integer) metrics.get("thread_count");
-        long gcTotalTime = (Long) metrics.get("gc_total_time_ms");
-        long uptime = (Long) metrics.get("uptime_ms");
-        
-        // Calculate GC overhead
-        double gcOverhead = uptime > 0 ? (double) gcTotalTime / uptime * 100 : 0;
-        
-        // Get CPU load if available
-        Double processCpuLoad = (Double) metrics.get("process_cpu_load");
-        
-        // Critical conditions
-        if (heapUsedPercent > CRITICAL_MEMORY_THRESHOLD * 100 ||
-            threadCount > HIGH_THREAD_COUNT_THRESHOLD ||
-            gcOverhead > 10 ||
-            (processCpuLoad != null && processCpuLoad > HIGH_CPU_THRESHOLD)) {
+        // Check memory usage
+        @SuppressWarnings("unchecked")
+        Map<String, Long> heapUsage = (Map<String, Long>) metrics.get("heapMemoryUsage");
+        double heapUsedPercent = (double) heapUsage.get("used") / heapUsage.get("max");
+
+        if (heapUsedPercent > CRITICAL_MEMORY_THRESHOLD ||
+            (Long) metrics.get("gcCollectionTime") > HIGH_GC_TIME_THRESHOLD ||
+            (Integer) metrics.get("threadCount") > HIGH_THREAD_COUNT_THRESHOLD) {
             return "CRITICAL";
         }
         
-        // Degraded conditions
-        if (heapUsedPercent > HIGH_MEMORY_THRESHOLD * 100 ||
-            threadCount > HIGH_THREAD_COUNT_THRESHOLD * 0.7 ||
-            gcOverhead > 5 ||
-            (processCpuLoad != null && processCpuLoad > HIGH_CPU_THRESHOLD * 0.7)) {
+        if (heapUsedPercent > HIGH_MEMORY_THRESHOLD ||
+            ((Double) metrics.get("cpuLoad") > HIGH_CPU_THRESHOLD)) {
             return "DEGRADED";
         }
         
@@ -268,14 +241,15 @@ public class JVMMetricsLogger {
      */
     private String formatMetrics(Map<String, Object> metrics) {
         return String.format(
-            "Heap: %.1f%% (%d MB / %d MB), Threads: %d, GC: %d collections (%d ms), Uptime: %d min",
-            (Double) metrics.get("heap_used_percent"),
-            (Long) metrics.get("heap_used") / 1024 / 1024,
-            (Long) metrics.get("heap_max") / 1024 / 1024,
-            (Integer) metrics.get("thread_count"),
-            (Long) metrics.get("gc_total_collections"),
-            (Long) metrics.get("gc_total_time_ms"),
-            (Long) metrics.get("uptime_ms") / 60000
+            "Memory[Heap: %s, NonHeap: %s], Threads[Active: %d, Peak: %d], " +
+            "GC[Collections: %d, Time: %dms], CPU Load: %.2f",
+            metrics.get("heapMemoryUsage"),
+            metrics.get("nonHeapMemoryUsage"),
+            metrics.get("threadCount"),
+            metrics.get("peakThreadCount"),
+            metrics.get("gcCollectionCount"),
+            metrics.get("gcCollectionTime"),
+            metrics.get("cpuLoad")
         );
     }
 }

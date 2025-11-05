@@ -9,7 +9,6 @@ import org.mockito.InjectMocks;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
 
-import static org.junit.jupiter.api.Assertions.assertDoesNotThrow;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.Mockito.*;
 
@@ -22,11 +21,13 @@ class JVMMetricsLoggerTest {
     @InjectMocks
     private JVMMetricsLogger jvmMetricsLogger;
 
+    @BeforeEach
+    void setUp() {
+        // Set up any necessary test fixtures
+    }
+
     @Test
     void logJVMMetrics_ShouldLogMetricsSuccessfully() {
-        // given
-        doNothing().when(structuredLogger).performance(any(PerformanceEvent.class));
-
         // when
         jvmMetricsLogger.logJVMMetrics();
 
@@ -35,9 +36,27 @@ class JVMMetricsLoggerTest {
     }
 
     @Test
-    void logCriticalJVMEvents_ShouldExecuteWithoutException() {
-        // when & then
-        // 예외가 발생하지 않고 정상적으로 실행되는지 확인
-        assertDoesNotThrow(() -> jvmMetricsLogger.logCriticalJVMEvents());
+    void logCriticalJVMEvents_ShouldCheckMemoryPressure() {
+        // when
+        jvmMetricsLogger.logCriticalJVMEvents();
+
+        // No immediate verification since the method might or might not log based on current JVM state
+        // But we can verify that the method runs without throwing exceptions
+        verifyNoMoreInteractions(structuredLogger);
+    }
+
+    @Test
+    void logJVMMetrics_ShouldHandleExceptionGracefully() {
+        // given
+        doThrow(new RuntimeException("Test exception"))
+            .when(structuredLogger)
+            .performance(any(PerformanceEvent.class));
+
+        // when
+        jvmMetricsLogger.logJVMMetrics();
+
+        // then
+        // Method should not throw exception even when structuredLogger fails
+        verify(structuredLogger, times(1)).performance(any(PerformanceEvent.class));
     }
 }

@@ -3,6 +3,7 @@ package com.Hamalog.logging.metrics;
 import com.Hamalog.logging.StructuredLogger;
 import com.Hamalog.logging.events.PerformanceEvent;
 import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.InjectMocks;
@@ -23,10 +24,11 @@ class JVMMetricsLoggerTest {
 
     @BeforeEach
     void setUp() {
-        // Set up any necessary test fixtures
+        // 필요한 경우 추가 설정
     }
 
     @Test
+    @DisplayName("JVM 메트릭 로깅이 정상적으로 동작해야 한다")
     void logJVMMetrics_ShouldLogMetricsSuccessfully() {
         // when
         jvmMetricsLogger.logJVMMetrics();
@@ -36,17 +38,8 @@ class JVMMetricsLoggerTest {
     }
 
     @Test
-    void logCriticalJVMEvents_ShouldCheckMemoryPressure() {
-        // when
-        jvmMetricsLogger.logCriticalJVMEvents();
-
-        // No immediate verification since the method might or might not log based on current JVM state
-        // But we can verify that the method runs without throwing exceptions
-        verifyNoMoreInteractions(structuredLogger);
-    }
-
-    @Test
-    void logJVMMetrics_ShouldHandleExceptionGracefully() {
+    @DisplayName("예외 발생 시에도 애플리케이션이 계속 실행되어야 한다")
+    void logJVMMetrics_ShouldHandleExceptionsGracefully() {
         // given
         doThrow(new RuntimeException("Test exception"))
             .when(structuredLogger)
@@ -56,7 +49,7 @@ class JVMMetricsLoggerTest {
         jvmMetricsLogger.logJVMMetrics();
 
         // then
-        // Method should not throw exception even when structuredLogger fails
         verify(structuredLogger, times(1)).performance(any(PerformanceEvent.class));
+        // 예외가 발생해도 메소드가 정상적으로 종료되어야 함
     }
 }

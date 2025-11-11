@@ -44,7 +44,6 @@ Hamalog는 개인의 복약 스케줄을 체계적으로 관리하고 복약 기
 - **Spring Boot 3.4.5**: 최신 Spring Boot 프레임워크
 - **Spring Security**: JWT 및 OAuth2 보안 구현
 - **Spring Data JPA**: 데이터베이스 ORM 및 Repository 패턴
-- **Spring Cloud 2024.0.0**: 클라우드 네이티브 기능 지원
 
 ### Database & Cache
 - **MySQL**: 프로덕션 환경 주 데이터베이스
@@ -130,12 +129,13 @@ export SPRING_REDIS_HOST=localhost
 export SPRING_REDIS_PORT=6379
 
 # JWT 설정
-export JWT_SECRET=your_jwt_secret_key
+# JWT_SECRET는 Base64 인코딩된 256-bit 키여야 합니다
+export JWT_SECRET=your_base64_256bit_secret
 export JWT_EXPIRATION=3600000
 
 # OAuth2 설정 (카카오)
-export OAUTH2_KAKAO_CLIENT_ID=your_kakao_client_id
-export OAUTH2_KAKAO_CLIENT_SECRET=your_kakao_client_secret
+export KAKAO_CLIENT_ID=your_kakao_client_id
+export KAKAO_CLIENT_SECRET=your_kakao_client_secret
 ```
 
 ### 테스트 환경
@@ -356,4 +356,4 @@ curl http://localhost:8080/actuator/health
 
 ---
 **Hamalog v0.0.1-SNAPSHOT**  
-*마지막 업데이트: 2025-11-10*
+*마지막 업데이트: 2025-11-11*

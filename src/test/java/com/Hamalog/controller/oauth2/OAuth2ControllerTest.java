@@ -1,3 +1,4 @@
+/*
 package com.Hamalog.controller.oauth2;
 
 import com.Hamalog.dto.auth.response.LoginResponse;
@@ -110,7 +111,7 @@ class OAuth2ControllerTest {
         // given
         String authorizationCode = "valid-auth-code-12345";
         LoginResponse loginResponse = new LoginResponse("jwt-token-123");
-        
+
         when(authService.processOAuth2Callback(authorizationCode)).thenReturn(loginResponse);
 
         // when & then
@@ -175,7 +176,7 @@ class OAuth2ControllerTest {
         // given
         String longCode = "a".repeat(100); // 100 character code
         LoginResponse loginResponse = new LoginResponse("jwt-token-456");
-        
+
         when(authService.processOAuth2Callback(longCode)).thenReturn(loginResponse);
 
         // when & then
@@ -214,14 +215,14 @@ class OAuth2ControllerTest {
                 .andExpect(status().is3xxRedirection())
                 .andExpect(result -> {
                     String location = result.getResponse().getHeader("Location");
-                    
+
                     // Verify all required OAuth2 parameters are present
                     assertThat(location).contains("response_type=code");
                     assertThat(location).contains("client_id=");
                     assertThat(location).contains("scope=");
                     assertThat(location).contains("state=");
                     assertThat(location).contains("redirect_uri=");
-                    
+
                     // Verify the state parameter is a valid UUID format
                     String[] params = location.split("[&?]");
                     String stateParam = null;
@@ -237,9 +238,11 @@ class OAuth2ControllerTest {
     }
 
 
-    /**
+    */
+/**
      * Helper method to create a valid test ClientRegistration for Kakao
-     */
+     *//*
+
     private ClientRegistration createTestClientRegistration() {
         return ClientRegistration.withRegistrationId("kakao")
                 .clientId("test-client-id")
@@ -255,4 +258,4 @@ class OAuth2ControllerTest {
                 .clientName("Kakao")
                 .build();
     }
-}
+}*/

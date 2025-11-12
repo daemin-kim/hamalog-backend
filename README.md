@@ -2,6 +2,26 @@
 
 Hamalog는 개인의 복약 스케줄을 체계적으로 관리하고 복약 기록, 부작용 추적을 지원하는 Spring Boot 기반 웹 애플리케이션입니다.
 
+## 🧭 빠른 안내 (TL;DR)
+```bash
+# 개발 모드 실행 (기본: H2, 콘솔 로깅)
+./gradlew bootRun
+
+# 테스트 실행
+./gradlew test
+
+# 테스트 + 커버리지 리포트 생성
+./gradlew test jacocoTestReport
+
+# 로컬 인프라(Redis 등) 실행
+docker-compose -f docker-compose.local.yml up -d
+```
+
+간단한 환경 요약:
+- 기본 프로필: 개발(default, H2 인메모리 DB)
+- 프로덕션 프로필: `prod` (MySQL/Redis 필요, 구조화 로그)
+- 보안 키: `JWT_SECRET`는 Base64 인코딩된 256-bit 키 필수
+
 ## 🚀 주요 기능
 
 ### 인증 및 보안

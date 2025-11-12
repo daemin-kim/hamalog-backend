@@ -126,7 +126,7 @@ public class OAuth2Controller {
                     )
             )
     })
-    @PostMapping("/api/auth/kakao/callback")
+    @PostMapping("/oauth2/auth/kakao/callback")
     public ResponseEntity<LoginResponse> handleKakaoCallback(@RequestParam("code") String code) {
         try {
             log.info("Processing Kakao OAuth2 callback with code: {}", code.substring(0, Math.min(code.length(), 10)) + "...");

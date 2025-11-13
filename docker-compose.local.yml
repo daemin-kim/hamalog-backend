@@ -15,8 +15,8 @@ services:
       - JWT_SECRET=EzUuJwKK4vLnvk5r7yAgdNP/sa1dL87febZhlayPGjI=
       - JWT_EXPIRY=3600000
       - HAMALOG_ENCRYPTION_KEY=7u+EyAhNyWu2hebIO0XoqUH1gwdoyyHKxcIKC2+A6aM=
-      - KAKAO_CLIENT_ID=86f21dfff5d2e9e3e1f76167df979268
-      - KAKAO_CLIENT_SECRET=ScyrNoUeoFLrCNS5MB7CF2kKxUVzaymx
+      - KAKAO_CLIENT_ID=e26adea63cc62391e69f8de848a922ef
+      - KAKAO_CLIENT_SECRET=SD6dSoxwFE3ts1CSvYIxybwTqOkfhVyb
       - FRONTEND_URL=http://localhost:3000
       - LOG_DIR=/app/logs
     depends_on:

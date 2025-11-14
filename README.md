@@ -376,4 +376,4 @@ curl http://localhost:8080/actuator/health
 
 ---
 **Hamalog v0.0.1-SNAPSHOT**  
-*마지막 업데이트: 2025-11-11*
+*마지막 업데이트: 2025-11-14*

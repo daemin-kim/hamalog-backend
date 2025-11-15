@@ -64,6 +64,7 @@ docker-compose -f docker-compose.local.yml up -d
 - **Spring Boot 3.4.5**: 최신 Spring Boot 프레임워크
 - **Spring Security**: JWT 및 OAuth2 보안 구현
 - **Spring Data JPA**: 데이터베이스 ORM 및 Repository 패턴
+- **Spring WebFlux**: WebClient 기반 비동기 HTTP 통신
 
 ### Database & Cache
 - **MySQL**: 프로덕션 환경 주 데이터베이스
@@ -71,7 +72,7 @@ docker-compose -f docker-compose.local.yml up -d
 - **Redis**: 캐싱, 세션 관리, 토큰 블랙리스트
 
 ### Security & Authentication
-- **JWT (JSON Web Token)**: 상태 비저장 인증
+- **JWT (JSON Web Token)**: JJWT 0.12.6 기반 상태 비저장 인증
 - **OAuth2 (Kakao)**: 소셜 로그인 연동
 - **AES 암호화**: 개인정보 필드별 암호화
 
@@ -84,22 +85,29 @@ docker-compose -f docker-compose.local.yml up -d
   - 성능 모니터링
   - 비즈니스 감사
   - 보안 이벤트 추적
+- **Spring Boot Actuator**: 헬스체크 및 메트릭 수집
+
+### API Documentation
+- **SpringDoc OpenAPI 2.7.0**: Swagger UI 기반 API 문서화
 
 ### Build & DevOps
-- **Gradle**: 빌드 및 의존성 관리
+- **Gradle 8.13**: 빌드 및 의존성 관리
+- **JaCoCo 0.8.10**: 테스트 커버리지 리포트
 - **Docker**: 컨테이너화 배포
 - **Docker Compose**: 로컬 개발 환경 구성
 
 ## 📋 사전 요구사항
 
 ### 필수 요구사항
-- **Java 21** (OpenJDK 21 권장)
+- **Java 21** (OpenJDK 21 이상)
+- **Gradle 8.13** 이상 (또는 ./gradlew 사용 가능)
 - **Docker** & **Docker Compose** (컨테이너 실행용)
 - **Redis** (캐싱 및 세션 관리용)
 - **MySQL** (프로덕션 환경용)
 
 ### 개발 환경 권장사항
-- **IntelliJ IDEA** 또는 **Visual Studio Code**
+- **IntelliJ IDEA** (Ultimate 또는 Community)
+- **Visual Studio Code** + Spring Boot Extension Pack
 - **Postman** (API 테스트용)
 
 ## 🚀 빠른 시작
@@ -376,4 +384,4 @@ curl http://localhost:8080/actuator/health
 
 ---
 **Hamalog v0.0.1-SNAPSHOT**  
-*마지막 업데이트: 2025-11-14*
+*마지막 업데이트: 2025-11-15*

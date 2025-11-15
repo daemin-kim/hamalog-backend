@@ -12,6 +12,7 @@ import jakarta.servlet.http.HttpServletResponse;
 import lombok.RequiredArgsConstructor;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.http.*;
 import org.springframework.security.oauth2.client.registration.ClientRegistration;
 import org.springframework.security.oauth2.client.registration.ClientRegistrationRepository;
@@ -20,6 +21,8 @@ import org.springframework.web.bind.annotation.*;
 import org.springframework.web.util.UriComponentsBuilder;
 
 import java.io.IOException;
+import java.net.URLEncoder;
+import java.nio.charset.StandardCharsets;
 import java.util.UUID;
 
 @Tag(name = "OAuth2 Authentication API", description = "OAuth2 소셜 로그인 관련 API")
@@ -31,6 +34,9 @@ public class OAuth2Controller {
     
     private final ClientRegistrationRepository clientRegistrationRepository;
     private final AuthService authService;
+
+    @Value("${hamalog.oauth2.rn-app-redirect-scheme:hamalog-rn}")
+    private String rnAppRedirectScheme;
 
     @Operation(
             summary = "카카오 OAuth2 로그인 시작",
@@ -89,54 +95,57 @@ public class OAuth2Controller {
 
     @Operation(
             summary = "카카오 OAuth2 콜백 처리",
-            description = "카카오에서 전송된 authorization code를 처리하여 JWT 토큰을 반환합니다. React Native 앱용."
+            description = "카카오에서 전송된 authorization code를 처리하여 JWT 토큰으로 교환하고 RN 앱으로 리다이렉트합니다."
     )
     @ApiResponses({
             @ApiResponse(
-                    responseCode = "200",
-                    description = "로그인 성공 및 JWT 토큰 반환",
-                    content = @Content(
-                            mediaType = "application/json",
-                            examples = @ExampleObject(
-                                    name = "LoginSuccess",
-                                    value = "{\n  \"token\": \"eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9...\"\n}"
-                            )
-                    )
+                    responseCode = "302",
+                    description = "RN 앱으로 리다이렉트 (JWT 토큰 포함)",
+                    content = @Content
             ),
             @ApiResponse(
                     responseCode = "400",
                     description = "잘못된 authorization code",
-                    content = @Content(
-                            mediaType = "application/json",
-                            examples = @ExampleObject(
-                                    name = "InvalidCode",
-                                    value = "{\n  \"error\": \"invalid_code\",\n  \"message\": \"유효하지 않은 authorization code입니다.\"\n}"
-                            )
-                    )
+                    content = @Content
             ),
             @ApiResponse(
                     responseCode = "500",
                     description = "서버 내부 오류",
-                    content = @Content(
-                            mediaType = "application/json",
-                            examples = @ExampleObject(
-                                    name = "ServerError",
-                                    value = "{\n  \"error\": \"server_error\",\n  \"message\": \"토큰 처리 중 오류가 발생했습니다.\"\n}"
-                            )
-                    )
+                    content = @Content
             )
     })
     @GetMapping("/oauth2/auth/kakao/callback")
-    public ResponseEntity<LoginResponse> handleKakaoCallback(@RequestParam("code") String code) {
+    public void handleKakaoCallback(
+            @RequestParam("code") String code,
+            @RequestParam(value = "state", required = false) String state,
+            HttpServletResponse response) throws IOException {
         try {
+            // TODO: State parameter validation should be implemented in future versions
+            // for preventing CSRF attacks
             log.info("Processing Kakao OAuth2 callback with code: {}", code.substring(0, Math.min(code.length(), 10)) + "...");
-            
-            LoginResponse response = authService.processOAuth2Callback(code);
-            return ResponseEntity.ok(response);
-            
+            if (state != null) {
+                log.debug("State parameter received (validation not implemented yet)");
+            }
+
+            // Process OAuth2 callback and get JWT token
+            LoginResponse loginResponse = authService.processOAuth2Callback(code);
+            String jwtToken = loginResponse.token();
+
+            // Redirect to RN app with JWT token
+            String redirectUri = String.format("%s://auth?token=%s",
+                    rnAppRedirectScheme,
+                    URLEncoder.encode(jwtToken, StandardCharsets.UTF_8));
+
+            log.info("Redirecting to RN app: {}://auth?token=***", rnAppRedirectScheme);
+            response.sendRedirect(redirectUri);
+
         } catch (Exception e) {
             log.error("Error processing Kakao OAuth2 callback", e);
-            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).build();
+            // Redirect to RN app with error information
+            String redirectUri = String.format("%s://auth?error=%s",
+                    rnAppRedirectScheme,
+                    URLEncoder.encode("TOKEN_EXCHANGE_FAILED", StandardCharsets.UTF_8));
+            response.sendRedirect(redirectUri);
         }
     }
 }

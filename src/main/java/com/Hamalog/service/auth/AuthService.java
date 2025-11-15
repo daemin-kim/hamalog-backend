@@ -179,6 +179,8 @@ public class AuthService {
             
             HttpEntity<MultiValueMap<String, String>> request = new HttpEntity<>(params, headers);
             
+            log.debug("Exchanging Kakao authorization code for access token at: {}", kakaoRegistration.getProviderDetails().getTokenUri());
+
             // Make token request
             ResponseEntity<String> response = restTemplate.postForEntity(
                     kakaoRegistration.getProviderDetails().getTokenUri(),
@@ -188,12 +190,16 @@ public class AuthService {
             
             if (response.getStatusCode().is2xxSuccessful() && response.getBody() != null) {
                 JsonNode tokenResponse = objectMapper.readTree(response.getBody());
-                return tokenResponse.get("access_token").asText();
+                String accessToken = tokenResponse.get("access_token").asText();
+                log.info("Successfully obtained Kakao access token");
+                return accessToken;
+            } else {
+                log.error("Failed to exchange authorization code. Status: {}, Body: {}", response.getStatusCode(), response.getBody());
+                return null;
             }
-            
-            return null;
-            
+
         } catch (Exception e) {
+            log.error("Exception while exchanging authorization code for token", e);
             return null;
         }
     }
@@ -206,6 +212,8 @@ public class AuthService {
             
             HttpEntity<String> request = new HttpEntity<>(headers);
             
+            log.debug("Fetching user info from Kakao");
+
             ResponseEntity<String> response = restTemplate.exchange(
                     "https://kapi.kakao.com/v2/user/me",
                     HttpMethod.GET,
@@ -214,12 +222,16 @@ public class AuthService {
             );
             
             if (response.getStatusCode().is2xxSuccessful() && response.getBody() != null) {
-                return objectMapper.readTree(response.getBody());
+                JsonNode userInfo = objectMapper.readTree(response.getBody());
+                log.info("Successfully fetched user info from Kakao");
+                return userInfo;
+            } else {
+                log.error("Failed to get user info from Kakao. Status: {}", response.getStatusCode());
+                return null;
             }
-            
-            return null;
-            
+
         } catch (Exception e) {
+            log.error("Exception while fetching user info from Kakao", e);
             return null;
         }
     }

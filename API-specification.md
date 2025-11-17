@@ -55,7 +55,7 @@
   "loginId": "user@example.com", 
   "password": "password123", 
   "name": "홍길동",
-  "nickName": "홍길동",
+  "nickName": "길동이",
   "phoneNumber": "01012345678",
   "birth": "1990-01-01"
 }
@@ -98,7 +98,7 @@
 ##### 복약 스케쥴 목록 응답 데이터 {#schedule-list-response}
 ```json
 {
-  "content": [
+  "schedules": [
     {
       "medicationScheduleId": 101,
       "memberId": 1,
@@ -107,14 +107,11 @@
       "prescriptionDate": "2025-08-01"
     }
   ],
-  "pageable": {
-    "pageNumber": 0,
-    "pageSize": 20
-  },
-  "totalElements": 10,
-  "totalPages": 1,
-  "last": true,
-  "first": true
+  "totalCount": 10,
+  "currentPage": 0,
+  "pageSize": 20,
+  "hasNext": false,
+  "hasPrevious": false
 }
 ```
 
@@ -351,3 +348,7 @@
     - **인증 API 정확성 검증**: AuthController와 OAuth2Controller의 실제 구현과 완전 일치 확인
     - **미구현 기능 제거**: Report API 섹션 제거 (실제 컨트롤러 미존재)
     - **종합 검토 완료**: 5개 컨트롤러(Auth, OAuth2, MedicationSchedule, MedicationRecord, SideEffect) 모든 엔드포인트가 실제 구현과 정확히 일치함을 재확인
+- **2025/11/17**: **API 명세 최종 동기화**
+    - **복약 스케줄 목록 응답 구조 업데이트**: `content` 필드 → `schedules`, 페이지네이션 필드 정규화
+    - **회원가입 요청 데이터 정확화**: nickName 예시 업데이트 및 검증 규칙 명시
+    - **모든 엔드포인트 재검증**: 현재 구현 코드와 완전 일치 확인

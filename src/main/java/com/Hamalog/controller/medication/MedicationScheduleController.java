@@ -8,6 +8,8 @@ import com.Hamalog.dto.medication.response.MedicationScheduleListResponse;
 import com.Hamalog.security.annotation.RequireResourceOwnership;
 import com.Hamalog.service.medication.MedicationScheduleService;
 import com.Hamalog.service.medication.FileStorageService;
+import com.Hamalog.service.medication.SecureFileStorageService;
+import com.Hamalog.validation.ValidImage;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.Parameter;
 import io.swagger.v3.oas.annotations.enums.ParameterIn;
@@ -36,13 +38,16 @@ public class MedicationScheduleController {
 
     private final MedicationScheduleService medicationScheduleService;
     private final FileStorageService fileStorageService;
+    private final SecureFileStorageService secureFileStorageService;
 
     public MedicationScheduleController(
             MedicationScheduleService medicationScheduleService,
-            FileStorageService fileStorageService
+            FileStorageService fileStorageService,
+            SecureFileStorageService secureFileStorageService
     ) {
         this.medicationScheduleService = medicationScheduleService;
         this.fileStorageService = fileStorageService;
+        this.secureFileStorageService = secureFileStorageService;
     }
 
     @Operation(summary = "회원의 복약 스케줄 목록 조회",
@@ -116,8 +121,10 @@ public class MedicationScheduleController {
             @Parameter(description = "복약 스케줄 생성 요청 데이터", required = true)
             @RequestPart("data") @Valid MedicationScheduleCreateRequest medicationScheduleCreateRequest,
 
-            @Parameter(description = "복약 스케줄에 첨부할 이미지 파일 (선택 사항)", required = false, content = @Content(mediaType = MediaType.APPLICATION_OCTET_STREAM_VALUE))
-            @RequestPart(value = "image", required = false) MultipartFile image,
+            @Parameter(description = "복약 스케줄에 첨부할 이미지 파일 (선택 사항, 최대 5MB)", required = false, content = @Content(mediaType = MediaType.APPLICATION_OCTET_STREAM_VALUE))
+            @RequestPart(value = "image", required = false)
+            @ValidImage(maxSize = 5 * 1024 * 1024)
+            MultipartFile image,
             @AuthenticationPrincipal UserDetails userDetails
     ) {
         MedicationSchedule createdMedicationSchedule = medicationScheduleService.createMedicationSchedule(medicationScheduleCreateRequest);

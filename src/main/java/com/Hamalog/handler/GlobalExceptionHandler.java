@@ -156,6 +156,7 @@ public class GlobalExceptionHandler {
 
     @ExceptionHandler(Exception.class)
     public ResponseEntity<ErrorResponse> handleException(Exception ex, HttpServletRequest request) {
+        // ✅ 클라이언트에는 일반적인 메시지만 전달
         ErrorResponse error = ErrorResponse.of(
                 HttpStatus.INTERNAL_SERVER_ERROR,
                 ErrorCode.INTERNAL_SERVER_ERROR.getCode(),
@@ -164,13 +165,14 @@ public class GlobalExceptionHandler {
                 null
         );
         
-        // Add error context to MDC
+        // ✅ 상세 정보는 로그에만 기록
         MDC.put("error.type", "UNEXPECTED_ERROR");
         MDC.put("error.code", ErrorCode.INTERNAL_SERVER_ERROR.getCode());
         MDC.put("error.httpStatus", "500");
         MDC.put("error.exception", ex.getClass().getSimpleName());
-        
-        log.error("[UNEXPECTED_ERROR] Unexpected system error - path={} traceId={} exception={} message={}", 
+        MDC.put("error.details", ex.getMessage());
+
+        log.error("[UNEXPECTED_ERROR] Unexpected system error - path={} traceId={} exception={} details={}",
             request.getRequestURI(), MDC.get("requestId"), ex.getClass().getSimpleName(), ex.getMessage(), ex);
         
         // Clean up error context

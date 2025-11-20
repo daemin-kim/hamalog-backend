@@ -45,7 +45,7 @@
 | **로그아웃** | `/auth/logout` | `POST` | (없음) | `"로그아웃이 성공적으로 처리되었습니다"`<br/>(Content-Type: text/plain) | **JWT 토큰 필수.** Redis 기반 토큰 블랙리스트로 즉시 무효화. |
 | **회원 탈퇴** | `/auth/account` | `DELETE` | (없음) | `"회원 탈퇴가 완료되었습니다"`<br/>(Content-Type: text/plain) | **인증된 사용자만 가능.** 모든 관련 데이터(복약 스케줄, 복약 기록, 부작용 기록) 영구 삭제. |
 | **카카오 로그인 시작** | `/oauth2/auth/kakao` | `GET` | (없음) | 카카오 인증 서버로 리디렉션 (302) | **OAuth2 인증 시작.** 카카오 로그인 페이지로 자동 리디렉션. |
-| **카카오 로그인 콜백** | `/oauth2/auth/kakao/callback` | `GET` | `?code={authorization_code}` | 로그인 응답 데이터 참고 | **Authorization code 처리.** 신규 사용자 자동 등록. JWT 토큰을 RN 앱 스킴 리다이렉션으로 반환. |
+| **카카오 로그인 콜백** | `/oauth2/auth/kakao/callback` | `POST` | `?code={authorization_code}` | 로그인 응답 데이터 참고 | **Authorization code 처리.** 신규 사용자 자동 등록. JWT 토큰 반환. |
 
 #### 인증 API 데이터 구조
 
@@ -352,9 +352,3 @@
     - **복약 스케줄 목록 응답 구조 업데이트**: `content` 필드 → `schedules`, 페이지네이션 필드 정규화
     - **회원가입 요청 데이터 정확화**: nickName 예시 업데이트 및 검증 규칙 명시
     - **모든 엔드포인트 재검증**: 현재 구현 코드와 완전 일치 확인
-- **2025/11/18**: **API 명세서 vs 실제 구현 완전 검증 (API_IMPLEMENTATION_AUDIT.md)**
-    - **감사 완료**: 19개 모든 엔드포인트 검증 완료, 불일치 항목 0개
-    - **불일치 수정**: 카카오 로그인 콜백 메서드 `POST` → `GET` 수정 (실제 구현 반영)
-    - **응답 구조 확인**: 모든 DTO 구조가 명세서와 완벽히 일치
-    - **권한 검증 검증**: 모든 보호된 엔드포인트에 `@RequireResourceOwnership` 적용 확인
-    - **입력 검증 확인**: 모든 필드에 적절한 검증 규칙 (@Email, @Pattern, @Size 등) 적용 확인 

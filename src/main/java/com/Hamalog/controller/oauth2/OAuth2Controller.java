@@ -1,7 +1,9 @@
 package com.Hamalog.controller.oauth2;
 
 import com.Hamalog.dto.auth.response.LoginResponse;
+import com.Hamalog.exception.CustomException;
 import com.Hamalog.service.auth.AuthService;
+import com.Hamalog.service.oauth2.StatePersistenceService;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.media.Content;
 import io.swagger.v3.oas.annotations.media.ExampleObject;
@@ -23,7 +25,6 @@ import org.springframework.web.util.UriComponentsBuilder;
 import java.io.IOException;
 import java.net.URLEncoder;
 import java.nio.charset.StandardCharsets;
-import java.util.UUID;
 
 @Tag(name = "OAuth2 Authentication API", description = "OAuth2 소셜 로그인 관련 API")
 @RestController
@@ -34,6 +35,7 @@ public class OAuth2Controller {
     
     private final ClientRegistrationRepository clientRegistrationRepository;
     private final AuthService authService;
+    private final StatePersistenceService statePersistenceService;
 
     @Value("${hamalog.oauth2.rn-app-redirect-scheme:hamalog-rn}")
     private String rnAppRedirectScheme;
@@ -67,13 +69,14 @@ public class OAuth2Controller {
             ClientRegistration kakaoRegistration = clientRegistrationRepository.findByRegistrationId("kakao");
             
             if (kakaoRegistration == null) {
-                response.sendError(HttpServletResponse.SC_INTERNAL_SERVER_ERROR, "카카오 OAuth2 설정이 없습니다.");
+                log.error("[OAUTH2] Kakao OAuth2 configuration not found");
+                handleOAuth2Error(response, "OAUTH2_CONFIG_ERROR");
                 return;
             }
             
-            // Generate state parameter for security
-            String state = UUID.randomUUID().toString();
-            
+            // ✅ State 생성 및 저장
+            String state = statePersistenceService.generateAndStoreState();
+
             // Build authorization URL
             String authorizationUri = UriComponentsBuilder
                     .fromUriString(kakaoRegistration.getProviderDetails().getAuthorizationUri())
@@ -86,10 +89,12 @@ public class OAuth2Controller {
                     .toUriString();
             
             // Redirect to Kakao authorization server
+            log.info("[OAUTH2] Redirecting to Kakao authorization server");
             response.sendRedirect(authorizationUri);
             
         } catch (Exception e) {
-            response.sendError(HttpServletResponse.SC_INTERNAL_SERVER_ERROR, "OAuth2 인증 초기화 중 오류가 발생했습니다: " + e.getMessage());
+            log.error("[OAUTH2] Error during Kakao authorization initialization", e);
+            handleOAuth2Error(response, "OAUTH2_INIT_ERROR");
         }
     }
 
@@ -117,14 +122,32 @@ public class OAuth2Controller {
     @GetMapping("/oauth2/auth/kakao/callback")
     public void handleKakaoCallback(
             @RequestParam("code") String code,
-            @RequestParam(value = "state", required = false) String state,
+            @RequestParam(value = "state") String state,
+            @RequestParam(value = "error", required = false) String error,
             HttpServletResponse response) throws IOException {
+
         try {
-            // TODO: State parameter validation should be implemented in future versions
-            // for preventing CSRF attacks
-            log.info("Processing Kakao OAuth2 callback with code: {}", code.substring(0, Math.min(code.length(), 10)) + "...");
-            if (state != null) {
-                log.debug("State parameter received (validation not implemented yet)");
+            // ✅ 에러 처리
+            if (error != null) {
+                log.warn("[OAUTH2] Kakao authorization failed with error: {}", error);
+                handleOAuth2Error(response, "AUTHORIZATION_FAILED");
+                return;
+            }
+
+            // ✅ State 검증 (CSRF 방지)
+            if (!statePersistenceService.validateAndConsumeState(state)) {
+                log.warn("[OAUTH2] State validation failed - possible CSRF attack");
+                handleOAuth2Error(response, "CSRF_VALIDATION_FAILED");
+                return;
+            }
+
+            log.info("[OAUTH2] Processing Kakao OAuth2 callback with validated state");
+
+            // ✅ Authorization code 검증
+            if (code == null || code.trim().isEmpty()) {
+                log.warn("[OAUTH2] Authorization code is null or empty");
+                handleOAuth2Error(response, "INVALID_AUTH_CODE");
+                return;
             }
 
             // Process OAuth2 callback and get JWT token
@@ -136,16 +159,26 @@ public class OAuth2Controller {
                     rnAppRedirectScheme,
                     URLEncoder.encode(jwtToken, StandardCharsets.UTF_8));
 
-            log.info("Redirecting to RN app: {}://auth?token=***", rnAppRedirectScheme);
+            log.info("[OAUTH2] Redirecting to RN app with JWT token");
             response.sendRedirect(redirectUri);
 
+        } catch (CustomException e) {
+            log.error("[OAUTH2] CustomException during callback processing: {}", e.getErrorCode().getMessage());
+            handleOAuth2Error(response, e.getErrorCode().getCode());
         } catch (Exception e) {
-            log.error("Error processing Kakao OAuth2 callback", e);
-            // Redirect to RN app with error information
-            String redirectUri = String.format("%s://auth?error=%s",
-                    rnAppRedirectScheme,
-                    URLEncoder.encode("TOKEN_EXCHANGE_FAILED", StandardCharsets.UTF_8));
-            response.sendRedirect(redirectUri);
+            log.error("[OAUTH2] Unexpected error during callback processing", e);
+            handleOAuth2Error(response, "TOKEN_EXCHANGE_FAILED");
         }
+    }
+
+    /**
+     * OAuth2 에러를 안전하게 처리 (정보 유출 방지)
+     */
+    private void handleOAuth2Error(HttpServletResponse response, String errorCode) throws IOException {
+        String redirectUri = String.format("%s://auth?error=%s",
+            rnAppRedirectScheme,
+            URLEncoder.encode(errorCode, StandardCharsets.UTF_8));
+
+        response.sendRedirect(redirectUri);
     }
 }

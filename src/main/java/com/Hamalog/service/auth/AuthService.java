@@ -7,6 +7,7 @@ import com.Hamalog.domain.medication.MedicationSchedule;
 import com.Hamalog.domain.sideEffect.SideEffectRecord;
 import com.Hamalog.dto.auth.request.SignupRequest;
 import com.Hamalog.dto.auth.response.LoginResponse;
+import com.Hamalog.dto.auth.response.TokenRefreshResponse;
 import com.Hamalog.exception.CustomException;
 import com.Hamalog.exception.ErrorCode;
 import com.Hamalog.repository.member.MemberRepository;
@@ -15,6 +16,7 @@ import com.Hamalog.repository.medication.MedicationScheduleRepository;
 import com.Hamalog.repository.sideEffect.SideEffectRecordRepository;
 import com.Hamalog.security.jwt.JwtTokenProvider;
 import com.Hamalog.security.jwt.TokenBlacklistService;
+import com.Hamalog.service.security.RefreshTokenService;
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import lombok.RequiredArgsConstructor;
@@ -50,6 +52,7 @@ public class AuthService {
     private final PasswordEncoder passwordEncoder;
     private final JwtTokenProvider jwtTokenProvider;
     private final TokenBlacklistService tokenBlacklistService;
+    private final RefreshTokenService refreshTokenService;
     private final AuthenticationManager authenticationManager;
     private final ClientRegistrationRepository clientRegistrationRepository;
     private final RestTemplate restTemplate;
@@ -69,14 +72,53 @@ public class AuthService {
                 new UsernamePasswordAuthenticationToken(loginId, password)
         );
         
-        String token = jwtTokenProvider.createToken(authentication.getName());
-        return new LoginResponse(token);
+        Member member = memberRepository.findByLoginId(loginId)
+            .orElseThrow(() -> new CustomException(ErrorCode.MEMBER_NOT_FOUND));
+
+        // AccessToken 생성
+        String accessToken = jwtTokenProvider.createToken(authentication.getName());
+        long expiresIn = 900;  // 15분
+
+        // RefreshToken 생성
+        var refreshToken = refreshTokenService.createRefreshToken(member.getMemberId());
+
+        log.info("[AUTH] User logged in - loginId: {}, memberId: {}", loginId, member.getMemberId());
+
+        return new LoginResponse(
+            accessToken,
+            refreshToken.getTokenValue(),
+            expiresIn
+        );
     }
 
     public void logoutUser(String token) {
         if (isValidTokenFormat(token)) {
             tokenBlacklistService.blacklistToken(token);
         }
+    }
+
+    /**
+     * RefreshToken으로 새 AccessToken 발급
+     */
+    public TokenRefreshResponse refreshAccessToken(String refreshTokenValue) {
+        var refreshToken = refreshTokenService.rotateToken(refreshTokenValue);
+
+        // 새 AccessToken 생성
+        String newAccessToken = jwtTokenProvider.createToken(
+            memberRepository.findById(refreshToken.getMemberId())
+                .map(Member::getLoginId)
+                .orElseThrow(() -> new CustomException(ErrorCode.MEMBER_NOT_FOUND))
+        );
+
+        long expiresIn = 900;  // 15분
+
+        log.debug("[AUTH] Access token refreshed - memberId: {}", refreshToken.getMemberId());
+
+        return new TokenRefreshResponse(
+            newAccessToken,
+            refreshToken.getTokenValue(),
+            expiresIn
+        );
     }
 
     @Transactional(rollbackFor = {Exception.class})

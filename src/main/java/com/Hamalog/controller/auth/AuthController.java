@@ -2,7 +2,8 @@ package com.Hamalog.controller.auth;
 
 import com.Hamalog.dto.auth.request.LoginRequest;
 import com.Hamalog.dto.auth.response.LoginResponse;
-import com.Hamalog.dto.auth.request.SignupRequest;
+import com.Hamalog.dto.auth.request.SignupRequest;import com.Hamalog.dto.auth.request.TokenRefreshRequest;
+import com.Hamalog.dto.auth.response.TokenRefreshResponse;
 import com.Hamalog.service.auth.AuthService;
 import com.Hamalog.service.i18n.MessageService;
 import io.swagger.v3.oas.annotations.Operation;
@@ -39,6 +40,21 @@ public class AuthController {
     public ResponseEntity<LoginResponse> login(@Valid @RequestBody LoginRequest request) {
         LoginResponse loginResponse = authService.authenticateAndGenerateToken(request.loginId(), request.password());
         return ResponseEntity.ok(loginResponse);
+    }
+
+    @PostMapping("/refresh")
+    @Operation(summary = "토큰 갱신", description = "RefreshToken을 사용하여 새로운 AccessToken을 발급받습니다.")
+    @ApiResponses({
+        @ApiResponse(responseCode = "200", description = "토큰 갱신 성공",
+                content = @Content(mediaType = "application/json",
+                        schema = @Schema(implementation = TokenRefreshResponse.class))),
+        @ApiResponse(responseCode = "401", description = "유효하지 않은 RefreshToken"),
+        @ApiResponse(responseCode = "400", description = "잘못된 요청")
+    })
+    public ResponseEntity<TokenRefreshResponse> refreshToken(
+            @Valid @RequestBody TokenRefreshRequest request) {
+        TokenRefreshResponse response = authService.refreshAccessToken(request.refreshToken());
+        return ResponseEntity.ok(response);
     }
 
     @PostMapping("/logout")

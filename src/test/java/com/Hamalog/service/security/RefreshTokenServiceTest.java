@@ -1,0 +1,130 @@
+package com.Hamalog.service.security;
+
+import com.Hamalog.domain.security.RefreshToken;
+import com.Hamalog.exception.CustomException;
+import com.Hamalog.repository.security.RefreshTokenRepository;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.DisplayName;
+import org.mockito.Mock;
+import org.mockito.MockitoAnnotations;
+
+import java.time.LocalDateTime;
+import java.util.Optional;
+
+import static org.junit.jupiter.api.Assertions.*;
+import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.Mockito.*;
+
+@DisplayName("Refresh Token Service Tests")
+class RefreshTokenServiceTest {
+
+    private RefreshTokenService service;
+
+    @Mock
+    private RefreshTokenRepository repository;
+
+    @BeforeEach
+    void setUp() {
+        MockitoAnnotations.openMocks(this);
+        service = new RefreshTokenService(repository);
+    }
+
+    @Test
+    @DisplayName("RefreshToken 생성 성공")
+    void testCreateRefreshToken() {
+        Long memberId = 1L;
+
+        when(repository.save(any(RefreshToken.class))).thenAnswer(invocation -> {
+            RefreshToken token = invocation.getArgument(0);
+            token.setId(1L);
+            return token;
+        });
+
+        RefreshToken refreshToken = service.createRefreshToken(memberId);
+
+        assertNotNull(refreshToken);
+        assertEquals(memberId, refreshToken.getMemberId());
+        assertFalse(refreshToken.isRevoked());
+        assertTrue(refreshToken.isValid());
+
+        verify(repository).revokeAllByMemberId(memberId);  // 기존 토큰 폐지
+    }
+
+    @Test
+    @DisplayName("RefreshToken 회전 성공 (Token Rotation)")
+    void testRotateToken() {
+        Long memberId = 1L;
+        String oldTokenValue = "old-token-value";
+
+        RefreshToken oldToken = RefreshToken.builder()
+            .id(1L)
+            .memberId(memberId)
+            .tokenValue(oldTokenValue)
+            .createdAt(LocalDateTime.now())
+            .expiresAt(LocalDateTime.now().plusDays(7))
+            .rotatedAt(LocalDateTime.now())
+            .isRevoked(false)
+            .build();
+
+        when(repository.findByTokenValue(oldTokenValue))
+            .thenReturn(Optional.of(oldToken));
+
+        when(repository.save(any(RefreshToken.class))).thenAnswer(invocation -> {
+            RefreshToken token = invocation.getArgument(0);
+            if (token.getId() == null) {
+                token.setId(2L);
+            }
+            return token;
+        });
+
+        RefreshToken newToken = service.rotateToken(oldTokenValue);
+
+        assertNotNull(newToken);
+        assertTrue(oldToken.isRevoked());  // 기존 토큰 폐지됨
+        assertNotEquals(oldToken.getTokenValue(), newToken.getTokenValue());
+        verify(repository, times(2)).save(any(RefreshToken.class));
+    }
+
+    @Test
+    @DisplayName("유효하지 않은 RefreshToken 회전 실패")
+    void testRotateInvalidToken() {
+        when(repository.findByTokenValue("invalid-token"))
+            .thenReturn(Optional.empty());
+
+        assertThrows(CustomException.class, () -> {
+            service.rotateToken("invalid-token");
+        });
+    }
+
+    @Test
+    @DisplayName("만료된 RefreshToken 회전 실패")
+    void testRotateExpiredToken() {
+        RefreshToken expiredToken = RefreshToken.builder()
+            .memberId(1L)
+            .tokenValue("expired-token")
+            .createdAt(LocalDateTime.now().minusDays(8))
+            .expiresAt(LocalDateTime.now().minusHours(1))
+            .rotatedAt(LocalDateTime.now().minusDays(8))
+            .isRevoked(false)
+            .build();
+
+        when(repository.findByTokenValue("expired-token"))
+            .thenReturn(Optional.of(expiredToken));
+
+        assertThrows(CustomException.class, () -> {
+            service.rotateToken("expired-token");
+        });
+    }
+
+    @Test
+    @DisplayName("사용자의 모든 RefreshToken 폐지")
+    void testRevokeAllByMemberId() {
+        Long memberId = 1L;
+
+        service.revokeAllByMemberId(memberId);
+
+        verify(repository).revokeAllByMemberId(memberId);
+    }
+}
+

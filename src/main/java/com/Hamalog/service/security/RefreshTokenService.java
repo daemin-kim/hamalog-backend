@@ -41,7 +41,7 @@ public class RefreshTokenService {
             .createdAt(now)
             .expiresAt(expiresAt)
             .rotatedAt(now)
-            .isRevoked(false)
+            .revoked(false)
             .build();
 
         log.debug("[SECURITY] RefreshToken created - memberId: {}", memberId);
@@ -64,7 +64,7 @@ public class RefreshTokenService {
         }
 
         // ✅ Token Rotation: 기존 토큰 폐지 및 새 토큰 발급
-        token.setIsRevoked(true);
+        token.setRevoked(true);
         refreshTokenRepository.save(token);
 
         log.debug("[SECURITY] Old refresh token revoked - memberId: {}", token.getMemberId());

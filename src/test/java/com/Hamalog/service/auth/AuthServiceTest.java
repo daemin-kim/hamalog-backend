@@ -13,6 +13,8 @@ import com.Hamalog.repository.medication.MedicationScheduleRepository;
 import com.Hamalog.repository.sideEffect.SideEffectRecordRepository;
 import com.Hamalog.security.jwt.JwtTokenProvider;
 import com.Hamalog.security.jwt.TokenBlacklistService;
+import com.Hamalog.service.security.RefreshTokenService;
+import com.Hamalog.domain.security.RefreshToken;
 import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
@@ -92,6 +94,9 @@ class AuthServiceTest {
     private ApplicationEventPublisher eventPublisher;
     
     @Mock
+    private RefreshTokenService refreshTokenService;
+
+    @Mock
     private Authentication authentication;
 
     @InjectMocks
@@ -166,19 +171,38 @@ class AuthServiceTest {
         String loginId = "test@example.com";
         String password = "password123";
         String expectedToken = "jwt-token";
-        
+        String refreshTokenValue = "refresh-token-value";
+
+        Member member = Member.builder()
+            .memberId(1L)
+            .loginId(loginId)
+            .build();
+
+        RefreshToken refreshToken = RefreshToken.builder()
+            .id(1L)
+            .memberId(1L)
+            .tokenValue(refreshTokenValue)
+            .createdAt(LocalDateTime.now())
+            .expiresAt(LocalDateTime.now().plusDays(7))
+            .rotatedAt(LocalDateTime.now())
+            .build();
+
         given(authenticationManager.authenticate(any(UsernamePasswordAuthenticationToken.class)))
             .willReturn(authentication);
         given(authentication.getName()).willReturn(loginId);
+        given(memberRepository.findByLoginId(loginId)).willReturn(Optional.of(member));
         given(jwtTokenProvider.createToken(loginId)).willReturn(expectedToken);
+        given(refreshTokenService.createRefreshToken(1L)).willReturn(refreshToken);
 
         // when
         LoginResponse response = authService.authenticateAndGenerateToken(loginId, password);
 
         // then
         assertThat(response.token()).isEqualTo(expectedToken);
+        assertThat(response.refreshToken()).isEqualTo(refreshTokenValue);
         verify(authenticationManager).authenticate(any(UsernamePasswordAuthenticationToken.class));
         verify(jwtTokenProvider).createToken(loginId);
+        verify(refreshTokenService).createRefreshToken(1L);
     }
 
     @Test

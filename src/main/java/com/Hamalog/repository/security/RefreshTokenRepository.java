@@ -23,7 +23,7 @@ public interface RefreshTokenRepository extends JpaRepository<RefreshToken, Long
     void deleteExpiredTokens(@Param("now") LocalDateTime now);
 
     @Modifying
-    @Query("UPDATE RefreshToken SET isRevoked = true WHERE memberId = :memberId")
+    @Query("UPDATE RefreshToken SET revoked = true WHERE memberId = :memberId")
     void revokeAllByMemberId(@Param("memberId") Long memberId);
 
     @Modifying

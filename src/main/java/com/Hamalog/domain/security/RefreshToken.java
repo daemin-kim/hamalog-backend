@@ -1,10 +1,7 @@
 package com.Hamalog.domain.security;
 
 import jakarta.persistence.*;
-import lombok.AllArgsConstructor;
-import lombok.Builder;
-import lombok.Data;
-import lombok.NoArgsConstructor;
+import lombok.*;
 
 import java.time.LocalDateTime;
 
@@ -40,14 +37,15 @@ public class RefreshToken {
     private LocalDateTime rotatedAt;
 
     @Column(nullable = false)
-    private Boolean isRevoked = false;
+    @Builder.Default
+    private boolean revoked = false;
 
     public boolean isExpired() {
         return LocalDateTime.now().isAfter(expiresAt);
     }
 
     public boolean isValid() {
-        return !isRevoked && !isExpired();
+        return !revoked && !isExpired();
     }
 }
 

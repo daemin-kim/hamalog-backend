@@ -122,7 +122,7 @@ public class OAuth2Controller {
     @GetMapping("/oauth2/auth/kakao/callback")
     public void handleKakaoCallback(
             @RequestParam("code") String code,
-            @RequestParam(value = "state") String state,
+            @RequestParam(value = "state", required = false) String state,
             @RequestParam(value = "error", required = false) String error,
             HttpServletResponse response) throws IOException {
 
@@ -135,7 +135,7 @@ public class OAuth2Controller {
             }
 
             // ✅ State 검증 (CSRF 방지)
-            if (!statePersistenceService.validateAndConsumeState(state)) {
+            if (state == null || !statePersistenceService.validateAndConsumeState(state)) {
                 log.warn("[OAUTH2] State validation failed - possible CSRF attack");
                 handleOAuth2Error(response, "CSRF_VALIDATION_FAILED");
                 return;

@@ -20,16 +20,23 @@ class ImageValidatorTest {
     @Mock
     private ConstraintValidatorContext context;
 
+    @Mock
+    private ConstraintValidatorContext.ConstraintViolationBuilder builder;
+
     @BeforeEach
     void setUp() {
         MockitoAnnotations.openMocks(this);
         validator = new ImageValidator();
 
         ValidImage annotation = mock(ValidImage.class);
-        when(annotation.maxSize()).thenReturn(5 * 1024 * 1024);
+        when(annotation.maxSize()).thenReturn(5L * 1024 * 1024);
         when(annotation.allowedContentTypes()).thenReturn(
             new String[]{"image/jpeg", "image/png", "image/gif", "image/webp"}
         );
+
+        // Mock 컨텍스트 빌더 체인 설정
+        when(context.buildConstraintViolationWithTemplate(anyString())).thenReturn(builder);
+        when(builder.addConstraintViolation()).thenReturn(context);
 
         validator.initialize(annotation);
     }

@@ -236,7 +236,14 @@ class MedicationScheduleControllerTest {
         // given
         MedicationScheduleCreateRequest request = createTestCreateRequest();
         MedicationSchedule createdSchedule = createTestMedicationSchedule(1L);
-        MockMultipartFile imageFile = new MockMultipartFile("image", "test.jpg", "image/jpeg", "test image content".getBytes());
+
+        // Create a valid JPEG file header (Magic Number: FF D8 FF E0 ...)
+        byte[] validJpegHeader = new byte[] {
+            (byte) 0xFF, (byte) 0xD8, (byte) 0xFF, (byte) 0xE0, // JPEG magic number
+            0x00, 0x10, 0x4A, 0x46, 0x49, 0x46, 0x00, 0x01,     // JFIF header
+            0x01, 0x00, 0x00, 0x01, 0x00, 0x01, 0x00, 0x00      // Additional JPEG data
+        };
+        MockMultipartFile imageFile = new MockMultipartFile("image", "test.jpg", "image/jpeg", validJpegHeader);
 
         when(medicationScheduleService.createMedicationSchedule(any(MedicationScheduleCreateRequest.class)))
                 .thenReturn(createdSchedule);

@@ -89,8 +89,10 @@ class LoginResponseTest {
         String json = objectMapper.writeValueAsString(loginResponse);
 
         // then
-        assertThat(json).contains("\"token\":");
+        assertThat(json).contains("\"access_token\":");
         assertThat(json).contains(token);
+        assertThat(json).contains("\"token_type\":");
+        assertThat(json).contains("\"expires_in\":");
     }
 
     @Test
@@ -98,13 +100,15 @@ class LoginResponseTest {
     void deserialization_FromJson_ShouldDeserializeCorrectly() throws Exception {
         // given
         String token = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJzdWIiOiJ0ZXN0dXNlciIsImV4cCI6MTY5ODM2MDAwMH0.signature";
-        String json = "{\"token\":\"" + token + "\"}";
+        String json = "{\"access_token\":\"" + token + "\",\"refresh_token\":null,\"expires_in\":3600,\"token_type\":\"Bearer\"}";
 
         // when
         LoginResponse loginResponse = objectMapper.readValue(json, LoginResponse.class);
 
         // then
         assertThat(loginResponse.token()).isEqualTo(token);
+        assertThat(loginResponse.tokenType()).isEqualTo("Bearer");
+        assertThat(loginResponse.expiresIn()).isEqualTo(3600);
     }
 
     @Test
@@ -117,20 +121,22 @@ class LoginResponseTest {
         String json = objectMapper.writeValueAsString(loginResponse);
 
         // then
-        assertThat(json).contains("\"token\":null");
+        assertThat(json).contains("\"access_token\":null");
+        assertThat(json).contains("\"token_type\":\"Bearer\"");
     }
 
     @Test
     @DisplayName("Should handle deserialization of null token")
     void deserialization_WithNullToken_ShouldHandleCorrectly() throws Exception {
         // given
-        String json = "{\"token\":null}";
+        String json = "{\"access_token\":null,\"refresh_token\":null,\"expires_in\":3600,\"token_type\":\"Bearer\"}";
 
         // when
         LoginResponse loginResponse = objectMapper.readValue(json, LoginResponse.class);
 
         // then
         assertThat(loginResponse.token()).isNull();
+        assertThat(loginResponse.tokenType()).isEqualTo("Bearer");
     }
 
     @Test

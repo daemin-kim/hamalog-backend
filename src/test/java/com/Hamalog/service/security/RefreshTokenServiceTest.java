@@ -8,6 +8,7 @@ import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.DisplayName;
 import org.mockito.Mock;
 import org.mockito.MockitoAnnotations;
+import org.springframework.test.util.ReflectionTestUtils;
 
 import java.time.LocalDateTime;
 import java.util.Optional;
@@ -28,6 +29,8 @@ class RefreshTokenServiceTest {
     void setUp() {
         MockitoAnnotations.openMocks(this);
         service = new RefreshTokenService(repository);
+        // refreshTokenExpiryMs 값을 604800000ms (7일)로 설정
+        ReflectionTestUtils.setField(service, "refreshTokenExpiryMs", 604800000L);
     }
 
     @Test
@@ -64,7 +67,7 @@ class RefreshTokenServiceTest {
             .createdAt(LocalDateTime.now())
             .expiresAt(LocalDateTime.now().plusDays(7))
             .rotatedAt(LocalDateTime.now())
-            .isRevoked(false)
+            .revoked(false)
             .build();
 
         when(repository.findByTokenValue(oldTokenValue))
@@ -106,7 +109,7 @@ class RefreshTokenServiceTest {
             .createdAt(LocalDateTime.now().minusDays(8))
             .expiresAt(LocalDateTime.now().minusHours(1))
             .rotatedAt(LocalDateTime.now().minusDays(8))
-            .isRevoked(false)
+            .revoked(false)
             .build();
 
         when(repository.findByTokenValue("expired-token"))

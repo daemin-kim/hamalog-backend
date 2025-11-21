@@ -2,6 +2,7 @@ package com.Hamalog.controller.oauth2;
 
 import com.Hamalog.dto.auth.response.LoginResponse;
 import com.Hamalog.service.auth.AuthService;
+import com.Hamalog.service.oauth2.StatePersistenceService;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -33,6 +34,9 @@ class OAuth2ControllerCallbackTest {
     @MockitoBean
     private AuthService authService;
 
+    @MockitoBean
+    private StatePersistenceService statePersistenceService;
+
     private static final String TEST_CODE = "test-authorization-code";
     private static final String TEST_TOKEN = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJzdWIiOiIxMjM0NTY3ODkwIn0.dozjgNryP4J3jVmNHl0w5N_XgL0n3I9PlFUP0THsR8U";
     private static final String TEST_STATE = "test-state-value";
@@ -43,6 +47,7 @@ class OAuth2ControllerCallbackTest {
     void handleKakaoCallback_Success() throws Exception {
         // Given: AuthService가 정상적으로 JWT 토큰 반환
         LoginResponse loginResponse = new LoginResponse(TEST_TOKEN);
+        when(statePersistenceService.validateAndConsumeState(TEST_STATE)).thenReturn(true);
         when(authService.processOAuth2Callback(anyString())).thenReturn(loginResponse);
 
         // When: 콜백 엔드포인트 호출
@@ -85,9 +90,7 @@ class OAuth2ControllerCallbackTest {
     @Test
     @DisplayName("카카오 OAuth2 콜백 - State 파라미터 없이 호출")
     void handleKakaoCallback_WithoutState() throws Exception {
-        // Given: AuthService가 정상적으로 JWT 토큰 반환
-        LoginResponse loginResponse = new LoginResponse(TEST_TOKEN);
-        when(authService.processOAuth2Callback(anyString())).thenReturn(loginResponse);
+        // Given: State가 없으므로 validation 실패
 
         // When: State 파라미터 없이 콜백 엔드포인트 호출
         MvcResult result = mockMvc.perform(get("/oauth2/auth/kakao/callback")
@@ -95,12 +98,10 @@ class OAuth2ControllerCallbackTest {
                 .andExpect(status().is3xxRedirection())
                 .andReturn();
 
-        // Then: RN 앱 스킴으로 리다이렉트 (State 없어도 작동)
+        // Then: CSRF 검증 실패로 에러 리다이렉트
         String redirectUrl = result.getResponse().getRedirectedUrl();
         assertThat(redirectUrl).isNotNull();
-        assertThat(redirectUrl).startsWith(RN_APP_SCHEME + "://auth?token=");
-
-        System.out.println("✅ State 파라미터 없이 성공 - 리다이렉트 URL: " + redirectUrl);
+        assertThat(redirectUrl).startsWith(RN_APP_SCHEME + "://auth?error=");
     }
 }
 

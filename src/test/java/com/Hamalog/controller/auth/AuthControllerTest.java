@@ -138,7 +138,7 @@ class AuthControllerTest {
                         .contentType(MediaType.APPLICATION_JSON)
                         .content(objectMapper.writeValueAsString(loginRequest)))
                 .andExpect(status().isOk())
-                .andExpect(jsonPath("$.token").value("jwt.token.here"));
+                .andExpect(jsonPath("$.access_token").value("jwt.token.here"));
 
         verify(authService).authenticateAndGenerateToken("test@example.com", "password123");
     }

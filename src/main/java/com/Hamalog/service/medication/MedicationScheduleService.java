@@ -16,7 +16,6 @@ import com.Hamalog.repository.member.MemberRepository;
 import com.Hamalog.security.annotation.RequireResourceOwnership;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
-import org.springframework.context.ApplicationEventPublisher;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 

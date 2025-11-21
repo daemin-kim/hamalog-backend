@@ -7,8 +7,6 @@ import com.Hamalog.dto.medication.response.MedicationScheduleResponse;
 import com.Hamalog.dto.medication.response.MedicationScheduleListResponse;
 import com.Hamalog.security.annotation.RequireResourceOwnership;
 import com.Hamalog.service.medication.MedicationScheduleService;
-import com.Hamalog.service.medication.FileStorageService;
-import com.Hamalog.service.medication.SecureFileStorageService;
 import com.Hamalog.validation.ValidImage;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.Parameter;
@@ -29,7 +27,6 @@ import org.springframework.web.multipart.MultipartFile;
 import org.springframework.security.core.annotation.AuthenticationPrincipal;
 import org.springframework.security.core.userdetails.UserDetails;
 
-import java.util.List;
 
 @Tag(name = "Medication Schedule API", description = "복약 스케줄 관련 CRUD API")
 @RestController
@@ -37,17 +34,11 @@ import java.util.List;
 public class MedicationScheduleController {
 
     private final MedicationScheduleService medicationScheduleService;
-    private final FileStorageService fileStorageService;
-    private final SecureFileStorageService secureFileStorageService;
 
     public MedicationScheduleController(
-            MedicationScheduleService medicationScheduleService,
-            FileStorageService fileStorageService,
-            SecureFileStorageService secureFileStorageService
+            MedicationScheduleService medicationScheduleService
     ) {
         this.medicationScheduleService = medicationScheduleService;
-        this.fileStorageService = fileStorageService;
-        this.secureFileStorageService = secureFileStorageService;
     }
 
     @Operation(summary = "회원의 복약 스케줄 목록 조회",

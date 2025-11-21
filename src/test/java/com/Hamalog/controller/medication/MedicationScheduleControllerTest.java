@@ -3,7 +3,6 @@ package com.Hamalog.controller.medication;
 import com.Hamalog.domain.medication.MedicationSchedule;
 import com.Hamalog.dto.medication.request.MedicationScheduleCreateRequest;
 import com.Hamalog.dto.medication.request.MedicationScheduleUpdateRequest;
-import com.Hamalog.service.medication.FileStorageService;
 import com.Hamalog.service.medication.MedicationScheduleService;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import org.junit.jupiter.api.BeforeEach;
@@ -55,8 +54,6 @@ class MedicationScheduleControllerTest {
     @Mock
     private MedicationScheduleService medicationScheduleService;
 
-    @Mock
-    private FileStorageService fileStorageService;
 
     @InjectMocks
     private MedicationScheduleController medicationScheduleController;

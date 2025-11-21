@@ -2,14 +2,12 @@ package com.Hamalog.service.auth;
 
 import com.Hamalog.domain.events.member.MemberDeletedEvent;
 import com.Hamalog.domain.member.Member;
-import com.Hamalog.domain.medication.MedicationRecord;
-import com.Hamalog.domain.medication.MedicationSchedule;
-import com.Hamalog.domain.sideEffect.SideEffectRecord;
 import com.Hamalog.dto.auth.request.SignupRequest;
 import com.Hamalog.dto.auth.response.LoginResponse;
 import com.Hamalog.dto.auth.response.TokenRefreshResponse;
 import com.Hamalog.exception.CustomException;
 import com.Hamalog.exception.ErrorCode;
+import com.Hamalog.logging.SensitiveDataMasker;
 import com.Hamalog.repository.member.MemberRepository;
 import com.Hamalog.repository.medication.MedicationRecordRepository;
 import com.Hamalog.repository.medication.MedicationScheduleRepository;
@@ -82,7 +80,9 @@ public class AuthService {
         // RefreshToken 생성
         var refreshToken = refreshTokenService.createRefreshToken(member.getMemberId());
 
-        log.info("[AUTH] User logged in - loginId: {}, memberId: {}", loginId, member.getMemberId());
+        log.info("[AUTH] User logged in - loginId: {}, memberId: {}",
+            SensitiveDataMasker.maskEmail(loginId),
+            SensitiveDataMasker.maskUserId(member.getMemberId()));
 
         return new LoginResponse(
             accessToken,
@@ -126,7 +126,8 @@ public class AuthService {
         // 1. 즉시 토큰 무효화 (트랜잭션 내부에서 처리하여 동시성 문제 방지)
         if (isValidTokenFormat(token)) {
             tokenBlacklistService.blacklistToken(token);
-            log.info("[AUTH] Token blacklisted immediately during member deletion - loginId: {}", loginId);
+            log.info("[AUTH] Token blacklisted immediately during member deletion - loginId: {}",
+                SensitiveDataMasker.maskEmail(loginId));
         }
 
         // 2. 회원 조회 및 검증
@@ -141,7 +142,9 @@ public class AuthService {
         // 4. 회원 완전 삭제
         memberRepository.delete(member);
         
-        log.info("[AUTH] Member deleted successfully - loginId: {}, memberId: {}", loginId, memberId);
+        log.info("[AUTH] Member deleted successfully - loginId: {}, memberId: {}",
+            SensitiveDataMasker.maskEmail(loginId),
+            SensitiveDataMasker.maskUserId(memberId));
 
         // 5. 이벤트 발행 (추가 후처리용)
         eventPublisher.publishEvent(new MemberDeletedEvent(loginId, token, memberId));

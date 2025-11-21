@@ -8,6 +8,8 @@ import com.Hamalog.security.jwt.JwtAuthenticationFilter;
 import com.Hamalog.security.jwt.JwtTokenProvider;
 import com.Hamalog.security.oauth2.OAuth2AuthenticationSuccessHandler;
 import com.Hamalog.service.oauth2.KakaoOAuth2UserService;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.context.annotation.Bean;
@@ -30,6 +32,8 @@ import org.springframework.web.cors.UrlBasedCorsConfigurationSource;
 @Configuration
 @EnableWebSecurity
 public class SecurityConfig {
+
+    private static final Logger log = LoggerFactory.getLogger(SecurityConfig.class);
 
     private final CustomUserDetailsService customUserDetailsService;
     private final KakaoOAuth2UserService kakaoOAuth2UserService;
@@ -63,16 +67,29 @@ public class SecurityConfig {
             @Value("${hamalog.cors.allowed-origins:http://localhost:3000}") String allowedOriginsCsv
     ) throws Exception {
         http
+                // JWT 기반 stateless 인증에서는 CSRF 불필요
+                // 대신 SameSite Cookie 및 추가 보안 헤더로 보호
                 .csrf(csrf -> csrf.disable())
                 .cors(cors -> cors.configurationSource(corsConfigurationSource(allowedOriginsCsv)))
                 .headers(headers -> headers
-                        .contentSecurityPolicy(csp -> csp.policyDirectives("default-src 'self'; script-src 'self' 'unsafe-inline'; style-src 'self' 'unsafe-inline'; img-src 'self' data:; font-src 'self'; connect-src 'self'"))
+                        .contentSecurityPolicy(csp -> csp.policyDirectives(
+                            "default-src 'self'; " +
+                            "script-src 'self'; " +  // unsafe-inline 제거 (XSS 방지)
+                            "style-src 'self' 'unsafe-inline'; " +
+                            "img-src 'self' data: https:; " +
+                            "font-src 'self'; " +
+                            "connect-src 'self'; " +
+                            "frame-ancestors 'none'; " +  // Clickjacking 방지
+                            "base-uri 'self'; " +
+                            "form-action 'self'"
+                        ))
                         .frameOptions(frame -> frame.deny())
                         .contentTypeOptions(Customizer.withDefaults())
                         .referrerPolicy(ref -> ref.policy(org.springframework.security.web.header.writers.ReferrerPolicyHeaderWriter.ReferrerPolicy.STRICT_ORIGIN_WHEN_CROSS_ORIGIN))
                         .httpStrictTransportSecurity(hstsConfig -> hstsConfig
                                 .maxAgeInSeconds(31536000)
                                 .includeSubDomains(true)
+                                .preload(true)  // HSTS Preload 추가
                         )
                         .addHeaderWriter(new org.springframework.security.web.header.writers.StaticHeadersWriter("X-Permitted-Cross-Domain-Policies", "none"))
                         .addHeaderWriter(new org.springframework.security.web.header.writers.StaticHeadersWriter("X-Download-Options", "noopen"))
@@ -126,25 +143,40 @@ public class SecurityConfig {
             @Value("${hamalog.cors.allowed-origins:http://localhost:3000}") String allowedOriginsCsv
     ) {
         CorsConfiguration config = new CorsConfiguration();
+
+        // ✅ 명시적으로 허용된 Origin만 추가
         if (allowedOriginsCsv != null && !allowedOriginsCsv.isBlank()) {
             for (String origin : allowedOriginsCsv.split(",")) {
                 String trimmed = origin.trim();
                 if (!trimmed.isEmpty()) {
+                    // 프로덕션에서는 정확한 도메인만 허용
                     config.addAllowedOriginPattern(trimmed);
                 }
             }
+        } else {
+            // 기본값: 개발 환경
+            config.addAllowedOriginPattern("http://localhost:3000");
         }
+
         config.setAllowCredentials(true);
+
+        // ✅ 필요한 헤더만 명시적으로 허용
         config.addAllowedHeader("Authorization");
         config.addAllowedHeader("Content-Type");
         config.addAllowedHeader("Accept");
+        config.addAllowedHeader("X-Requested-With");
+
+        // ✅ 필요한 HTTP 메서드만 허용
         config.addAllowedMethod("GET");
         config.addAllowedMethod("POST");
         config.addAllowedMethod("PUT");
         config.addAllowedMethod("PATCH");
         config.addAllowedMethod("DELETE");
         config.addAllowedMethod("OPTIONS");
+
+        // ✅ Preflight 캐시 시간 설정 (1시간)
         config.setMaxAge(3600L);
+
         UrlBasedCorsConfigurationSource source = new UrlBasedCorsConfigurationSource();
         source.registerCorsConfiguration("/**", config);
         return source;

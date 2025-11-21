@@ -196,7 +196,7 @@ class SecurityConfigTest {
 
     @Test
     @DisplayName("Should handle empty origins string in CORS configuration")
-    void corsConfigurationSource_EmptyOrigins_HandlesGracefully() {
+    void corsConfigurationSource_EmptyOrigins_UsesDefault() {
         // given
         String emptyOrigins = "";
 
@@ -210,13 +210,13 @@ class SecurityConfigTest {
         CorsConfiguration config = source.getCorsConfigurations().get("/**");
 
         assertThat(config).isNotNull();
-        // When no origins are provided, getAllowedOriginPatterns() returns null
-        assertThat(config.getAllowedOriginPatterns()).isNullOrEmpty();
+        // 기본값 localhost:3000이 설정됨
+        assertThat(config.getAllowedOriginPatterns()).containsExactly("http://localhost:3000");
     }
 
     @Test
     @DisplayName("Should handle null origins string in CORS configuration")
-    void corsConfigurationSource_NullOrigins_HandlesGracefully() {
+    void corsConfigurationSource_NullOrigins_UsesDefault() {
         // when
         CorsConfigurationSource corsConfigurationSource = securityConfig.corsConfigurationSource(null);
 
@@ -227,8 +227,8 @@ class SecurityConfigTest {
         CorsConfiguration config = source.getCorsConfigurations().get("/**");
 
         assertThat(config).isNotNull();
-        // When null origins are provided, getAllowedOriginPatterns() returns null
-        assertThat(config.getAllowedOriginPatterns()).isNullOrEmpty();
+        // 기본값 localhost:3000이 설정됨
+        assertThat(config.getAllowedOriginPatterns()).containsExactly("http://localhost:3000");
     }
 
     @Test

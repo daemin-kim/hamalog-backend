@@ -123,18 +123,28 @@ public class AuthService {
 
     @Transactional(rollbackFor = {Exception.class})
     public void deleteMember(String loginId, String token) {
+        // 1. 즉시 토큰 무효화 (트랜잭션 내부에서 처리하여 동시성 문제 방지)
+        if (isValidTokenFormat(token)) {
+            tokenBlacklistService.blacklistToken(token);
+            log.info("[AUTH] Token blacklisted immediately during member deletion - loginId: {}", loginId);
+        }
+
+        // 2. 회원 조회 및 검증
         Member member = memberRepository.findByLoginId(loginId)
                 .orElseThrow(() -> new CustomException(ErrorCode.MEMBER_NOT_FOUND));
 
         Long memberId = member.getMemberId();
+
+        // 3. 관련 데이터 삭제 (cascade 순서 보장)
         deleteMemberRelatedData(memberId);
         
+        // 4. 회원 완전 삭제
         memberRepository.delete(member);
         
-        // Publish event to handle Redis operations after transaction completion
-        if (isValidTokenFormat(token)) {
-            eventPublisher.publishEvent(new MemberDeletedEvent(loginId, token, memberId));
-        }
+        log.info("[AUTH] Member deleted successfully - loginId: {}, memberId: {}", loginId, memberId);
+
+        // 5. 이벤트 발행 (추가 후처리용)
+        eventPublisher.publishEvent(new MemberDeletedEvent(loginId, token, memberId));
     }
 
     private void deleteMemberRelatedData(Long memberId) {

@@ -170,8 +170,8 @@ class RateLimitingServiceTest {
     }
 
     @Test
-    @DisplayName("Redis 오류 시 허용 (fail-open)")
-    void tryConsumeAuthRequest_RedisError_FailOpen() {
+    @DisplayName("Redis 오류 시 차단 (fail-safe)")
+    void tryConsumeAuthRequest_RedisError_FailSafe() {
         // Given
         String key = "test-key";
         given(zSetOperations.removeRangeByScore(anyString(), anyDouble(), anyDouble()))
@@ -181,6 +181,6 @@ class RateLimitingServiceTest {
         boolean result = rateLimitingService.tryConsumeAuthRequest(key);
 
         // Then
-        assertThat(result).isTrue(); // fail-open behavior
+        assertThat(result).isFalse(); // fail-safe behavior (보안 우선)
     }
 }

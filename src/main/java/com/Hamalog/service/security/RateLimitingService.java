@@ -45,7 +45,8 @@ public class RateLimitingService {
             Long currentCount = redisTemplate.opsForZSet().count(redisKey, windowStart, currentTime);
             
             if (currentCount != null && currentCount >= maxRequests) {
-                log.warn("Rate limit exceeded for key: {}, current count: {}, max: {}", key, currentCount, maxRequests);
+                log.warn("[RATE_LIMIT] Rate limit exceeded for key: {}, current count: {}, max: {}",
+                    key, currentCount, maxRequests);
                 return false;
             }
 
@@ -54,8 +55,10 @@ public class RateLimitingService {
             
             return true;
         } catch (Exception e) {
-            log.error("Error checking rate limit for key: " + key, e);
-            return true;
+            log.error("[RATE_LIMIT] Error checking rate limit for key: " + key +
+                ". Denying access for security (fail-safe)", e);
+            // Redis 장애 시 보수적으로 접근 차단 (보안 우선)
+            return false;
         }
     }
 

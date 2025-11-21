@@ -17,8 +17,11 @@ import io.swagger.v3.oas.annotations.responses.ApiResponse;
 import io.swagger.v3.oas.annotations.responses.ApiResponses;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import jakarta.validation.Valid;
+import jakarta.validation.constraints.Max;
 import org.springframework.data.domain.Page;
+import org.springframework.data.domain.PageRequest;
 import org.springframework.data.domain.Pageable;
+import org.springframework.data.web.PageableDefault;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
@@ -58,10 +61,15 @@ public class MedicationScheduleController {
     public ResponseEntity<MedicationScheduleListResponse> getMedicationSchedules(
             @Parameter(description = "회원 ID", required = true, example = "1", in = ParameterIn.PATH)
             @PathVariable("member-id") Long memberId,
-            @Parameter(description = "페이지네이션 정보", required = false)
-            Pageable pageable,
+            @Parameter(description = "페이지네이션 정보 (최대 100개)", required = false)
+            @PageableDefault(size = 20, page = 0) Pageable pageable,
             @AuthenticationPrincipal UserDetails userDetails
     ){
+        // 페이지 크기 제한 (DoS 방지)
+        if (pageable.getPageSize() > 100) {
+            pageable = PageRequest.of(pageable.getPageNumber(), 100, pageable.getSort());
+        }
+
         Page<MedicationSchedule> medicationSchedules = medicationScheduleService.getMedicationSchedules(memberId, pageable);
         Page<MedicationScheduleResponse> medicationScheduleResponses = medicationSchedules.map(MedicationScheduleResponse::from);
         MedicationScheduleListResponse response = MedicationScheduleListResponse.from(medicationScheduleResponses);

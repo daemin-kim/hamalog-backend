@@ -5,6 +5,9 @@ import com.Hamalog.dto.auth.response.LoginResponse;
 import com.Hamalog.dto.auth.request.SignupRequest;
 import com.Hamalog.dto.auth.request.TokenRefreshRequest;
 import com.Hamalog.dto.auth.response.TokenRefreshResponse;
+import com.Hamalog.exception.CustomException;
+import com.Hamalog.exception.ErrorCode;
+import com.Hamalog.security.jwt.JwtTokenProvider;
 import com.Hamalog.service.auth.AuthService;
 import com.Hamalog.service.i18n.MessageService;
 import io.swagger.v3.oas.annotations.Operation;
@@ -28,6 +31,7 @@ public class AuthController {
 
     private final AuthService authService;
     private final MessageService messageService;
+    private final JwtTokenProvider jwtTokenProvider;
 
     @PostMapping("/signup")
     public ResponseEntity<String> signup(@Valid @RequestBody SignupRequest request) {
@@ -57,16 +61,28 @@ public class AuthController {
     }
 
     @PostMapping("/logout")
+    @Operation(summary = "로그아웃", description = "현재 로그인된 사용자를 로그아웃하고 토큰을 무효화합니다.")
+    @ApiResponses({
+        @ApiResponse(responseCode = "200", description = "로그아웃 성공"),
+        @ApiResponse(responseCode = "401", description = "유효하지 않은 토큰")
+    })
     public ResponseEntity<String> logout(HttpServletRequest request) {
         String authorizationHeader = request.getHeader("Authorization");
         
-        if (authorizationHeader != null && authorizationHeader.startsWith("Bearer ")) {
-            String token = authorizationHeader.substring(7);
-            authService.logoutUser(token);
-            return ResponseEntity.ok(messageService.getMessage("auth.logout.success"));
+        // Bearer 토큰 형식 검증
+        if (authorizationHeader == null || !authorizationHeader.startsWith("Bearer ")) {
+            throw new CustomException(ErrorCode.INVALID_TOKEN);
         }
-        
-        return ResponseEntity.ok(messageService.getMessage("auth.logout.success.simple"));
+
+        String token = authorizationHeader.substring(7);
+
+        // 토큰 유효성 검증
+        if (!jwtTokenProvider.validateToken(token)) {
+            throw new CustomException(ErrorCode.INVALID_TOKEN);
+        }
+
+        authService.logoutUser(token);
+        return ResponseEntity.ok(messageService.getMessage("auth.logout.success"));
     }
 
     @DeleteMapping("/account")

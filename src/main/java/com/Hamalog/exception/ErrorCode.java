@@ -15,6 +15,7 @@ public enum ErrorCode {
     // Authorization and Security Errors
     UNAUTHORIZED("UNAUTHORIZED", "인증이 필요합니다."),
     FORBIDDEN("FORBIDDEN", "접근 권한이 없습니다."),
+    INVALID_TOKEN("INVALID_TOKEN", "유효하지 않은 토큰입니다."),
     BAD_REQUEST("BAD_REQUEST", "잘못된 요청입니다."),
     
     // System Errors

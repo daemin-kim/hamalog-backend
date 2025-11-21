@@ -3,6 +3,8 @@ package com.Hamalog.controller.auth;
 import com.Hamalog.dto.auth.request.LoginRequest;
 import com.Hamalog.dto.auth.request.SignupRequest;
 import com.Hamalog.dto.auth.response.LoginResponse;
+import com.Hamalog.handler.GlobalExceptionHandler;
+import com.Hamalog.security.jwt.JwtTokenProvider;
 import com.Hamalog.service.auth.AuthService;
 import com.Hamalog.service.i18n.MessageService;
 import com.fasterxml.jackson.databind.ObjectMapper;
@@ -46,6 +48,9 @@ class AuthControllerTest {
     @Mock
     private MessageService messageService;
 
+    @Mock
+    private JwtTokenProvider jwtTokenProvider;
+
     @InjectMocks
     private AuthController authController;
 
@@ -64,6 +69,7 @@ class AuthControllerTest {
         jsonConverter.setObjectMapper(objectMapper);
         
         mockMvc = MockMvcBuilders.standaloneSetup(authController)
+                .setControllerAdvice(new GlobalExceptionHandler())
                 .setMessageConverters(stringConverter, jsonConverter)
                 .defaultResponseCharacterEncoding(StandardCharsets.UTF_8)
                 .build();
@@ -162,24 +168,26 @@ class AuthControllerTest {
     @DisplayName("로그아웃 성공 - JWT 토큰 포함")
     void logout_WithJwtToken_Success() throws Exception {
         // Given
+        String token = "jwt.token.here";
+        given(jwtTokenProvider.validateToken(token)).willReturn(true);
         doNothing().when(authService).logoutUser(anyString());
 
         // When & Then
         mockMvc.perform(post("/auth/logout")
-                        .header("Authorization", "Bearer jwt.token.here"))
+                        .header("Authorization", "Bearer " + token))
                 .andExpect(status().isOk())
                 .andExpect(content().string("로그아웃 성공 - 토큰이 무효화되었습니다"));
 
-        verify(authService).logoutUser("jwt.token.here");
+        verify(jwtTokenProvider).validateToken(token);
+        verify(authService).logoutUser(token);
     }
 
     @Test
-    @DisplayName("로그아웃 성공 - JWT 토큰 없음")
-    void logout_WithoutJwtToken_Success() throws Exception {
+    @DisplayName("로그아웃 실패 - JWT 토큰 없음")
+    void logout_WithoutJwtToken_Failure() throws Exception {
         // When & Then
         mockMvc.perform(post("/auth/logout"))
-                .andExpect(status().isOk())
-                .andExpect(content().string("로그아웃 성공"));
+                .andExpect(status().is4xxClientError());
 
         verify(authService, never()).logoutUser(anyString());
     }

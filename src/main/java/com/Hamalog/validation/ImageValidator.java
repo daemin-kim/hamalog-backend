@@ -28,6 +28,18 @@ public class ImageValidator implements ConstraintValidator<ValidImage, Multipart
             return true;
         }
 
+        // ✅ 파일명 검증 (Path Traversal 공격 방지)
+        String originalFilename = file.getOriginalFilename();
+        if (originalFilename == null || !isValidFilename(originalFilename)) {
+            context.disableDefaultConstraintViolation();
+            context.buildConstraintViolationWithTemplate(
+                "Invalid filename. Only alphanumeric characters, dash, underscore, and dot are allowed"
+            ).addConstraintViolation();
+
+            log.warn("[UPLOAD] Invalid filename detected - possible path traversal attack: {}", originalFilename);
+            return false;
+        }
+
         // ✅ 파일 크기 검증
         if (file.getSize() > maxSize) {
             context.disableDefaultConstraintViolation();
@@ -69,6 +81,24 @@ public class ImageValidator implements ConstraintValidator<ValidImage, Multipart
         }
 
         return true;
+    }
+
+    /**
+     * 파일명 유효성 검증 (Path Traversal 공격 방지)
+     * 알파벳, 숫자, 하이픈, 언더스코어, 점만 허용
+     */
+    private boolean isValidFilename(String filename) {
+        if (filename == null || filename.trim().isEmpty()) {
+            return false;
+        }
+
+        // 경로 순회 시도 차단
+        if (filename.contains("..") || filename.contains("/") || filename.contains("\\")) {
+            return false;
+        }
+
+        // 안전한 문자만 허용 (알파벳, 숫자, -, _, .)
+        return filename.matches("^[a-zA-Z0-9._-]+$");
     }
 
     /**

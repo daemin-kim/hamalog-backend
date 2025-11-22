@@ -2,13 +2,71 @@
 
 ## 📋 개요
 
-GitHub Actions를 통한 자동 배포를 시작하려면 **18개의 GitHub Secrets**을 설정해야 합니다.
+현재 상황:
+- ✅ **11개의 Secrets이 이미 설정됨**
+- 🚨 **4개만 추가로 설정하면 배포 가능!**
+- 🟡 **2개 더 설정하면 완벽!**
 
-**⚠️ 중요**: 이 설정 없이는 배포가 실패합니다!
+**⚠️ 중요**: 4개의 필수 Secrets이 설정되어야만 배포가 시작됩니다!
 
 ---
 
-## 🚀 빠른 시작 (5분)
+## 🚀 빠른 시작 (2분)
+
+### ⚠️ 중요: SSH_PRIVATE_KEY 이름 변경
+
+현재 `SERVER_SSH_KEY`로 설정되어 있으나, workflow가 `SSH_PRIVATE_KEY`를 찾고 있습니다.
+
+**해결 방법:**
+```
+GitHub Repository Settings → Secrets and variables → Actions
+→ SERVER_SSH_KEY 클릭
+→ "Update secret" 클릭
+→ Name을 SSH_PRIVATE_KEY로 변경
+→ "Update secret" 클릭
+```
+
+또는 새로 생성하고 기존 것 삭제:
+```bash
+# 기존 값 확인 후 복사
+# GitHub UI에서 SERVER_SSH_KEY의 값 복사
+
+# 새로 생성
+GitHub → Settings → Secrets → New repository secret
+Name: SSH_PRIVATE_KEY
+Value: (SERVER_SSH_KEY의 값 붙여넣기)
+
+# 기존 것 삭제
+SERVER_SSH_KEY → Delete
+```
+
+### 새로 설정해야 할 4개의 필수 Secrets
+
+```
+1️⃣ SERVER_PORT = 22
+2️⃣ JWT_EXPIRY = 900000
+3️⃣ JWT_REFRESH_TOKEN_EXPIRY = 604800000
+4️⃣ KAKAO_REDIRECT_URI = http://49.142.154.182:8080/oauth2/auth/kakao/callback
+```
+
+### 권장: 추가로 2개 설정
+
+```
+5️⃣ DB_NAME = Hamalog
+6️⃣ DB_USERNAME = hamalog_user
+```
+
+### GitHub CLI로 빠르게 설정 (권장)
+
+```bash
+gh secret set SSH_PRIVATE_KEY < ~/.ssh/id_rsa
+gh secret set SERVER_PORT -b "22"
+gh secret set JWT_EXPIRY -b "900000"
+gh secret set JWT_REFRESH_TOKEN_EXPIRY -b "604800000"
+gh secret set KAKAO_REDIRECT_URI -b "http://49.142.154.182:8080/oauth2/auth/kakao/callback"
+gh secret set DB_NAME -b "Hamalog"
+gh secret set DB_USERNAME -b "hamalog_user"
+```
 
 ### 1단계: 서버 정보 수집
 
@@ -184,27 +242,39 @@ Secrets 설정 후 다음을 확인하세요:
 ```
 GitHub Repository Settings → Secrets and variables → Actions
 
-[ ] SSH_PRIVATE_KEY     ✓ 설정됨
-[ ] SERVER_HOST         ✓ 설정됨
-[ ] SERVER_USER         ✓ 설정됨
-[ ] SERVER_PORT         ✓ 설정됨
-[ ] JWT_SECRET          ✓ 설정됨
-[ ] JWT_EXPIRY          ✓ 설정됨
-[ ] JWT_REFRESH_TOKEN_EXPIRY ✓ 설정됨
-[ ] HAMALOG_ENCRYPTION_KEY   ✓ 설정됨
-[ ] KAKAO_CLIENT_ID     ✓ 설정됨
-[ ] KAKAO_CLIENT_SECRET ✓ 설정됨
-[ ] KAKAO_REDIRECT_URI  ✓ 설정됨
-[ ] DB_NAME             ✓ 설정됨
-[ ] DB_USERNAME         ✓ 설정됨
-[ ] DB_PASSWORD         ✓ 설정됨
-[ ] MYSQL_ROOT_PASSWORD ✓ 설정됨
-[ ] SPRING_DATA_REDIS_PASSWORD ✓ 설정됨
-[ ] FRONTEND_URL        ✓ 설정됨 (또는 기본값 사용)
-[ ] ALLOWED_ORIGINS     ✓ 설정됨 (또는 기본값 사용)
+✅ 이미 설정된 것들:
+[✓] CR_PAT
+[✓] DB_PASSWORD
+[✓] HAMALOG_ENCRYPTION_KEY
+[✓] JWT_SECRET
+[✓] KAKAO_CLIENT_ID
+[✓] KAKAO_CLIENT_SECRET
+[✓] MYSQL_ROOT_PASSWORD
+[✓] SERVER_HOST
+[✓] SERVER_USER
+[✓] SPRING_DATA_REDIS_PASSWORD
+
+🚨 반드시 설정 필요:
+[ ] SSH_PRIVATE_KEY ← SERVER_SSH_KEY 이름 변경 또는 새로 생성
+[ ] SERVER_PORT ← 새로 설정
+[ ] JWT_EXPIRY ← 새로 설정
+[ ] JWT_REFRESH_TOKEN_EXPIRY ← 새로 설정
+[ ] KAKAO_REDIRECT_URI ← 새로 설정
+
+🟡 권장 설정:
+[ ] DB_NAME ← 새로 설정
+[ ] DB_USERNAME ← 새로 설정
+
+🟢 선택 (기본값 있음):
+[ ] FRONTEND_URL (선택)
+[ ] ALLOWED_ORIGINS (선택)
 ```
 
-모든 필수 항목(🚨)이 체크되었으면 배포 준비 완료!
+**최소 필수:** 🚨 4-5개 만 설정하면 배포 시작!
+
+---
+
+**자세한 내용은 [GITHUB_SECRETS_TODO.md](GITHUB_SECRETS_TODO.md)를 참고하세요.**
 
 ---
 

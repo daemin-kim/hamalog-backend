@@ -33,9 +33,22 @@
 **⚠️ 중요 사항:**
 - 현재 `SERVER_SSH_KEY`라는 이름으로 설정되어 있음
 - GitHub Actions workflow가 `SSH_PRIVATE_KEY`라는 이름을 찾고 있음
-- **해결 방법:**
-  1. 기존 `SERVER_SSH_KEY` 클릭 → "Update" → 이름을 `SSH_PRIVATE_KEY`로 변경
-  2. 또는 `SERVER_SSH_KEY`의 값을 복사해서 `SSH_PRIVATE_KEY`로 새로 생성 후 `SERVER_SSH_KEY` 삭제
+- **GitHub UI에서 이름 변경 불가** → 삭제 후 새로 생성 필요
+
+**해결 방법:**
+1. 기존 `SERVER_SSH_KEY` 삭제
+2. `SSH_PRIVATE_KEY` 새로 생성
+
+**🚀 한 줄로 끝내기 (CLI 권장):**
+```bash
+# 로컬 SSH 키를 GitHub에 자동 업로드
+gh secret set SSH_PRIVATE_KEY < ~/.ssh/id_rsa
+
+# 확인
+gh secret list | grep SSH_PRIVATE_KEY
+```
+
+**📖 상세 가이드:** [SSH_KEY_QUICK_SETUP.md](SSH_KEY_QUICK_SETUP.md) 참고
 
 #### 2️⃣ **SERVER_PORT**
 ```

@@ -152,13 +152,13 @@ jobs:
         }
         
         echo "Configuring SSH options for reliability..."
-        cat >> ~/.ssh/config << 'SSHCONFIG'
+        tee -a ~/.ssh/config > /dev/null << 'SSHEOF'
 Host *
-ConnectTimeout 30
-StrictHostKeyChecking accept-new
-UserKnownHostsFile ~/.ssh/known_hosts
-BatchMode yes
-SSHCONFIG
+  ConnectTimeout 30
+  StrictHostKeyChecking accept-new
+  UserKnownHostsFile ~/.ssh/known_hosts
+  BatchMode yes
+SSHEOF
         
         chmod 600 ~/.ssh/config
         
@@ -306,13 +306,13 @@ SSHCONFIG
         chmod 600 ~/.ssh/id_rsa
         
         echo "Configuring SSH..."
-        cat >> ~/.ssh/config << 'SSHCONFIG'
+        tee -a ~/.ssh/config > /dev/null << 'SSHEOF'
 Host *
-ConnectTimeout 30
-StrictHostKeyChecking accept-new
-UserKnownHostsFile ~/.ssh/known_hosts
-BatchMode yes
-SSHCONFIG
+  ConnectTimeout 30
+  StrictHostKeyChecking accept-new
+  UserKnownHostsFile ~/.ssh/known_hosts
+  BatchMode yes
+SSHEOF
         chmod 600 ~/.ssh/config
         
         ssh-keyscan -p ${SERVER_PORT} -T 10 $SERVER_HOST >> ~/.ssh/known_hosts 2>/dev/null || true

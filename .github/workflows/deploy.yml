@@ -154,10 +154,10 @@ jobs:
         echo "Configuring SSH options for reliability..."
         cat >> ~/.ssh/config << 'SSHCONFIG'
 Host *
-  ConnectTimeout 30
-  StrictHostKeyChecking accept-new
-  UserKnownHostsFile ~/.ssh/known_hosts
-  BatchMode yes
+ConnectTimeout 30
+StrictHostKeyChecking accept-new
+UserKnownHostsFile ~/.ssh/known_hosts
+BatchMode yes
 SSHCONFIG
         
         chmod 600 ~/.ssh/config
@@ -308,10 +308,10 @@ SSHCONFIG
         echo "Configuring SSH..."
         cat >> ~/.ssh/config << 'SSHCONFIG'
 Host *
-  ConnectTimeout 30
-  StrictHostKeyChecking accept-new
-  UserKnownHostsFile ~/.ssh/known_hosts
-  BatchMode yes
+ConnectTimeout 30
+StrictHostKeyChecking accept-new
+UserKnownHostsFile ~/.ssh/known_hosts
+BatchMode yes
 SSHCONFIG
         chmod 600 ~/.ssh/config
         

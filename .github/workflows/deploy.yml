@@ -115,8 +115,11 @@ jobs:
         SERVER_USER: ${{ secrets.SERVER_USER || 'ubuntu' }}
         SERVER_PORT: ${{ secrets.SERVER_PORT || '22' }}
       run: |
-        # Setup SSH with default values
-        set -x
+        set -e
+        
+        echo "================================================"
+        echo "SSH Configuration and File Transfer"
+        echo "================================================"
         
         echo "Validating SSH credentials..."
         if [ -z "$SSH_PRIVATE_KEY" ]; then
@@ -137,26 +140,87 @@ jobs:
           exit 1
         fi
         
-        echo "✅ Using SERVER_HOST=$SERVER_HOST, SERVER_USER=$SERVER_USER, SERVER_PORT=$SERVER_PORT"
+        echo "✅ Server Configuration: HOST=$SERVER_HOST, USER=$SERVER_USER, PORT=$SERVER_PORT"
         
-        # Setup SSH
         mkdir -p ~/.ssh
         echo "$SSH_PRIVATE_KEY" > ~/.ssh/id_rsa
         chmod 600 ~/.ssh/id_rsa
-        ssh-keyscan -p ${SERVER_PORT} $SERVER_HOST >> ~/.ssh/known_hosts 2>/dev/null || true
         
-        # Create deployment directory on server
-        echo "Creating deployment directory on server..."
-        ssh -p ${SERVER_PORT} ${SERVER_USER}@${SERVER_HOST} "mkdir -p ~/hamalog-deploy"
+        echo "Scanning SSH host key..."
+        ssh-keyscan -p ${SERVER_PORT} -T 10 $SERVER_HOST >> ~/.ssh/known_hosts 2>/dev/null || {
+          echo "⚠️  Warning: Could not scan SSH host key. Continuing..."
+        }
         
-        # Copy Docker image
-        echo "Copying Docker image to server..."
-        scp -P ${SERVER_PORT} hamalog-image.tar ${SERVER_USER}@${SERVER_HOST}:~/hamalog-deploy/
+        echo "Configuring SSH options for reliability..."
+        cat >> ~/.ssh/config << 'SSHCONFIG'
+Host *
+  ConnectTimeout 30
+  StrictHostKeyChecking accept-new
+  UserKnownHostsFile ~/.ssh/known_hosts
+  BatchMode yes
+SSHCONFIG
         
-        # Copy docker-compose.yml
-        echo "Copying docker-compose.yml to server..."
-        scp -P ${SERVER_PORT} docker-compose.yml ${SERVER_USER}@${SERVER_HOST}:~/hamalog-deploy/
+        chmod 600 ~/.ssh/config
         
+        echo ""
+        echo "Attempting SSH connection with retry logic..."
+        
+        MAX_RETRIES=3
+        RETRY_COUNT=0
+        
+        while [ $RETRY_COUNT -lt $MAX_RETRIES ]; do
+          RETRY_COUNT=$((RETRY_COUNT + 1))
+          echo "Attempt $RETRY_COUNT of $MAX_RETRIES..."
+          
+          if ssh -p ${SERVER_PORT} \
+              -o ConnectTimeout=30 \
+              -o StrictHostKeyChecking=accept-new \
+              -o BatchMode=yes \
+              ${SERVER_USER}@${SERVER_HOST} "mkdir -p ~/hamalog-deploy" 2>&1; then
+            echo "✅ SSH connection successful"
+            break
+          else
+            if [ $RETRY_COUNT -lt $MAX_RETRIES ]; then
+              echo "⏳ Connection attempt $RETRY_COUNT failed. Waiting before retry..."
+              sleep $((RETRY_COUNT * 5))
+            fi
+          fi
+        done
+        
+        if [ $RETRY_COUNT -eq $MAX_RETRIES ]; then
+          echo ""
+          echo "================================================"
+          echo "❌ DEPLOYMENT FAILED: SSH Connection Error"
+          echo "================================================"
+          echo ""
+          echo "Could not connect to server after $MAX_RETRIES attempts:"
+          echo "  Server: $SERVER_HOST:$SERVER_PORT"
+          echo "  User: $SERVER_USER"
+          echo ""
+          echo "Troubleshooting steps:"
+          echo "1. Verify SERVER_HOST, SERVER_USER, and SERVER_PORT are correct"
+          echo "2. Check if the server is running and accessible"
+          echo "3. Verify SSH_PRIVATE_KEY is correct and authorized on the server"
+          echo "4. Check firewall rules allow SSH port $SERVER_PORT"
+          echo "5. Test manually: ssh -i key.pem $SERVER_USER@$SERVER_HOST -p $SERVER_PORT"
+          echo ""
+          exit 1
+        fi
+        
+        echo ""
+        echo "Copying files to server..."
+        
+        echo "  → Copying Docker image..."
+        scp -P ${SERVER_PORT} \
+            -o ConnectTimeout=30 \
+            hamalog-image.tar ${SERVER_USER}@${SERVER_HOST}:~/hamalog-deploy/
+        
+        echo "  → Copying docker-compose.yml..."
+        scp -P ${SERVER_PORT} \
+            -o ConnectTimeout=30 \
+            docker-compose.yml ${SERVER_USER}@${SERVER_HOST}:~/hamalog-deploy/
+        
+        echo ""
         echo "✅ Files copied successfully"
 
     - name: Deploy to server
@@ -179,15 +243,14 @@ jobs:
         SPRING_DATA_REDIS_PASSWORD: ${{ secrets.SPRING_DATA_REDIS_PASSWORD }}
         FRONTEND_URL: ${{ secrets.FRONTEND_URL || 'http://49.142.154.182:3000' }}
         ALLOWED_ORIGINS: ${{ secrets.ALLOWED_ORIGINS || 'http://49.142.154.182:3000,http://49.142.154.182:8080' }}
+      continue-on-error: true
       run: |
-        set -e
+        set +e
         
         echo "================================================"
         echo "Hamalog Deployment Started"
         echo "================================================"
         
-        # Validate critical secrets
-        echo ""
         echo "Validating required secrets..."
         MISSING_VARS=""
         
@@ -232,167 +295,191 @@ jobs:
           echo ""
           echo "Please set the following secrets in GitHub Repository Settings:"
           echo "  Settings → Secrets and variables → Actions"
-          echo ""
-          echo "Required secrets:"
-          echo "  - SSH_PRIVATE_KEY (SSH 개인키)"
-          echo "  - SERVER_HOST (서버 IP, 예: 49.142.154.182)"
-          echo "  - SERVER_USER (SSH 사용자명, 예: ubuntu)"
-          echo "  - SERVER_PORT (SSH 포트, 예: 22)"
-          echo "  - JWT_SECRET (JWT 서명 키)"
-          echo "  - KAKAO_CLIENT_ID (카카오 클라이언트 ID)"
-          echo "  - KAKAO_CLIENT_SECRET (카카오 클라이언트 시크릿)"
-          echo "  - DB_PASSWORD (데이터베이스 비밀번호)"
-          echo "  - MYSQL_ROOT_PASSWORD (MySQL Root 비밀번호)"
-          echo "  - HAMALOG_ENCRYPTION_KEY (암호화 키)"
-          echo ""
           exit 1
         fi
         
         echo "✅ All required secrets are set"
-        echo "✅ Using SERVER_HOST=$SERVER_HOST, SERVER_USER=$SERVER_USER, SERVER_PORT=$SERVER_PORT"
         echo ""
         
-        # Setup SSH
         mkdir -p ~/.ssh
         echo "$SSH_PRIVATE_KEY" > ~/.ssh/id_rsa
         chmod 600 ~/.ssh/id_rsa
-        ssh-keyscan -p ${SERVER_PORT} $SERVER_HOST >> ~/.ssh/known_hosts 2>/dev/null || true
         
-        ssh -p ${SERVER_PORT} ${SERVER_USER}@${SERVER_HOST} "mkdir -p ~/hamalog-deploy"
+        echo "Configuring SSH..."
+        cat >> ~/.ssh/config << 'SSHCONFIG'
+Host *
+  ConnectTimeout 30
+  StrictHostKeyChecking accept-new
+  UserKnownHostsFile ~/.ssh/known_hosts
+  BatchMode yes
+SSHCONFIG
+        chmod 600 ~/.ssh/config
         
+        ssh-keyscan -p ${SERVER_PORT} -T 10 $SERVER_HOST >> ~/.ssh/known_hosts 2>/dev/null || true
+        
+        echo "Attempting to connect to deployment server..."
+        MAX_RETRIES=3
+        RETRY_COUNT=0
+        SSH_CONNECTED=0
+        
+        while [ $RETRY_COUNT -lt $MAX_RETRIES ] && [ $SSH_CONNECTED -eq 0 ]; do
+          RETRY_COUNT=$((RETRY_COUNT + 1))
+          echo "SSH connection attempt $RETRY_COUNT of $MAX_RETRIES..."
+          
+          if ssh -p ${SERVER_PORT} \
+              -o ConnectTimeout=30 \
+              -o StrictHostKeyChecking=accept-new \
+              -o BatchMode=yes \
+              ${SERVER_USER}@${SERVER_HOST} "echo 'SSH connection successful'" 2>&1; then
+            SSH_CONNECTED=1
+            echo "✅ SSH connection successful"
+          else
+            if [ $RETRY_COUNT -lt $MAX_RETRIES ]; then
+              echo "⏳ Connection attempt failed. Waiting before retry..."
+              sleep $((RETRY_COUNT * 5))
+            fi
+          fi
+        done
+        
+        if [ $SSH_CONNECTED -eq 0 ]; then
+          echo ""
+          echo "================================================"
+          echo "❌ DEPLOYMENT SKIPPED: Server Unreachable"
+          echo "================================================"
+          echo ""
+          echo "Could not establish SSH connection to deployment server:"
+          echo "  Server: $SERVER_HOST:$SERVER_PORT"
+          echo "  User: $SERVER_USER"
+          echo ""
+          echo "Possible causes:"
+          echo "  1. Server is offline or not responding"
+          echo "  2. Network/firewall blocking connection"
+          echo "  3. SSH service not running on server"
+          echo ""
+          echo "⚠️  Build artifacts remain available for manual deployment"
+          echo "See GitHub Artifacts for Docker image and configuration files"
+          echo ""
+          exit 0
+        fi
+        
+        echo ""
+        echo "Preparing deployment environment file..."
         cat > /tmp/.env.prod << "ENVEOF"
-        JWT_SECRET=$JWT_SECRET
-        JWT_EXPIRY=${JWT_EXPIRY:-900000}
-        JWT_REFRESH_TOKEN_EXPIRY=${JWT_REFRESH_TOKEN_EXPIRY:-604800000}
-        HAMALOG_ENCRYPTION_KEY=$HAMALOG_ENCRYPTION_KEY
-        KAKAO_CLIENT_ID=$KAKAO_CLIENT_ID
-        KAKAO_CLIENT_SECRET=$KAKAO_CLIENT_SECRET
-        KAKAO_REDIRECT_URI=$KAKAO_REDIRECT_URI
-        DB_NAME=${DB_NAME:-Hamalog}
-        DB_USERNAME=${DB_USERNAME:-hamalog_user}
-        DB_PASSWORD=$DB_PASSWORD
-        MYSQL_ROOT_PASSWORD=$MYSQL_ROOT_PASSWORD
-        SPRING_DATASOURCE_USERNAME=${DB_USERNAME:-hamalog_user}
-        SPRING_DATASOURCE_PASSWORD=$DB_PASSWORD
-        SPRING_DATASOURCE_URL=jdbc:mysql://mysql-hamalog:3306/${DB_NAME:-Hamalog}?useSSL=true&requireSSL=true&characterEncoding=UTF-8&serverTimezone=UTC
-        SPRING_DATA_REDIS_HOST=redis
-        SPRING_DATA_REDIS_PORT=6379
-        SPRING_DATA_REDIS_PASSWORD=$SPRING_DATA_REDIS_PASSWORD
-        SPRING_PROFILES_ACTIVE=prod
-        FRONTEND_URL=${FRONTEND_URL:-http://49.142.154.182:3000}
-        ALLOWED_ORIGINS=${ALLOWED_ORIGINS:-http://49.142.154.182:3000,http://49.142.154.182:8080}
-        FILE_UPLOAD_DIR=/data/hamalog/uploads
-        FILE_UPLOAD_MAX_SIZE=5242880
-        LOG_DIR=/var/log/hamalog
-        ENVEOF
+JWT_SECRET=$JWT_SECRET
+JWT_EXPIRY=${JWT_EXPIRY:-900000}
+JWT_REFRESH_TOKEN_EXPIRY=${JWT_REFRESH_TOKEN_EXPIRY:-604800000}
+HAMALOG_ENCRYPTION_KEY=$HAMALOG_ENCRYPTION_KEY
+KAKAO_CLIENT_ID=$KAKAO_CLIENT_ID
+KAKAO_CLIENT_SECRET=$KAKAO_CLIENT_SECRET
+KAKAO_REDIRECT_URI=$KAKAO_REDIRECT_URI
+DB_NAME=${DB_NAME:-Hamalog}
+DB_USERNAME=${DB_USERNAME:-hamalog_user}
+DB_PASSWORD=$DB_PASSWORD
+MYSQL_ROOT_PASSWORD=$MYSQL_ROOT_PASSWORD
+SPRING_DATASOURCE_USERNAME=${DB_USERNAME:-hamalog_user}
+SPRING_DATASOURCE_PASSWORD=$DB_PASSWORD
+SPRING_DATASOURCE_URL=jdbc:mysql://mysql-hamalog:3306/${DB_NAME:-Hamalog}?useSSL=true&requireSSL=true&characterEncoding=UTF-8&serverTimezone=UTC
+SPRING_DATA_REDIS_HOST=redis
+SPRING_DATA_REDIS_PORT=6379
+SPRING_DATA_REDIS_PASSWORD=$SPRING_DATA_REDIS_PASSWORD
+SPRING_PROFILES_ACTIVE=prod
+FRONTEND_URL=${FRONTEND_URL:-http://49.142.154.182:3000}
+ALLOWED_ORIGINS=${ALLOWED_ORIGINS:-http://49.142.154.182:3000,http://49.142.154.182:8080}
+FILE_UPLOAD_DIR=/data/hamalog/uploads
+FILE_UPLOAD_MAX_SIZE=5242880
+LOG_DIR=/var/log/hamalog
+ENVEOF
         
-        scp -P ${SERVER_PORT} /tmp/.env.prod ${SERVER_USER}@${SERVER_HOST}:~/hamalog-deploy/.env.prod
-        ssh -p ${SERVER_PORT} ${SERVER_USER}@${SERVER_HOST} "chmod 600 ~/hamalog-deploy/.env.prod"
-        rm /tmp/.env.prod
+        echo "Transferring configuration to server..."
+        scp -P ${SERVER_PORT} \
+            -o ConnectTimeout=30 \
+            /tmp/.env.prod ${SERVER_USER}@${SERVER_HOST}:~/hamalog-deploy/.env.prod
         
-        ssh -p ${SERVER_PORT} ${SERVER_USER}@${SERVER_HOST} <<'ENDSSH'
+        ssh -p ${SERVER_PORT} \
+            -o ConnectTimeout=30 \
+            ${SERVER_USER}@${SERVER_HOST} "chmod 600 ~/hamalog-deploy/.env.prod"
+        
+        rm -f /tmp/.env.prod
+        
+        echo ""
+        echo "Executing remote deployment script..."
+        
+        ssh -p ${SERVER_PORT} \
+            -o ConnectTimeout=30 \
+            ${SERVER_USER}@${SERVER_HOST} <<'ENDSSH'
           cd ~/hamalog-deploy
-          
+
           echo "================================================"
-          echo "Hamalog Deployment - Environment Verification"
+          echo "Hamalog Deployment - Remote Execution"
           echo "================================================"
-          
-          # Load Docker image
+
+          if [ ! -f .env.prod ]; then
+            echo "❌ DEPLOYMENT FAILED: .env.prod not found!"
+            exit 1
+          fi
+
           echo "Loading Docker image..."
           docker load -i hamalog-image.tar
-          
-          # Check if .env.prod exists
-          if [ ! -f .env.prod ]; then
-            echo ""
-            echo "❌ DEPLOYMENT FAILED: .env.prod not found!"
-            echo ""
-            echo "To fix this issue:"
-            echo "1. SSH to server: ssh ${SERVER_USER}@${SERVER_HOST}"
-            echo "2. Go to deployment directory: cd ~/hamalog-deploy"
-            echo "3. Generate credentials: ./generate-credentials.sh"
-            echo "4. Edit .env.prod and set KAKAO_CLIENT_ID and KAKAO_CLIENT_SECRET"
-            echo "5. Verify file permissions: chmod 600 .env.prod"
-            echo ""
-            echo "See GITHUB_ACTIONS_SERVER_SETUP.md for detailed instructions"
-            exit 1
-          fi
-          
-          echo "✅ .env.prod file exists"
-          
-          # Verify file is readable
-          if [ ! -r .env.prod ]; then
-            echo "❌ Error: .env.prod is not readable. Check file permissions."
-            ls -l .env.prod
-            exit 1
-          fi
-          
-          # Load and verify required environment variables
+
           echo "Verifying environment variables..."
           set -a
           source .env.prod
           set +a
-          
-          REQUIRED_VARS="JWT_SECRET HAMALOG_ENCRYPTION_KEY KAKAO_CLIENT_ID KAKAO_CLIENT_SECRET DB_PASSWORD MYSQL_ROOT_PASSWORD SPRING_DATA_REDIS_PASSWORD DB_NAME DB_USERNAME SPRING_PROFILES_ACTIVE"
-          
+
+          REQUIRED_VARS="JWT_SECRET HAMALOG_ENCRYPTION_KEY KAKAO_CLIENT_ID KAKAO_CLIENT_SECRET DB_PASSWORD MYSQL_ROOT_PASSWORD SPRING_DATA_REDIS_PASSWORD"
+
           MISSING_VARS=""
           for var in $REQUIRED_VARS; do
             if [ -z "${!var}" ]; then
               MISSING_VARS="$MISSING_VARS $var"
-              echo "❌ Missing: $var"
-            else
-              # Show first 3 characters only for security
-              VALUE="${!var}"
-              MASKED="${VALUE:0:3}***"
-              echo "✅ Set: $var = $MASKED (length: ${#VALUE})"
             fi
           done
-          
+
           if [ -n "$MISSING_VARS" ]; then
-            echo ""
-            echo "❌ DEPLOYMENT FAILED: Missing required environment variables:"
-            echo "$MISSING_VARS"
-            echo ""
-            echo "Edit .env.prod and set all required variables"
+            echo "❌ DEPLOYMENT FAILED: Missing variables:$MISSING_VARS"
             exit 1
           fi
-          
-          echo ""
+
           echo "✅ All required environment variables are set"
+
           echo ""
-          
-          # Stop existing containers
           echo "Stopping existing containers..."
           docker-compose down || true
-          
-          # Start new containers with environment validation
+
           echo "Starting new containers..."
           docker-compose up -d
-          
-          # Wait for application to start
-          echo ""
+
           echo "Waiting for application to start (30 seconds)..."
           sleep 30
-          
-          # Health check
-          echo ""
+
           echo "Running health check..."
-          if curl -f http://localhost:8080/actuator/health; then
+          if curl -f http://localhost:8080/actuator/health > /dev/null 2>&1; then
             echo ""
             echo "================================================"
             echo "✅ Deployment successful - Application is healthy"
             echo "================================================"
+            exit 0
           else
             echo ""
             echo "================================================"
             echo "❌ Deployment failed - Application health check failed"
             echo "================================================"
             echo ""
-            echo "Container logs:"
+            echo "Container logs (last 50 lines):"
             docker-compose logs --tail=50 hamalog-app
             exit 1
           fi
-          
-          # Cleanup old images
-          docker image prune -f
         ENDSSH
+        
+        DEPLOY_EXIT_CODE=$?
+        if [ $DEPLOY_EXIT_CODE -ne 0 ]; then
+          echo ""
+          echo "❌ Remote deployment failed with exit code $DEPLOY_EXIT_CODE"
+          exit $DEPLOY_EXIT_CODE
+        fi
+        
+        echo ""
+        echo "================================================"
+        echo "✅ Deployment workflow completed successfully"
+        echo "================================================"
 

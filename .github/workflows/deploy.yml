@@ -111,47 +111,154 @@ jobs:
     - name: Copy files to server
       env:
         SSH_PRIVATE_KEY: ${{ secrets.SSH_PRIVATE_KEY }}
-        SERVER_HOST: ${{ secrets.SERVER_HOST }}
-        SERVER_USER: ${{ secrets.SERVER_USER }}
-        SERVER_PORT: ${{ secrets.SERVER_PORT }}
+        SERVER_HOST: ${{ secrets.SERVER_HOST || '49.142.154.182' }}
+        SERVER_USER: ${{ secrets.SERVER_USER || 'ubuntu' }}
+        SERVER_PORT: ${{ secrets.SERVER_PORT || '22' }}
       run: |
+        # Setup SSH with default values
+        set -x
+        
+        echo "Validating SSH credentials..."
+        if [ -z "$SSH_PRIVATE_KEY" ]; then
+          echo "❌ ERROR: SSH_PRIVATE_KEY secret is not set!"
+          echo "Please set SSH_PRIVATE_KEY in GitHub Repository Secrets"
+          exit 1
+        fi
+        
+        if [ -z "$SERVER_HOST" ] || [ "$SERVER_HOST" = "null" ]; then
+          echo "❌ ERROR: SERVER_HOST secret is not set!"
+          echo "Please set SERVER_HOST in GitHub Repository Secrets"
+          exit 1
+        fi
+        
+        if [ -z "$SERVER_USER" ] || [ "$SERVER_USER" = "null" ]; then
+          echo "❌ ERROR: SERVER_USER secret is not set!"
+          echo "Please set SERVER_USER in GitHub Repository Secrets"
+          exit 1
+        fi
+        
+        echo "✅ Using SERVER_HOST=$SERVER_HOST, SERVER_USER=$SERVER_USER, SERVER_PORT=$SERVER_PORT"
+        
         # Setup SSH
         mkdir -p ~/.ssh
         echo "$SSH_PRIVATE_KEY" > ~/.ssh/id_rsa
         chmod 600 ~/.ssh/id_rsa
-        ssh-keyscan -p ${SERVER_PORT:-22} $SERVER_HOST >> ~/.ssh/known_hosts
+        ssh-keyscan -p ${SERVER_PORT} $SERVER_HOST >> ~/.ssh/known_hosts 2>/dev/null || true
         
         # Create deployment directory on server
-        ssh -p ${SERVER_PORT:-22} ${SERVER_USER}@${SERVER_HOST} "mkdir -p ~/hamalog-deploy"
+        echo "Creating deployment directory on server..."
+        ssh -p ${SERVER_PORT} ${SERVER_USER}@${SERVER_HOST} "mkdir -p ~/hamalog-deploy"
         
         # Copy Docker image
-        scp -P ${SERVER_PORT:-22} hamalog-image.tar ${SERVER_USER}@${SERVER_HOST}:~/hamalog-deploy/
+        echo "Copying Docker image to server..."
+        scp -P ${SERVER_PORT} hamalog-image.tar ${SERVER_USER}@${SERVER_HOST}:~/hamalog-deploy/
         
         # Copy docker-compose.yml
-        scp -P ${SERVER_PORT:-22} docker-compose.yml ${SERVER_USER}@${SERVER_HOST}:~/hamalog-deploy/
+        echo "Copying docker-compose.yml to server..."
+        scp -P ${SERVER_PORT} docker-compose.yml ${SERVER_USER}@${SERVER_HOST}:~/hamalog-deploy/
+        
+        echo "✅ Files copied successfully"
 
     - name: Deploy to server
       env:
         SSH_PRIVATE_KEY: ${{ secrets.SSH_PRIVATE_KEY }}
-        SERVER_HOST: ${{ secrets.SERVER_HOST }}
-        SERVER_USER: ${{ secrets.SERVER_USER }}
-        SERVER_PORT: ${{ secrets.SERVER_PORT }}
+        SERVER_HOST: ${{ secrets.SERVER_HOST || '49.142.154.182' }}
+        SERVER_USER: ${{ secrets.SERVER_USER || 'ubuntu' }}
+        SERVER_PORT: ${{ secrets.SERVER_PORT || '22' }}
         JWT_SECRET: ${{ secrets.JWT_SECRET }}
-        JWT_EXPIRY: ${{ secrets.JWT_EXPIRY }}
-        JWT_REFRESH_TOKEN_EXPIRY: ${{ secrets.JWT_REFRESH_TOKEN_EXPIRY }}
+        JWT_EXPIRY: ${{ secrets.JWT_EXPIRY || '900000' }}
+        JWT_REFRESH_TOKEN_EXPIRY: ${{ secrets.JWT_REFRESH_TOKEN_EXPIRY || '604800000' }}
         HAMALOG_ENCRYPTION_KEY: ${{ secrets.HAMALOG_ENCRYPTION_KEY }}
         KAKAO_CLIENT_ID: ${{ secrets.KAKAO_CLIENT_ID }}
         KAKAO_CLIENT_SECRET: ${{ secrets.KAKAO_CLIENT_SECRET }}
         KAKAO_REDIRECT_URI: ${{ secrets.KAKAO_REDIRECT_URI }}
-        DB_NAME: ${{ secrets.DB_NAME }}
-        DB_USERNAME: ${{ secrets.DB_USERNAME }}
+        DB_NAME: ${{ secrets.DB_NAME || 'Hamalog' }}
+        DB_USERNAME: ${{ secrets.DB_USERNAME || 'hamalog_user' }}
         DB_PASSWORD: ${{ secrets.DB_PASSWORD }}
         MYSQL_ROOT_PASSWORD: ${{ secrets.MYSQL_ROOT_PASSWORD }}
         SPRING_DATA_REDIS_PASSWORD: ${{ secrets.SPRING_DATA_REDIS_PASSWORD }}
-        FRONTEND_URL: ${{ secrets.FRONTEND_URL }}
-        ALLOWED_ORIGINS: ${{ secrets.ALLOWED_ORIGINS }}
+        FRONTEND_URL: ${{ secrets.FRONTEND_URL || 'http://49.142.154.182:3000' }}
+        ALLOWED_ORIGINS: ${{ secrets.ALLOWED_ORIGINS || 'http://49.142.154.182:3000,http://49.142.154.182:8080' }}
       run: |
-        ssh -p ${SERVER_PORT:-22} ${SERVER_USER}@${SERVER_HOST} "mkdir -p ~/hamalog-deploy"
+        set -e
+        
+        echo "================================================"
+        echo "Hamalog Deployment Started"
+        echo "================================================"
+        
+        # Validate critical secrets
+        echo ""
+        echo "Validating required secrets..."
+        MISSING_VARS=""
+        
+        if [ -z "$SSH_PRIVATE_KEY" ]; then
+          MISSING_VARS="$MISSING_VARS SSH_PRIVATE_KEY"
+        fi
+        
+        if [ -z "$SERVER_HOST" ] || [ "$SERVER_HOST" = "null" ]; then
+          MISSING_VARS="$MISSING_VARS SERVER_HOST"
+        fi
+        
+        if [ -z "$SERVER_USER" ] || [ "$SERVER_USER" = "null" ]; then
+          MISSING_VARS="$MISSING_VARS SERVER_USER"
+        fi
+        
+        if [ -z "$JWT_SECRET" ]; then
+          MISSING_VARS="$MISSING_VARS JWT_SECRET"
+        fi
+        
+        if [ -z "$KAKAO_CLIENT_ID" ]; then
+          MISSING_VARS="$MISSING_VARS KAKAO_CLIENT_ID"
+        fi
+        
+        if [ -z "$KAKAO_CLIENT_SECRET" ]; then
+          MISSING_VARS="$MISSING_VARS KAKAO_CLIENT_SECRET"
+        fi
+        
+        if [ -z "$DB_PASSWORD" ]; then
+          MISSING_VARS="$MISSING_VARS DB_PASSWORD"
+        fi
+        
+        if [ -z "$MYSQL_ROOT_PASSWORD" ]; then
+          MISSING_VARS="$MISSING_VARS MYSQL_ROOT_PASSWORD"
+        fi
+        
+        if [ -z "$HAMALOG_ENCRYPTION_KEY" ]; then
+          MISSING_VARS="$MISSING_VARS HAMALOG_ENCRYPTION_KEY"
+        fi
+        
+        if [ -n "$MISSING_VARS" ]; then
+          echo "❌ ERROR: Missing required secrets:$MISSING_VARS"
+          echo ""
+          echo "Please set the following secrets in GitHub Repository Settings:"
+          echo "  Settings → Secrets and variables → Actions"
+          echo ""
+          echo "Required secrets:"
+          echo "  - SSH_PRIVATE_KEY (SSH 개인키)"
+          echo "  - SERVER_HOST (서버 IP, 예: 49.142.154.182)"
+          echo "  - SERVER_USER (SSH 사용자명, 예: ubuntu)"
+          echo "  - SERVER_PORT (SSH 포트, 예: 22)"
+          echo "  - JWT_SECRET (JWT 서명 키)"
+          echo "  - KAKAO_CLIENT_ID (카카오 클라이언트 ID)"
+          echo "  - KAKAO_CLIENT_SECRET (카카오 클라이언트 시크릿)"
+          echo "  - DB_PASSWORD (데이터베이스 비밀번호)"
+          echo "  - MYSQL_ROOT_PASSWORD (MySQL Root 비밀번호)"
+          echo "  - HAMALOG_ENCRYPTION_KEY (암호화 키)"
+          echo ""
+          exit 1
+        fi
+        
+        echo "✅ All required secrets are set"
+        echo "✅ Using SERVER_HOST=$SERVER_HOST, SERVER_USER=$SERVER_USER, SERVER_PORT=$SERVER_PORT"
+        echo ""
+        
+        # Setup SSH
+        mkdir -p ~/.ssh
+        echo "$SSH_PRIVATE_KEY" > ~/.ssh/id_rsa
+        chmod 600 ~/.ssh/id_rsa
+        ssh-keyscan -p ${SERVER_PORT} $SERVER_HOST >> ~/.ssh/known_hosts 2>/dev/null || true
+        
+        ssh -p ${SERVER_PORT} ${SERVER_USER}@${SERVER_HOST} "mkdir -p ~/hamalog-deploy"
         
         cat > /tmp/.env.prod << "ENVEOF"
         JWT_SECRET=$JWT_SECRET
@@ -179,11 +286,11 @@ jobs:
         LOG_DIR=/var/log/hamalog
         ENVEOF
         
-        scp -P ${SERVER_PORT:-22} /tmp/.env.prod ${SERVER_USER}@${SERVER_HOST}:~/hamalog-deploy/.env.prod
-        ssh -p ${SERVER_PORT:-22} ${SERVER_USER}@${SERVER_HOST} "chmod 600 ~/hamalog-deploy/.env.prod"
+        scp -P ${SERVER_PORT} /tmp/.env.prod ${SERVER_USER}@${SERVER_HOST}:~/hamalog-deploy/.env.prod
+        ssh -p ${SERVER_PORT} ${SERVER_USER}@${SERVER_HOST} "chmod 600 ~/hamalog-deploy/.env.prod"
         rm /tmp/.env.prod
         
-        ssh -p ${SERVER_PORT:-22} ${SERVER_USER}@${SERVER_HOST} <<'ENDSSH'
+        ssh -p ${SERVER_PORT} ${SERVER_USER}@${SERVER_HOST} <<'ENDSSH'
           cd ~/hamalog-deploy
           
           echo "================================================"

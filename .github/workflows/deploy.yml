@@ -1,0 +1,188 @@
+name: CI/CD - Build and Deploy to On-Premise Server
+
+on:
+  push:
+    branches: [ main ]
+  pull_request:
+    branches: [ main ]
+
+env:
+  DOCKER_IMAGE_NAME: hamalog-app
+  DOCKER_REGISTRY: ghcr.io
+
+jobs:
+  build-and-test:
+    runs-on: ubuntu-latest
+
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@v4
+
+    - name: Set up JDK 17
+      uses: actions/setup-java@v4
+      with:
+        java-version: '17'
+        distribution: 'temurin'
+        cache: gradle
+
+    - name: Grant execute permission for gradlew
+      run: chmod +x gradlew
+
+    - name: Build with Gradle
+      env:
+        # Test environment uses H2 in-memory database
+        SPRING_PROFILES_ACTIVE: test
+      run: ./gradlew clean build -x test
+
+    - name: Run tests
+      env:
+        SPRING_PROFILES_ACTIVE: test
+      run: ./gradlew test
+
+    - name: Generate test coverage report
+      run: ./gradlew jacocoTestReport
+
+    - name: Upload test results
+      if: always()
+      uses: actions/upload-artifact@v4
+      with:
+        name: test-results
+        path: build/reports/tests/test/
+
+    - name: Upload coverage report
+      uses: actions/upload-artifact@v4
+      with:
+        name: coverage-report
+        path: build/reports/jacoco/test/
+
+    - name: Build JAR
+      run: ./gradlew bootJar
+
+    - name: Upload JAR artifact
+      uses: actions/upload-artifact@v4
+      with:
+        name: hamalog-jar
+        path: build/libs/*.jar
+
+  build-docker-image:
+    needs: build-and-test
+    runs-on: ubuntu-latest
+    if: github.ref == 'refs/heads/main' && github.event_name == 'push'
+
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@v4
+
+    - name: Download JAR artifact
+      uses: actions/download-artifact@v4
+      with:
+        name: hamalog-jar
+        path: build/libs/
+
+    - name: Set up Docker Buildx
+      uses: docker/setup-buildx-action@v3
+
+    - name: Build Docker image
+      run: |
+        docker build -t ${{ env.DOCKER_IMAGE_NAME }}:latest .
+        docker save ${{ env.DOCKER_IMAGE_NAME }}:latest -o hamalog-image.tar
+
+    - name: Upload Docker image
+      uses: actions/upload-artifact@v4
+      with:
+        name: docker-image
+        path: hamalog-image.tar
+        retention-days: 1
+
+  deploy-to-server:
+    needs: build-docker-image
+    runs-on: ubuntu-latest
+    if: github.ref == 'refs/heads/main' && github.event_name == 'push'
+
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@v4
+
+    - name: Download Docker image
+      uses: actions/download-artifact@v4
+      with:
+        name: docker-image
+
+    - name: Copy files to server
+      env:
+        SSH_PRIVATE_KEY: ${{ secrets.SSH_PRIVATE_KEY }}
+        SERVER_HOST: ${{ secrets.SERVER_HOST }}
+        SERVER_USER: ${{ secrets.SERVER_USER }}
+        SERVER_PORT: ${{ secrets.SERVER_PORT }}
+      run: |
+        # Setup SSH
+        mkdir -p ~/.ssh
+        echo "$SSH_PRIVATE_KEY" > ~/.ssh/id_rsa
+        chmod 600 ~/.ssh/id_rsa
+        ssh-keyscan -p ${SERVER_PORT:-22} $SERVER_HOST >> ~/.ssh/known_hosts
+        
+        # Create deployment directory on server
+        ssh -p ${SERVER_PORT:-22} ${SERVER_USER}@${SERVER_HOST} "mkdir -p ~/hamalog-deploy"
+        
+        # Copy Docker image
+        scp -P ${SERVER_PORT:-22} hamalog-image.tar ${SERVER_USER}@${SERVER_HOST}:~/hamalog-deploy/
+        
+        # Copy docker-compose.yml
+        scp -P ${SERVER_PORT:-22} docker-compose.yml ${SERVER_USER}@${SERVER_HOST}:~/hamalog-deploy/
+
+    - name: Deploy to server
+      env:
+        SSH_PRIVATE_KEY: ${{ secrets.SSH_PRIVATE_KEY }}
+        SERVER_HOST: ${{ secrets.SERVER_HOST }}
+        SERVER_USER: ${{ secrets.SERVER_USER }}
+        SERVER_PORT: ${{ secrets.SERVER_PORT }}
+      run: |
+        ssh -p ${SERVER_PORT:-22} ${SERVER_USER}@${SERVER_HOST} << 'ENDSSH'
+          cd ~/hamalog-deploy
+          
+          # Load Docker image
+          docker load -i hamalog-image.tar
+          
+          # Check if .env.prod exists
+          if [ ! -f .env.prod ]; then
+            echo "❌ Error: .env.prod not found on server!"
+            echo "Please create .env.prod with all required environment variables."
+            exit 1
+          fi
+          
+          # Verify required environment variables
+          source .env.prod
+          REQUIRED_VARS="JWT_SECRET HAMALOG_ENCRYPTION_KEY KAKAO_CLIENT_ID KAKAO_CLIENT_SECRET DB_PASSWORD MYSQL_ROOT_PASSWORD SPRING_DATA_REDIS_PASSWORD"
+          
+          for var in $REQUIRED_VARS; do
+            if [ -z "${!var}" ]; then
+              echo "❌ Error: Required environment variable $var is not set in .env.prod"
+              exit 1
+            fi
+          done
+          
+          echo "✅ All required environment variables are set"
+          
+          # Stop existing containers
+          docker-compose down || true
+          
+          # Start new containers
+          docker-compose up -d
+          
+          # Wait for application to start
+          echo "Waiting for application to start..."
+          sleep 30
+          
+          # Health check
+          if curl -f http://localhost:8080/actuator/health; then
+            echo "✅ Deployment successful - Application is healthy"
+          else
+            echo "❌ Deployment failed - Application health check failed"
+            docker-compose logs hamalog-app
+            exit 1
+          fi
+          
+          # Cleanup old images
+          docker image prune -f
+        ENDSSH
+

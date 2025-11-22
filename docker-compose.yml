@@ -4,18 +4,23 @@ services:
     build: .
     ports:
       - "8080:8080"
+    env_file:
+      - .env.prod
     environment:
       - SPRING_PROFILES_ACTIVE=prod
-      - SPRING_DATASOURCE_URL=jdbc:mysql://mysql-hamalog:3306/${DB_NAME:-Hamalog}
-      - SPRING_DATASOURCE_USERNAME=${SPRING_DATASOURCE_USERNAME:-hamalog_user}
-      - SPRING_DATASOURCE_PASSWORD=${SPRING_DATASOURCE_PASSWORD:-hamalog_password}
+      - SPRING_DATASOURCE_URL=jdbc:mysql://mysql-hamalog:3306/${DB_NAME}?useSSL=true&requireSSL=true&characterEncoding=UTF-8&serverTimezone=UTC
+      - SPRING_DATASOURCE_USERNAME=${DB_USERNAME}
+      - SPRING_DATASOURCE_PASSWORD=${DB_PASSWORD}
       - SPRING_DATA_REDIS_HOST=redis
       - SPRING_DATA_REDIS_PORT=6379
-      # Production environment configuration
-      - JWT_EXPIRY=3600000
-      # Real Kakao OAuth2 credentials for production
-      - KAKAO_CLIENT_ID=86f21dfff5d2e9e3e1f76167df979268
-      - KAKAO_CLIENT_SECRET=ScyrNoUeoFLrCNS5MB7CF2kKxUVzaymx
+      - SPRING_DATA_REDIS_PASSWORD=${SPRING_DATA_REDIS_PASSWORD}
+      - JWT_SECRET=${JWT_SECRET}
+      - JWT_EXPIRY=${JWT_EXPIRY}
+      - JWT_REFRESH_TOKEN_EXPIRY=${JWT_REFRESH_TOKEN_EXPIRY}
+      - HAMALOG_ENCRYPTION_KEY=${HAMALOG_ENCRYPTION_KEY}
+      - KAKAO_CLIENT_ID=${KAKAO_CLIENT_ID}
+      - KAKAO_CLIENT_SECRET=${KAKAO_CLIENT_SECRET}
+      - KAKAO_REDIRECT_URI=${KAKAO_REDIRECT_URI}
     depends_on:
       mysql-hamalog:
         condition: service_healthy
@@ -29,12 +34,18 @@ services:
     image: redis:7-alpine
     ports:
       - "6379:6379"
-    command: redis-server --appendonly yes
+    command: >
+      redis-server
+      --requirepass ${SPRING_DATA_REDIS_PASSWORD}
+      --appendonly yes
+      --maxmemory 256mb
+      --maxmemory-policy allkeys-lru
+      --protected-mode yes
     volumes:
       - redis-data:/data
     restart: unless-stopped
     healthcheck:
-      test: ["CMD", "redis-cli", "ping"]
+      test: ["CMD", "redis-cli", "--no-auth-warning", "-a", "${SPRING_DATA_REDIS_PASSWORD}", "ping"]
       interval: 30s
       timeout: 10s
       retries: 3
@@ -44,10 +55,18 @@ services:
     ports:
       - "3306:3306"
     environment:
-      - MYSQL_ROOT_PASSWORD=${MYSQL_ROOT_PASSWORD:-root_password}
-      - MYSQL_DATABASE=${DB_NAME:-Hamalog}
-      - MYSQL_USER=${DB_USERNAME:-hamalog_user}
-      - MYSQL_PASSWORD=${DB_PASSWORD:-hamalog_password}
+      - MYSQL_ROOT_PASSWORD=${MYSQL_ROOT_PASSWORD}
+      - MYSQL_DATABASE=${DB_NAME}
+      - MYSQL_USER=${DB_USERNAME}
+      - MYSQL_PASSWORD=${DB_PASSWORD}
+      - MYSQL_ROOT_HOST=localhost
+    command: >
+      --character-set-server=utf8mb4
+      --collation-server=utf8mb4_unicode_ci
+      --require_secure_transport=ON
+      --ssl-ca=/etc/mysql/ssl/ca.pem
+      --ssl-cert=/etc/mysql/ssl/server-cert.pem
+      --ssl-key=/etc/mysql/ssl/server-key.pem
     volumes:
       - mysql-data:/var/lib/mysql
     restart: unless-stopped

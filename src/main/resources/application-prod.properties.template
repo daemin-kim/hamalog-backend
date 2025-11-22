@@ -1,0 +1,88 @@
+# Production Configuration Template
+# Copy this file to src/main/resources/application-prod.properties
+# DO NOT commit the actual file to Git
+
+spring.devtools.restart.enabled=false
+spring.devtools.livereload.enabled=false
+spring.h2.console.enabled=false
+
+# Database Configuration - Use SSL/TLS
+spring.datasource.url=${SPRING_DATASOURCE_URL}
+spring.datasource.username=${SPRING_DATASOURCE_USERNAME}
+spring.datasource.password=${SPRING_DATASOURCE_PASSWORD}
+
+# HikariCP Connection Pool
+spring.datasource.hikari.maximum-pool-size=20
+spring.datasource.hikari.minimum-idle=5
+spring.datasource.hikari.connection-timeout=20000
+spring.datasource.hikari.idle-timeout=300000
+spring.datasource.hikari.max-lifetime=1200000
+spring.datasource.hikari.leak-detection-threshold=60000
+
+# JPA Configuration
+spring.jpa.show-sql=false
+spring.jpa.properties.hibernate.format_sql=false
+spring.jpa.hibernate.ddl-auto=validate
+spring.jpa.properties.hibernate.dialect=org.hibernate.dialect.MySQLDialect
+
+# Performance Optimization
+spring.jpa.properties.hibernate.default_batch_fetch_size=100
+spring.jpa.properties.hibernate.batch_fetch_style=LEGACY
+spring.jpa.properties.hibernate.jdbc.batch_size=20
+spring.jpa.properties.hibernate.order_inserts=true
+spring.jpa.properties.hibernate.order_updates=true
+spring.jpa.properties.hibernate.jdbc.batch_versioned_data=true
+
+# Transaction Configuration
+spring.transaction.default-timeout=30
+spring.jpa.properties.hibernate.connection.isolation=2
+
+# Security: Secure cookies for production
+server.servlet.session.cookie.secure=true
+server.servlet.session.cookie.http-only=true
+server.servlet.session.cookie.same-site=strict
+
+# JWT Configuration - From environment variables
+jwt.secret=${JWT_SECRET}
+jwt.expiry=${JWT_EXPIRY:900000}
+jwt.refresh-token.expiry=${JWT_REFRESH_TOKEN_EXPIRY:604800000}
+
+# Data encryption key - From environment variables
+hamalog.encryption.key=${HAMALOG_ENCRYPTION_KEY}
+
+# OAuth2 Kakao configuration - From environment variables
+spring.security.oauth2.client.registration.kakao.client-id=${KAKAO_CLIENT_ID}
+spring.security.oauth2.client.registration.kakao.client-secret=${KAKAO_CLIENT_SECRET}
+spring.security.oauth2.client.registration.kakao.redirect-uri=${KAKAO_REDIRECT_URI}
+
+# Redis Configuration
+spring.data.redis.host=${SPRING_DATA_REDIS_HOST:redis}
+spring.data.redis.port=${SPRING_DATA_REDIS_PORT:6379}
+spring.data.redis.password=${SPRING_DATA_REDIS_PASSWORD}
+spring.data.redis.timeout=2000ms
+spring.data.redis.connect-timeout=2000ms
+spring.data.redis.lettuce.pool.max-active=8
+spring.data.redis.lettuce.pool.max-idle=8
+
+# File Upload
+file.upload.directory=${FILE_UPLOAD_DIR:/data/hamalog/uploads}
+file.upload.max-size=5242880
+
+# Logging
+logging.level.root=INFO
+logging.level.com.Hamalog=INFO
+logging.file.path=${LOG_DIR:/var/log/hamalog}
+
+# Actuator
+management.endpoints.web.exposure.include=health,metrics
+management.endpoint.health.show-details=when-authorized
+management.metrics.export.prometheus.enabled=true
+
+# CORS
+hamalog.cors.allowed-origins=${ALLOWED_ORIGINS:http://localhost:3000}
+
+# AOP Configuration
+app.aop.global-enabled=true
+app.aop.development-mode=false
+app.aop.include-stack-trace=false
+

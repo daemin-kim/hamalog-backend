@@ -49,4 +49,18 @@ logs/
 
 ### Docker ###
 .env
+.env.*
+*.env
+!.env.example
+
+### Sensitive Configuration ###
+application-secret.properties
+application-prod.properties
+application-local.properties
+src/main/resources/application-prod.properties
+src/main/resources/application-local.properties
+
+### Docker Secrets ###
+secrets/
+*.secret
 docker-compose.override.yml

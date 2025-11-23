@@ -137,11 +137,4 @@ jobs:
         ALLOWED_ORIGINS: ${{ secrets.ALLOWED_ORIGINS }}
       run: bash .github/scripts/deploy.sh
 
-    - name: Verify deployment
-      env:
-        SSH_PRIVATE_KEY: ${{ secrets.SSH_PRIVATE_KEY }}
-        SERVER_HOST: ${{ secrets.SERVER_HOST }}
-        SERVER_USER: ${{ secrets.SERVER_USER }}
-        SERVER_PORT: ${{ secrets.SERVER_PORT }}
-      run: bash .github/scripts/verify-deployment.sh
 

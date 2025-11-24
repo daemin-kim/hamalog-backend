@@ -6,7 +6,10 @@ import com.Hamalog.domain.sideEffect.SideEffectRecord;
 import com.Hamalog.domain.sideEffect.SideEffectSideEffectRecord;
 import com.Hamalog.dto.sideEffect.request.SideEffectRecordRequest;
 import com.Hamalog.dto.sideEffect.response.RecentSideEffectResponse;
+import com.Hamalog.exception.ErrorCode;
 import com.Hamalog.exception.member.MemberNotFoundException;
+import com.Hamalog.exception.sideEffect.SideEffectNotFoundException;
+import com.Hamalog.exception.validation.InvalidInputException;
 import com.Hamalog.repository.member.MemberRepository;
 import com.Hamalog.repository.sideEffect.SideEffectRecordRepository;
 import com.Hamalog.repository.sideEffect.SideEffectRepository;
@@ -89,6 +92,7 @@ class SideEffectServiceTest {
                 sideEffectRepository, sideEffectRecordRepository, sideEffectSideEffectRecordRepository,
                 memberRepository, cacheService
         );
+        when(memberRepository.existsById(memberId)).thenReturn(true);
         when(cacheService.getRecentSideEffects(memberId)).thenReturn(cachedNames);
 
         // when
@@ -96,6 +100,7 @@ class SideEffectServiceTest {
 
         // then
         assertThat(result.recentSideEffect()).isEqualTo(cachedNames);
+        verify(memberRepository).existsById(memberId);
         verify(cacheService).getRecentSideEffects(memberId);
         verify(sideEffectRepository, never()).findRecentSideEffectNames(any());
         verify(cacheService, never()).refreshRecentSideEffects(any(), any());
@@ -111,6 +116,7 @@ class SideEffectServiceTest {
                 sideEffectRepository, sideEffectRecordRepository, sideEffectSideEffectRecordRepository,
                 memberRepository, cacheService
         );
+        when(memberRepository.existsById(memberId)).thenReturn(true);
         when(cacheService.getRecentSideEffects(memberId)).thenReturn(Collections.emptyList());
         when(sideEffectRepository.findRecentSideEffectNames(memberId)).thenReturn(dbNames);
 
@@ -119,6 +125,7 @@ class SideEffectServiceTest {
 
         // then
         assertThat(result.recentSideEffect()).isEqualTo(dbNames);
+        verify(memberRepository).existsById(memberId);
         verify(cacheService).getRecentSideEffects(memberId);
         verify(sideEffectRepository).findRecentSideEffectNames(memberId);
         verify(cacheService).refreshRecentSideEffects(memberId, dbNames);
@@ -134,6 +141,7 @@ class SideEffectServiceTest {
                 sideEffectRepository, sideEffectRecordRepository, sideEffectSideEffectRecordRepository,
                 memberRepository, cacheService
         );
+        when(memberRepository.existsById(memberId)).thenReturn(true);
         when(cacheService.getRecentSideEffects(memberId)).thenReturn(Collections.emptyList());
         when(sideEffectRepository.findRecentSideEffectNames(memberId)).thenReturn(emptyNames);
 
@@ -142,6 +150,7 @@ class SideEffectServiceTest {
 
         // then
         assertThat(result.recentSideEffect()).isEmpty();
+        verify(memberRepository).existsById(memberId);
         verify(cacheService).getRecentSideEffects(memberId);
         verify(sideEffectRepository).findRecentSideEffectNames(memberId);
         verify(cacheService, never()).refreshRecentSideEffects(any(), any());
@@ -157,6 +166,7 @@ class SideEffectServiceTest {
                 sideEffectRepository, sideEffectRecordRepository, sideEffectSideEffectRecordRepository,
                 memberRepository, null
         );
+        when(memberRepository.existsById(memberId)).thenReturn(true);
         when(sideEffectRepository.findRecentSideEffectNames(memberId)).thenReturn(dbNames);
 
         // when
@@ -164,6 +174,7 @@ class SideEffectServiceTest {
 
         // then
         assertThat(result.recentSideEffect()).isEqualTo(dbNames);
+        verify(memberRepository).existsById(memberId);
         verify(sideEffectRepository).findRecentSideEffectNames(memberId);
         verifyNoInteractions(cacheService);
     }
@@ -229,8 +240,7 @@ class SideEffectServiceTest {
 
         // when & then
         assertThatThrownBy(() -> sideEffectService.createSideEffectRecord(createRequest))
-                .isInstanceOf(IllegalArgumentException.class)
-                .hasMessageContaining("SideEffect not found with id: 1");
+                .isInstanceOf(SideEffectNotFoundException.class);
 
         verify(memberRepository).findById(1L);
         verify(sideEffectRecordRepository).save(any(SideEffectRecord.class));
@@ -278,22 +288,20 @@ class SideEffectServiceTest {
                 LocalDateTime.now(),
                 Collections.emptyList()
         );
-        when(memberRepository.findById(1L)).thenReturn(Optional.of(mockMember));
-        when(sideEffectRecordRepository.save(any(SideEffectRecord.class))).thenReturn(mockRecord);
-        when(sideEffectRepository.findAllById(Collections.emptyList())).thenReturn(Collections.emptyList());
 
         SideEffectService serviceWithCache = new SideEffectService(
                 sideEffectRepository, sideEffectRecordRepository, sideEffectSideEffectRecordRepository,
                 memberRepository, cacheService
         );
 
-        // when
-        serviceWithCache.createSideEffectRecord(emptyRequest);
+        // when & then
+        assertThatThrownBy(() -> serviceWithCache.createSideEffectRecord(emptyRequest))
+                .isInstanceOf(InvalidInputException.class)
+                .hasMessageContaining(ErrorCode.EMPTY_SIDE_EFFECT_LIST.getMessage());
 
-        // then
-        verify(memberRepository).findById(1L);
-        verify(sideEffectRecordRepository).save(any(SideEffectRecord.class));
-        verify(sideEffectRepository).findAllById(Collections.emptyList());
+        verify(memberRepository, never()).findById(any());
+        verify(sideEffectRecordRepository, never()).save(any(SideEffectRecord.class));
+        verify(sideEffectRepository, never()).findAllById(any());
         verify(sideEffectSideEffectRecordRepository, never()).save(any());
         verify(cacheService, never()).addRecentSideEffect(any(), any());
     }

@@ -73,7 +73,7 @@ class ErrorCodeTest {
         ErrorCode[] errorCodes = ErrorCode.values();
 
         // then
-        assertThat(errorCodes).hasSize(11); // INVALID_TOKEN 추가로 11개
+        assertThat(errorCodes).hasSize(44); // 예외처리 강화로 44개
     }
 
     @Test

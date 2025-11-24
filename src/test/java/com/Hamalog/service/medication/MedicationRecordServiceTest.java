@@ -77,6 +77,7 @@ class MedicationRecordServiceTest {
         // given
         Long scheduleId = 1L;
         List<MedicationRecord> expectedRecords = Arrays.asList(mockRecord);
+        when(medicationScheduleRepository.existsById(scheduleId)).thenReturn(true);
         when(medicationRecordRepository.findAllByMedicationSchedule_MedicationScheduleId(scheduleId))
                 .thenReturn(expectedRecords);
 
@@ -85,6 +86,7 @@ class MedicationRecordServiceTest {
 
         // then
         assertThat(result).isEqualTo(expectedRecords);
+        verify(medicationScheduleRepository).existsById(scheduleId);
         verify(medicationRecordRepository).findAllByMedicationSchedule_MedicationScheduleId(scheduleId);
     }
 
@@ -125,6 +127,11 @@ class MedicationRecordServiceTest {
                 .thenReturn(Optional.of(mockSchedule));
         when(medicationTimeRepository.findById(createRequest.medicationTimeId()))
                 .thenReturn(Optional.of(mockTime));
+
+        // Mock the relationship between MedicationTime and MedicationSchedule
+        when(mockTime.getMedicationSchedule()).thenReturn(mockSchedule);
+        when(mockSchedule.getMedicationScheduleId()).thenReturn(1L);
+
         when(medicationRecordRepository.save(any(MedicationRecord.class))).thenReturn(mockRecord);
 
         // when

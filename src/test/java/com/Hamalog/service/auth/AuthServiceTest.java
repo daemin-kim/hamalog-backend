@@ -353,11 +353,26 @@ class AuthServiceTest {
         String code = "oauth2-code";
         String accessToken = "kakao-access-token";
         String jwtToken = "jwt-token";
+        String refreshTokenValue = "refresh-token-value";
         String loginId = "kakao_12345@oauth2.internal";
         
         ClientRegistration kakaoRegistration = createMockClientRegistration();
         JsonNode userInfo = createMockUserInfo();
         
+        Member existingMember = Member.builder()
+            .memberId(1L)
+            .loginId(loginId)
+            .build();
+
+        RefreshToken refreshToken = RefreshToken.builder()
+            .id(1L)
+            .memberId(1L)
+            .tokenValue(refreshTokenValue)
+            .createdAt(LocalDateTime.now())
+            .expiresAt(LocalDateTime.now().plusDays(7))
+            .rotatedAt(LocalDateTime.now())
+            .build();
+
         given(clientRegistrationRepository.findByRegistrationId("kakao")).willReturn(kakaoRegistration);
         
         // Mock token exchange
@@ -373,17 +388,19 @@ class AuthServiceTest {
         given(objectMapper.readTree(userResponse.getBody())).willReturn(userInfo);
         
         // Mock existing user
-        Member existingMember = Member.builder().loginId(loginId).build();
         given(memberRepository.findByLoginId(loginId)).willReturn(Optional.of(existingMember));
         given(jwtTokenProvider.createToken(loginId)).willReturn(jwtToken);
+        given(refreshTokenService.createRefreshToken(1L)).willReturn(refreshToken);
 
         // when
         LoginResponse response = authService.processOAuth2Callback(code);
 
         // then
         assertThat(response.token()).isEqualTo(jwtToken);
+        assertThat(response.refreshToken()).isEqualTo(refreshTokenValue);
         verify(clientRegistrationRepository).findByRegistrationId("kakao");
         verify(jwtTokenProvider).createToken(loginId);
+        verify(refreshTokenService).createRefreshToken(1L);
     }
 
     @Test
@@ -396,28 +413,32 @@ class AuthServiceTest {
 
         // when & then
         assertThatThrownBy(() -> authService.processOAuth2Callback(code))
-            .isInstanceOf(CustomException.class)
-            .hasMessage(ErrorCode.INTERNAL_SERVER_ERROR.getMessage());
+            .isInstanceOf(com.Hamalog.exception.oauth2.OAuth2Exception.class)
+            .hasMessageContaining(ErrorCode.OAUTH2_CONFIG_ERROR.getMessage());
     }
 
     @Test
     @DisplayName("OAuth2 콜백 처리 시 토큰 교환 실패 시 예외가 발생해야 함")
-    void processOAuth2Callback_TokenExchangeFailed_ShouldThrowException() {
+    void processOAuth2Callback_TokenExchangeFailed_ShouldThrowException() throws JsonProcessingException {
         // given
         String code = "oauth2-code";
         
         ClientRegistration kakaoRegistration = createMockClientRegistration();
         given(clientRegistrationRepository.findByRegistrationId("kakao")).willReturn(kakaoRegistration);
         
-        // Mock failed token exchange
-        ResponseEntity<String> tokenResponse = new ResponseEntity<>("", HttpStatus.BAD_REQUEST);
+        // Mock failed token exchange - 성공 응답이지만 access_token이 없거나 빈 값
+        ResponseEntity<String> tokenResponse = new ResponseEntity<>("{}", HttpStatus.OK);
         given(restTemplate.postForEntity(anyString(), any(HttpEntity.class), eq(String.class)))
             .willReturn(tokenResponse);
 
+        // Mock token response without access_token
+        ObjectMapper realObjectMapper = new ObjectMapper();
+        JsonNode emptyTokenResponse = realObjectMapper.readTree("{}");
+        given(objectMapper.readTree(tokenResponse.getBody())).willReturn(emptyTokenResponse);
+
         // when & then
         assertThatThrownBy(() -> authService.processOAuth2Callback(code))
-            .isInstanceOf(CustomException.class)
-            .hasMessage(ErrorCode.BAD_REQUEST.getMessage());
+            .isInstanceOf(com.Hamalog.exception.oauth2.OAuth2TokenExchangeException.class);
     }
 
     @Test
@@ -436,15 +457,20 @@ class AuthServiceTest {
             .willReturn(tokenResponse);
         given(objectMapper.readTree(tokenResponse.getBody())).willReturn(createMockTokenResponse(accessToken));
         
-        // Mock failed user info retrieval
-        ResponseEntity<String> userResponse = new ResponseEntity<>("", HttpStatus.BAD_REQUEST);
+        // Mock failed user info retrieval - 응답은 성공이지만 id 필드가 없음
+        ResponseEntity<String> userResponse = new ResponseEntity<>("{}", HttpStatus.OK);
         given(restTemplate.exchange(anyString(), eq(HttpMethod.GET), any(HttpEntity.class), eq(String.class)))
             .willReturn(userResponse);
 
+        // Mock user info without id field
+        ObjectMapper realObjectMapper = new ObjectMapper();
+        JsonNode emptyUserInfo = realObjectMapper.readTree("{}");
+        given(objectMapper.readTree(userResponse.getBody())).willReturn(emptyUserInfo);
+
         // when & then
         assertThatThrownBy(() -> authService.processOAuth2Callback(code))
-            .isInstanceOf(CustomException.class)
-            .hasMessage(ErrorCode.BAD_REQUEST.getMessage());
+            .isInstanceOf(com.Hamalog.exception.oauth2.OAuth2Exception.class)
+            .hasMessageContaining(ErrorCode.OAUTH2_USER_INFO_FAILED.getMessage());
     }
 
     @Test
@@ -454,11 +480,29 @@ class AuthServiceTest {
         String code = "oauth2-code";
         String accessToken = "kakao-access-token";
         String jwtToken = "jwt-token";
+        String refreshTokenValue = "refresh-token-value";
         String loginId = "kakao_12345@oauth2.internal";
         
         ClientRegistration kakaoRegistration = createMockClientRegistration();
         JsonNode userInfo = createMockUserInfo();
         
+        Member newMember = Member.builder()
+            .memberId(1L)
+            .loginId(loginId)
+            .password("{oauth2}")
+            .name("테스트유저")
+            .nickName("테스트유저")
+            .build();
+
+        RefreshToken refreshToken = RefreshToken.builder()
+            .id(1L)
+            .memberId(1L)
+            .tokenValue(refreshTokenValue)
+            .createdAt(LocalDateTime.now())
+            .expiresAt(LocalDateTime.now().plusDays(7))
+            .rotatedAt(LocalDateTime.now())
+            .build();
+
         given(clientRegistrationRepository.findByRegistrationId("kakao")).willReturn(kakaoRegistration);
         
         // Mock token exchange
@@ -473,16 +517,21 @@ class AuthServiceTest {
             .willReturn(userResponse);
         given(objectMapper.readTree(userResponse.getBody())).willReturn(userInfo);
         
-        // Mock new user (not existing)
-        given(memberRepository.findByLoginId(loginId)).willReturn(Optional.empty());
+        // Mock new user (not existing initially, then return saved member)
+        given(memberRepository.findByLoginId(loginId))
+            .willReturn(Optional.empty())  // First call - user doesn't exist
+            .willReturn(Optional.of(newMember));  // Second call - user exists after save
+        given(memberRepository.save(any(Member.class))).willReturn(newMember);
         given(jwtTokenProvider.createToken(loginId)).willReturn(jwtToken);
+        given(refreshTokenService.createRefreshToken(1L)).willReturn(refreshToken);
 
         // when
         LoginResponse response = authService.processOAuth2Callback(code);
 
         // then
         assertThat(response.token()).isEqualTo(jwtToken);
-        
+        assertThat(response.refreshToken()).isEqualTo(refreshTokenValue);
+
         ArgumentCaptor<Member> memberCaptor = ArgumentCaptor.forClass(Member.class);
         verify(memberRepository).save(memberCaptor.capture());
         
@@ -491,6 +540,8 @@ class AuthServiceTest {
         assertThat(savedMember.getPassword()).isEqualTo("{oauth2}");
         assertThat(savedMember.getName()).isEqualTo("테스트유저");
         assertThat(savedMember.getNickName()).isEqualTo("테스트유저");
+
+        verify(refreshTokenService).createRefreshToken(1L);
     }
 
     @Test

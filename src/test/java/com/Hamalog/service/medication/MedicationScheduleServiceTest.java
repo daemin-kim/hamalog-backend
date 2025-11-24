@@ -108,6 +108,7 @@ class MedicationScheduleServiceTest {
         // given
         Long memberId = 1L;
         List<MedicationSchedule> expectedSchedules = Arrays.asList(mockSchedule);
+        when(memberRepository.existsById(memberId)).thenReturn(true);
         when(medicationScheduleRepository.findAllByMember_MemberId(memberId))
                 .thenReturn(expectedSchedules);
 
@@ -116,6 +117,7 @@ class MedicationScheduleServiceTest {
 
         // then
         assertThat(result).isEqualTo(expectedSchedules);
+        verify(memberRepository).existsById(memberId);
         verify(medicationScheduleRepository).findAllByMember_MemberId(memberId);
     }
 
@@ -125,7 +127,11 @@ class MedicationScheduleServiceTest {
         // given
         Long memberId = 1L;
         Pageable pageable = mock(Pageable.class);
+        when(pageable.getPageNumber()).thenReturn(0);
+        when(pageable.getPageSize()).thenReturn(10);
+
         Page<MedicationSchedule> expectedPage = new PageImpl<>(Arrays.asList(mockSchedule));
+        when(memberRepository.existsById(memberId)).thenReturn(true);
         when(medicationScheduleRepository.findByMember_MemberId(memberId, pageable))
                 .thenReturn(expectedPage);
 
@@ -134,6 +140,7 @@ class MedicationScheduleServiceTest {
 
         // then
         assertThat(result).isEqualTo(expectedPage);
+        verify(memberRepository).existsById(memberId);
         verify(medicationScheduleRepository).findByMember_MemberId(memberId, pageable);
     }
 

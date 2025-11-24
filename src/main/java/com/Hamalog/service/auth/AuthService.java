@@ -186,35 +186,61 @@ public class AuthService {
     @Transactional
     public LoginResponse processOAuth2Callback(String code) {
         try {
+            // 입력값 검증
+            if (code == null || code.trim().isEmpty()) {
+                log.warn("OAuth2 callback received with null or empty authorization code");
+                throw new com.Hamalog.exception.oauth2.OAuth2Exception(ErrorCode.OAUTH2_INVALID_CODE);
+            }
+
             // Get Kakao client registration
             ClientRegistration kakaoRegistration = clientRegistrationRepository.findByRegistrationId("kakao");
             if (kakaoRegistration == null) {
-                throw new CustomException(ErrorCode.INTERNAL_SERVER_ERROR);
+                log.error("Kakao OAuth2 client registration not found");
+                throw new com.Hamalog.exception.oauth2.OAuth2Exception(ErrorCode.OAUTH2_CONFIG_ERROR);
             }
             
             // Exchange authorization code for access token
             String accessToken = exchangeCodeForToken(code, kakaoRegistration);
-            if (accessToken == null) {
-                throw new CustomException(ErrorCode.BAD_REQUEST);
+            if (accessToken == null || accessToken.trim().isEmpty()) {
+                log.error("Failed to exchange authorization code for access token");
+                throw new com.Hamalog.exception.oauth2.OAuth2TokenExchangeException();
             }
             
             // Get user info from Kakao
             JsonNode userInfo = getUserInfoFromKakao(accessToken);
             if (userInfo == null) {
-                throw new CustomException(ErrorCode.BAD_REQUEST);
+                log.error("Failed to retrieve user info from Kakao");
+                throw new com.Hamalog.exception.oauth2.OAuth2Exception(ErrorCode.OAUTH2_USER_INFO_FAILED);
             }
             
             // Process user (create or find existing)
             String loginId = processKakaoUser(userInfo);
             
+            // 회원 조회하여 RefreshToken 생성
+            Member member = memberRepository.findByLoginId(loginId)
+                .orElseThrow(() -> new CustomException(ErrorCode.MEMBER_NOT_FOUND));
+
             // Generate JWT token
             String jwtToken = jwtTokenProvider.createToken(loginId);
-            
-            return new LoginResponse(jwtToken);
-            
+            long expiresIn = 900;  // 15분
+
+            // RefreshToken 생성
+            var refreshToken = refreshTokenService.createRefreshToken(member.getMemberId());
+
+            log.info("[OAUTH2] User logged in via Kakao - loginId: {}",
+                SensitiveDataMasker.maskEmail(loginId));
+
+            return new LoginResponse(jwtToken, refreshToken.getTokenValue(), expiresIn);
+
+        } catch (com.Hamalog.exception.oauth2.OAuth2Exception e) {
+            // OAuth2 관련 예외는 그대로 던짐
+            throw e;
         } catch (CustomException e) {
+            // 기타 커스텀 예외도 그대로 던짐
             throw e;
         } catch (Exception e) {
+            // 예상치 못한 예외는 로그 후 일반 오류로 변환
+            log.error("Unexpected error during OAuth2 callback processing", e);
             throw new CustomException(ErrorCode.INTERNAL_SERVER_ERROR);
         }
     }
@@ -245,16 +271,40 @@ public class AuthService {
             
             if (response.getStatusCode().is2xxSuccessful() && response.getBody() != null) {
                 JsonNode tokenResponse = objectMapper.readTree(response.getBody());
+
+                // access_token 필드 존재 여부 확인
+                if (!tokenResponse.has("access_token")) {
+                    log.error("Access token not found in Kakao token response");
+                    return null;
+                }
+
                 String accessToken = tokenResponse.get("access_token").asText();
+
+                if (accessToken == null || accessToken.trim().isEmpty()) {
+                    log.error("Access token is null or empty in Kakao token response");
+                    return null;
+                }
+
                 log.info("Successfully obtained Kakao access token");
                 return accessToken;
             } else {
-                log.error("Failed to exchange authorization code. Status: {}, Body: {}", response.getStatusCode(), response.getBody());
+                log.error("Failed to exchange authorization code. Status: {}, Body: {}",
+                    response.getStatusCode(), response.getBody());
                 return null;
             }
 
+        } catch (org.springframework.web.client.ResourceAccessException e) {
+            // 네트워크 타임아웃, 연결 실패 등
+            log.error("Network error while exchanging authorization code for token", e);
+            throw new CustomException(ErrorCode.EXTERNAL_API_TIMEOUT);
+        } catch (org.springframework.web.client.HttpClientErrorException |
+                 org.springframework.web.client.HttpServerErrorException e) {
+            // HTTP 4xx, 5xx 오류
+            log.error("HTTP error while exchanging authorization code. Status: {}, Body: {}",
+                e.getStatusCode(), e.getResponseBodyAsString());
+            throw new CustomException(ErrorCode.EXTERNAL_API_ERROR);
         } catch (Exception e) {
-            log.error("Exception while exchanging authorization code for token", e);
+            log.error("Unexpected exception while exchanging authorization code for token", e);
             return null;
         }
     }
@@ -278,6 +328,13 @@ public class AuthService {
             
             if (response.getStatusCode().is2xxSuccessful() && response.getBody() != null) {
                 JsonNode userInfo = objectMapper.readTree(response.getBody());
+
+                // 필수 필드 검증
+                if (!userInfo.has("id")) {
+                    log.error("User ID not found in Kakao user info response");
+                    return null;
+                }
+
                 log.info("Successfully fetched user info from Kakao");
                 return userInfo;
             } else {
@@ -285,51 +342,74 @@ public class AuthService {
                 return null;
             }
 
+        } catch (org.springframework.web.client.ResourceAccessException e) {
+            // 네트워크 타임아웃, 연결 실패 등
+            log.error("Network error while fetching user info from Kakao", e);
+            throw new CustomException(ErrorCode.EXTERNAL_API_TIMEOUT);
+        } catch (org.springframework.web.client.HttpClientErrorException |
+                 org.springframework.web.client.HttpServerErrorException e) {
+            // HTTP 4xx, 5xx 오류
+            log.error("HTTP error while fetching user info. Status: {}, Body: {}",
+                e.getStatusCode(), e.getResponseBodyAsString());
+            throw new CustomException(ErrorCode.EXTERNAL_API_ERROR);
         } catch (Exception e) {
-            log.error("Exception while fetching user info from Kakao", e);
+            log.error("Unexpected exception while fetching user info from Kakao", e);
             return null;
         }
     }
     
     private String processKakaoUser(JsonNode userInfo) {
-        // Extract Kakao ID
-        Long kakaoId = userInfo.get("id").asLong();
-        
-        // Extract user profile information
-        JsonNode kakaoAccount = userInfo.get("kakao_account");
-        JsonNode profile = kakaoAccount != null ? kakaoAccount.get("profile") : null;
-        String nickname = profile != null ? profile.get("nickname").asText(null) : null;
-        
-        // Create loginId in the same format as KakaoOAuth2UserService
-        String loginId = "kakao_" + kakaoId + "@oauth2.internal";
-        
-        // Check if user already exists
-        Optional<Member> existingMember = memberRepository.findByLoginId(loginId);
-        
-        if (existingMember.isEmpty()) {
-            // Create new member (same logic as KakaoOAuth2UserService)
-            String name = (nickname != null && !nickname.isBlank()) ? 
-                    (nickname.length() > 15 ? nickname.substring(0, 15) : nickname) : 
-                    "OAuth2_" + kakaoId.toString().substring(0, Math.min(kakaoId.toString().length(), 8));
-            
-            String phoneNumber = "01012345678"; // Placeholder as in KakaoOAuth2UserService
-            LocalDate birth = LocalDate.of(2000, 1, 1); // Default birth date
-            String nickName = (nickname != null && !nickname.isBlank()) ? nickname : "카카오유저";
-            
-            Member member = Member.builder()
-                    .loginId(loginId)
-                    .password("{oauth2}") // Mark as OAuth2 account
-                    .name(name)
-                    .nickName(nickName)
-                    .phoneNumber(phoneNumber)
-                    .birth(birth)
-                    .createdAt(LocalDateTime.now())
-                    .build();
-            
-            memberRepository.save(member);
+        try {
+            // Extract Kakao ID with validation
+            if (!userInfo.has("id")) {
+                log.error("Kakao user info missing 'id' field");
+                throw new com.Hamalog.exception.oauth2.OAuth2Exception(ErrorCode.OAUTH2_USER_INFO_FAILED);
+            }
+
+            Long kakaoId = userInfo.get("id").asLong();
+
+            // Extract user profile information
+            JsonNode kakaoAccount = userInfo.get("kakao_account");
+            JsonNode profile = kakaoAccount != null ? kakaoAccount.get("profile") : null;
+            String nickname = profile != null && profile.has("nickname") ?
+                profile.get("nickname").asText(null) : null;
+
+            // Create loginId in the same format as KakaoOAuth2UserService
+            String loginId = "kakao_" + kakaoId + "@oauth2.internal";
+
+            // Check if user already exists
+            Optional<Member> existingMember = memberRepository.findByLoginId(loginId);
+
+            if (existingMember.isEmpty()) {
+                // Create new member (same logic as KakaoOAuth2UserService)
+                String name = (nickname != null && !nickname.isBlank()) ?
+                        (nickname.length() > 15 ? nickname.substring(0, 15) : nickname) :
+                        "OAuth2_" + kakaoId.toString().substring(0, Math.min(kakaoId.toString().length(), 8));
+
+                String phoneNumber = "01012345678"; // Placeholder as in KakaoOAuth2UserService
+                LocalDate birth = LocalDate.of(2000, 1, 1); // Default birth date
+                String nickName = (nickname != null && !nickname.isBlank()) ? nickname : "카카오유저";
+
+                Member member = Member.builder()
+                        .loginId(loginId)
+                        .password("{oauth2}") // Mark as OAuth2 account
+                        .name(name)
+                        .nickName(nickName)
+                        .phoneNumber(phoneNumber)
+                        .birth(birth)
+                        .createdAt(LocalDateTime.now())
+                        .build();
+
+                memberRepository.save(member);
+                log.info("Created new OAuth2 member with loginId: {}", SensitiveDataMasker.maskEmail(loginId));
+            }
+
+            return loginId;
+
+        } catch (Exception e) {
+            log.error("Error processing Kakao user", e);
+            throw new com.Hamalog.exception.oauth2.OAuth2Exception(ErrorCode.OAUTH2_USER_INFO_FAILED);
         }
-        
-        return loginId;
     }
 
     private boolean isValidTokenFormat(String token) {

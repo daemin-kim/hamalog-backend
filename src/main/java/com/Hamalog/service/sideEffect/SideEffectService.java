@@ -2,17 +2,20 @@ package com.Hamalog.service.sideEffect;
 
 import com.Hamalog.domain.member.Member;
 import com.Hamalog.domain.sideEffect.SideEffect;
-import com.Hamalog.domain.sideEffect.SideEffectDegree;
 import com.Hamalog.domain.sideEffect.SideEffectRecord;
 import com.Hamalog.domain.sideEffect.SideEffectSideEffectRecord;
 import com.Hamalog.dto.sideEffect.request.SideEffectRecordRequest;
 import com.Hamalog.dto.sideEffect.response.RecentSideEffectResponse;
+import com.Hamalog.exception.ErrorCode;
 import com.Hamalog.exception.member.MemberNotFoundException;
+import com.Hamalog.exception.sideEffect.SideEffectNotFoundException;
+import com.Hamalog.exception.validation.InvalidInputException;
 import com.Hamalog.repository.member.MemberRepository;
 import com.Hamalog.repository.sideEffect.SideEffectRecordRepository;
 import com.Hamalog.repository.sideEffect.SideEffectRepository;
 import com.Hamalog.repository.sideEffect.SideEffectSideEffectRecordRepository;
 import com.Hamalog.security.annotation.RequireResourceOwnership;
+import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -25,6 +28,7 @@ import java.util.stream.Collectors;
 
 @Service
 @Transactional(readOnly = true)
+@Slf4j
 public class SideEffectService {
 
     private final SideEffectRepository sideEffectRepository;
@@ -46,6 +50,16 @@ public class SideEffectService {
     }
 
     public RecentSideEffectResponse getRecentSideEffects(Long memberId) {
+        // 입력값 검증
+        if (memberId == null || memberId <= 0) {
+            throw new InvalidInputException(ErrorCode.INVALID_PARAMETER);
+        }
+
+        // 회원 존재 여부 검증
+        if (!memberRepository.existsById(memberId)) {
+            throw new MemberNotFoundException();
+        }
+
         List<String> names;
         
         // Redis 캐시가 활성화된 경우 캐시 우선 조회
@@ -78,14 +92,21 @@ public class SideEffectService {
     )
     @Transactional(rollbackFor = {Exception.class})
     public void createSideEffectRecord(SideEffectRecordRequest request) {
+        // 입력값 검증
+        validateSideEffectRecordRequest(request);
+
         // 회원 존재 여부 확인
         Member member = memberRepository.findById(request.memberId())
                 .orElseThrow(MemberNotFoundException::new);
         
+        // 생성 시간 검증
+        LocalDateTime createdAt = request.createdAt() != null ? request.createdAt() : LocalDateTime.now();
+        validateCreatedAt(createdAt);
+
         // SideEffectRecord 생성
         SideEffectRecord sideEffectRecord = SideEffectRecord.builder()
                 .member(member)
-                .createdAt(request.createdAt() != null ? request.createdAt() : LocalDateTime.now())
+                .createdAt(createdAt)
                 .build();
         
         SideEffectRecord savedRecord = sideEffectRecordRepository.save(sideEffectRecord);
@@ -98,6 +119,18 @@ public class SideEffectService {
         // IN 쿼리로 모든 SideEffect를 한 번에 조회
         List<SideEffect> sideEffects = sideEffectRepository.findAllById(sideEffectIds);
         
+        // 존재하지 않는 SideEffect ID 검증
+        if (sideEffects.size() != sideEffectIds.size()) {
+            List<Long> foundIds = sideEffects.stream()
+                    .map(SideEffect::getSideEffectId)
+                    .toList();
+            List<Long> missingIds = sideEffectIds.stream()
+                    .filter(id -> !foundIds.contains(id))
+                    .toList();
+            log.warn("SideEffect IDs not found: {}", missingIds);
+            throw new SideEffectNotFoundException();
+        }
+
         // ID를 키로 하는 Map으로 변환하여 빠른 조회 가능
         Map<Long, SideEffect> sideEffectMap = sideEffects.stream()
                 .collect(Collectors.toMap(SideEffect::getSideEffectId, Function.identity()));
@@ -105,10 +138,14 @@ public class SideEffectService {
         // SideEffect와의 연결 관계 생성 및 캐시 업데이트를 위한 side effect 이름 수집
         List<String> newSideEffectNames = request.sideEffects().stream()
                 .map(item -> {
+                    // 부작용 정도 검증
+                    validateSideEffectDegree(item.degree());
+
                     // Map에서 SideEffect 조회 (N+1 문제 해결됨)
                     SideEffect sideEffect = sideEffectMap.get(item.sideEffectId());
                     if (sideEffect == null) {
-                        throw new IllegalArgumentException("SideEffect not found with id: " + item.sideEffectId());
+                        log.error("SideEffect not found with id: {}", item.sideEffectId());
+                        throw new SideEffectNotFoundException(item.sideEffectId());
                     }
                     
                     // SideEffectSideEffectRecord 생성
@@ -136,8 +173,57 @@ public class SideEffectService {
     }
     
     public boolean isOwner(Long memberId, String loginId) {
+        if (memberId == null || loginId == null) {
+            return false;
+        }
         return memberRepository.findById(memberId)
                 .map(member -> member.getLoginId().equals(loginId))
                 .orElse(false);
+    }
+
+    // ========== Private Validation Methods ==========
+
+    /**
+     * 부작용 기록 요청 데이터 검증
+     */
+    private void validateSideEffectRecordRequest(SideEffectRecordRequest request) {
+        if (request == null) {
+            throw new InvalidInputException(ErrorCode.BAD_REQUEST);
+        }
+
+        if (request.memberId() == null || request.memberId() <= 0) {
+            throw new InvalidInputException(ErrorCode.INVALID_PARAMETER);
+        }
+
+        if (request.sideEffects() == null || request.sideEffects().isEmpty()) {
+            log.warn("Side effect list is empty for member {}", request.memberId());
+            throw new InvalidInputException(ErrorCode.EMPTY_SIDE_EFFECT_LIST);
+        }
+
+        // 부작용 목록 크기 제한 (DoS 방지)
+        if (request.sideEffects().size() > 50) {
+            log.warn("Side effect list size {} exceeds maximum allowed (50)", request.sideEffects().size());
+            throw new InvalidInputException(ErrorCode.INVALID_INPUT);
+        }
+    }
+
+    /**
+     * 부작용 정도 검증 - 1-5 사이여야 함
+     */
+    private void validateSideEffectDegree(Integer degree) {
+        if (degree == null || degree < 1 || degree > 5) {
+            log.warn("Invalid side effect degree: {}", degree);
+            throw new InvalidInputException(ErrorCode.INVALID_SIDE_EFFECT_DEGREE);
+        }
+    }
+
+    /**
+     * 생성 시간 검증 - 미래 시간은 불가
+     */
+    private void validateCreatedAt(LocalDateTime createdAt) {
+        if (createdAt.isAfter(LocalDateTime.now())) {
+            log.warn("Created time {} is in the future", createdAt);
+            throw new InvalidInputException(ErrorCode.INVALID_DATE_RANGE);
+        }
     }
 }

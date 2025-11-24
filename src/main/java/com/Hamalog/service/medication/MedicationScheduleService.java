@@ -9,8 +9,10 @@ import com.Hamalog.domain.medication.MedicationSchedule;
 import com.Hamalog.domain.member.Member;
 import com.Hamalog.dto.medication.request.MedicationScheduleCreateRequest;
 import com.Hamalog.dto.medication.request.MedicationScheduleUpdateRequest;
+import com.Hamalog.exception.ErrorCode;
 import com.Hamalog.exception.medication.MedicationScheduleNotFoundException;
 import com.Hamalog.exception.member.MemberNotFoundException;
+import com.Hamalog.exception.validation.InvalidInputException;
 import com.Hamalog.repository.medication.MedicationScheduleRepository;
 import com.Hamalog.repository.member.MemberRepository;
 import com.Hamalog.security.annotation.RequireResourceOwnership;
@@ -34,11 +36,23 @@ public class MedicationScheduleService {
 
     @Transactional(readOnly = true)
     public List<MedicationSchedule> getMedicationSchedules(Long memberId) {
+        // 회원 존재 여부 검증
+        if (!memberRepository.existsById(memberId)) {
+            throw new MemberNotFoundException();
+        }
         return medicationScheduleRepository.findAllByMember_MemberId(memberId);
     }
 
     @Transactional(readOnly = true)
     public org.springframework.data.domain.Page<MedicationSchedule> getMedicationSchedules(Long memberId, org.springframework.data.domain.Pageable pageable) {
+        // 회원 존재 여부 검증
+        if (!memberRepository.existsById(memberId)) {
+            throw new MemberNotFoundException();
+        }
+
+        // 페이지네이션 파라미터 검증
+        validatePaginationParams(pageable);
+
         return medicationScheduleRepository.findByMember_MemberId(memberId, pageable);
     }
 
@@ -49,6 +63,9 @@ public class MedicationScheduleService {
     )
     @Transactional(readOnly = true)
     public MedicationSchedule getMedicationSchedule(Long medicationScheduleId) {
+        if (medicationScheduleId == null || medicationScheduleId <= 0) {
+            throw new InvalidInputException(ErrorCode.INVALID_PARAMETER);
+        }
         return medicationScheduleRepository.findById(medicationScheduleId)
                 .orElseThrow(MedicationScheduleNotFoundException::new);
     }
@@ -57,16 +74,27 @@ public class MedicationScheduleService {
     public MedicationSchedule createMedicationSchedule(
             MedicationScheduleCreateRequest medicationScheduleCreateRequest
     ) {
+        // 입력값 검증
+        validateMedicationScheduleRequest(medicationScheduleCreateRequest);
+
         Member member = memberRepository.findById(medicationScheduleCreateRequest.memberId())
                 .orElseThrow(MemberNotFoundException::new);
+
+        LocalDate prescriptionDate = LocalDate.parse(medicationScheduleCreateRequest.prescriptionDate());
+        LocalDate startOfAd = LocalDate.parse(medicationScheduleCreateRequest.startOfAd());
+
+        // 비즈니스 로직 검증
+        validateDateRange(prescriptionDate, startOfAd);
+        validatePrescriptionDays(medicationScheduleCreateRequest.prescriptionDays());
+        validatePerDay(medicationScheduleCreateRequest.perDay());
 
         MedicationSchedule medicationSchedule = new MedicationSchedule(
                 member,
                 medicationScheduleCreateRequest.name(),
                 medicationScheduleCreateRequest.hospitalName(),
-                LocalDate.parse(medicationScheduleCreateRequest.prescriptionDate()),
+                prescriptionDate,
                 medicationScheduleCreateRequest.memo(),
-                LocalDate.parse(medicationScheduleCreateRequest.startOfAd()),
+                startOfAd,
                 medicationScheduleCreateRequest.prescriptionDays(),
                 medicationScheduleCreateRequest.perDay(),
                 AlarmType.valueOf(medicationScheduleCreateRequest.alarmType())
@@ -105,7 +133,19 @@ public class MedicationScheduleService {
             Long medicationScheduleId,
             MedicationScheduleUpdateRequest medicationSchedule
     ) {
+        if (medicationScheduleId == null || medicationScheduleId <= 0) {
+            throw new InvalidInputException(ErrorCode.INVALID_PARAMETER);
+        }
+
+        // 입력값 검증
+        validateMedicationScheduleUpdateRequest(medicationSchedule);
+
         MedicationSchedule existingMedicationSchedule = getMedicationSchedule(medicationScheduleId);
+
+        // 비즈니스 로직 검증
+        validateDateRange(medicationSchedule.prescriptionDate(), medicationSchedule.startOfAd());
+        validatePrescriptionDays(medicationSchedule.prescriptionDays());
+        validatePerDay(medicationSchedule.perDay());
 
         existingMedicationSchedule.update(
                 medicationSchedule.name(),
@@ -148,6 +188,10 @@ public class MedicationScheduleService {
     )
     @Transactional(rollbackFor = {Exception.class})
     public void deleteMedicationSchedule(Long medicationScheduleId) {
+        if (medicationScheduleId == null || medicationScheduleId <= 0) {
+            throw new InvalidInputException(ErrorCode.INVALID_PARAMETER);
+        }
+
         MedicationSchedule medicationSchedule = getMedicationSchedule(medicationScheduleId);
         
         // Capture information before deletion for the event
@@ -172,8 +216,106 @@ public class MedicationScheduleService {
     
     @Transactional(readOnly = true)
     public boolean isOwner(Long memberId, String loginId) {
+        if (memberId == null || loginId == null) {
+            return false;
+        }
         return memberRepository.findById(memberId)
                 .map(member -> member.getLoginId().equals(loginId))
                 .orElse(false);
+    }
+
+    // ========== Private Validation Methods ==========
+
+    /**
+     * 복약 스케줄 생성 요청 데이터 검증
+     */
+    private void validateMedicationScheduleRequest(MedicationScheduleCreateRequest request) {
+        if (request == null) {
+            throw new InvalidInputException(ErrorCode.BAD_REQUEST);
+        }
+
+        if (request.memberId() == null || request.memberId() <= 0) {
+            throw new InvalidInputException(ErrorCode.INVALID_PARAMETER);
+        }
+
+        if (request.name() == null || request.name().trim().isEmpty()) {
+            throw new InvalidInputException(ErrorCode.MISSING_REQUIRED_FIELD);
+        }
+
+        if (request.prescriptionDate() == null || request.startOfAd() == null) {
+            throw new InvalidInputException(ErrorCode.MISSING_REQUIRED_FIELD);
+        }
+    }
+
+    /**
+     * 복약 스케줄 수정 요청 데이터 검증
+     */
+    private void validateMedicationScheduleUpdateRequest(MedicationScheduleUpdateRequest request) {
+        if (request == null) {
+            throw new InvalidInputException(ErrorCode.BAD_REQUEST);
+        }
+
+        if (request.name() == null || request.name().trim().isEmpty()) {
+            throw new InvalidInputException(ErrorCode.MISSING_REQUIRED_FIELD);
+        }
+
+        if (request.prescriptionDate() == null || request.startOfAd() == null) {
+            throw new InvalidInputException(ErrorCode.MISSING_REQUIRED_FIELD);
+        }
+    }
+
+    /**
+     * 날짜 범위 검증 - 시작일은 처방일 이후여야 함
+     */
+    private void validateDateRange(LocalDate prescriptionDate, LocalDate startOfAd) {
+        if (startOfAd.isBefore(prescriptionDate)) {
+            log.warn("Invalid date range: startOfAd {} is before prescriptionDate {}", startOfAd, prescriptionDate);
+            throw new InvalidInputException(ErrorCode.INVALID_DATE_RANGE);
+        }
+    }
+
+    /**
+     * 처방 일수 검증 - 1일 이상이어야 함
+     */
+    private void validatePrescriptionDays(Integer prescriptionDays) {
+        if (prescriptionDays == null || prescriptionDays < 1) {
+            log.warn("Invalid prescription days: {}", prescriptionDays);
+            throw new InvalidInputException(ErrorCode.INVALID_PRESCRIPTION_DAYS);
+        }
+
+        // 추가 검증: 처방 일수 상한선 (예: 최대 365일)
+        if (prescriptionDays > 365) {
+            log.warn("Prescription days {} exceeds maximum allowed (365)", prescriptionDays);
+            throw new InvalidInputException(ErrorCode.INVALID_PRESCRIPTION_DAYS);
+        }
+    }
+
+    /**
+     * 1일 복용 횟수 검증 - 1회 이상이어야 함
+     */
+    private void validatePerDay(Integer perDay) {
+        if (perDay == null || perDay < 1) {
+            log.warn("Invalid per day: {}", perDay);
+            throw new InvalidInputException(ErrorCode.INVALID_PER_DAY);
+        }
+
+        // 추가 검증: 1일 복용 횟수 상한선 (예: 최대 10회)
+        if (perDay > 10) {
+            log.warn("Per day {} exceeds maximum allowed (10)", perDay);
+            throw new InvalidInputException(ErrorCode.INVALID_PER_DAY);
+        }
+    }
+
+    /**
+     * 페이지네이션 파라미터 검증
+     */
+    private void validatePaginationParams(org.springframework.data.domain.Pageable pageable) {
+        if (pageable.getPageNumber() < 0) {
+            throw new InvalidInputException(ErrorCode.INVALID_PAGE_NUMBER);
+        }
+
+        if (pageable.getPageSize() < 1 || pageable.getPageSize() > 100) {
+            throw new InvalidInputException(ErrorCode.INVALID_PAGE_SIZE);
+        }
     }
 }

@@ -52,6 +52,15 @@ public class TrustedProxyService {
                 .findFirst();
     }
 
+    public Optional<String> extractSingleIp(String headerValue) {
+        if (!StringUtils.hasText(headerValue)) {
+            return Optional.empty();
+        }
+
+        String candidate = headerValue.trim();
+        return isValidIpLiteral(candidate) ? Optional.of(candidate) : Optional.empty();
+    }
+
     public List<String> getTrustedProxyCidrs() {
         return Collections.unmodifiableList(trustedProxyCidrs);
     }

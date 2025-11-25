@@ -4,6 +4,7 @@ import com.Hamalog.security.CustomUserDetailsService;
 import com.Hamalog.security.filter.CsrfValidationFilter;
 import com.Hamalog.security.filter.RateLimitingFilter;
 import com.Hamalog.security.filter.RequestSizeMonitoringFilter;
+import com.Hamalog.security.filter.TrustedProxyService;
 import com.Hamalog.security.jwt.JwtTokenProvider;
 import com.Hamalog.security.oauth2.OAuth2AuthenticationSuccessHandler;
 import com.Hamalog.service.oauth2.KakaoOAuth2UserService;
@@ -50,6 +51,9 @@ class SecurityConfigTest {
     private CsrfValidationFilter csrfValidationFilter;
 
     @Mock
+    private TrustedProxyService trustedProxyService;
+
+    @Mock
     private AuthenticationConfiguration authenticationConfiguration;
 
     @Mock
@@ -66,7 +70,8 @@ class SecurityConfigTest {
                 oAuth2AuthenticationSuccessHandler,
                 rateLimitingFilter,
                 requestSizeMonitoringFilter,
-                csrfValidationFilter
+                csrfValidationFilter,
+                trustedProxyService
         );
     }
 
@@ -88,7 +93,8 @@ class SecurityConfigTest {
                 oAuth2AuthenticationSuccessHandler,
                 null, // rateLimitingFilter can be null
                 requestSizeMonitoringFilter,
-                csrfValidationFilter
+                csrfValidationFilter,
+                trustedProxyService
         );
 
         // then

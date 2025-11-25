@@ -1,5 +1,6 @@
 package com.Hamalog.security.jwt;
 
+import com.Hamalog.security.filter.TrustedProxyService;
 import jakarta.servlet.FilterChain;
 import jakarta.servlet.ServletException;
 import jakarta.servlet.http.HttpServletRequest;
@@ -20,10 +21,13 @@ public class JwtAuthenticationFilter extends OncePerRequestFilter {
 
     private final JwtTokenProvider jwtTokenProvider;
     private final UserDetailsService userDetailsService;
+    private final TrustedProxyService trustedProxyService;
 
-    public JwtAuthenticationFilter(JwtTokenProvider jwtTokenProvider, UserDetailsService userDetailsService) {
+    public JwtAuthenticationFilter(JwtTokenProvider jwtTokenProvider, UserDetailsService userDetailsService,
+                                   TrustedProxyService trustedProxyService) {
         this.jwtTokenProvider = jwtTokenProvider;
         this.userDetailsService = userDetailsService;
+        this.trustedProxyService = trustedProxyService;
     }
 
     @Override
@@ -96,22 +100,15 @@ public class JwtAuthenticationFilter extends OncePerRequestFilter {
     }
 
     private String getClientIpAddress(HttpServletRequest request) {
-        String xForwardedFor = request.getHeader("X-Forwarded-For");
-        if (StringUtils.hasText(xForwardedFor)) {
-            return xForwardedFor.split(",")[0].trim();
+        String remoteAddr = request.getRemoteAddr();
+        if (!trustedProxyService.isTrustedProxy(remoteAddr)) {
+            return remoteAddr;
         }
-        
-        String xRealIp = request.getHeader("X-Real-IP");
-        if (StringUtils.hasText(xRealIp)) {
-            return xRealIp;
-        }
-        
-        String xClientIp = request.getHeader("X-Client-IP");
-        if (StringUtils.hasText(xClientIp)) {
-            return xClientIp;
-        }
-        
-        return request.getRemoteAddr();
+
+        return trustedProxyService.extractClientIp(request.getHeader("X-Forwarded-For"))
+                .or(() -> trustedProxyService.extractSingleIp(request.getHeader("X-Real-IP")))
+                .or(() -> trustedProxyService.extractSingleIp(request.getHeader("X-Client-IP")))
+                .orElse(remoteAddr);
     }
 
     private boolean requiresAuthentication(HttpServletRequest request) {

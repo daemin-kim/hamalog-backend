@@ -26,6 +26,7 @@ public class RateLimitingFilter extends OncePerRequestFilter {
 
     private final RateLimitingService rateLimitingService;
     private final ObjectMapper objectMapper;
+    private final TrustedProxyService trustedProxyService;
 
     private static final Set<String> AUTH_ENDPOINTS = Set.of(
         "/auth/login",
@@ -115,22 +116,13 @@ public class RateLimitingFilter extends OncePerRequestFilter {
     }
 
     private String getClientIpAddress(HttpServletRequest request) {
-        // Security Fix: Only use X-Forwarded-For from trusted proxies, otherwise use remote address
-        // In production, configure trusted proxy IPs and validate them
-        String xForwardedFor = request.getHeader("X-Forwarded-For");
-        
-        // TODO: Add trusted proxy IP validation in production
-        // For now, only use X-Forwarded-For if it exists, otherwise fall back to remote address
-        if (xForwardedFor != null && !xForwardedFor.isEmpty() && !"unknown".equalsIgnoreCase(xForwardedFor)) {
-            // Take the first IP in case of multiple proxies
-            if (xForwardedFor.contains(",")) {
-                return xForwardedFor.split(",")[0].trim();
-            }
-            return xForwardedFor;
+        String remoteAddr = request.getRemoteAddr();
+        if (!trustedProxyService.isTrustedProxy(remoteAddr)) {
+            return remoteAddr;
         }
-        
-        // Use the actual remote address as the most reliable source
-        return request.getRemoteAddr();
+
+        return trustedProxyService.extractClientIp(request.getHeader("X-Forwarded-For"))
+                .orElse(remoteAddr);
     }
 
     @Override

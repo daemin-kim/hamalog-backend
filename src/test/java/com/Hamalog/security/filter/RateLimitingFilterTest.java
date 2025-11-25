@@ -19,6 +19,7 @@ import org.springframework.http.MediaType;
 import java.io.IOException;
 import java.io.PrintWriter;
 import java.io.StringWriter;
+import java.util.Optional;
 
 import static org.junit.jupiter.api.Assertions.*;
 import static org.mockito.ArgumentMatchers.*;
@@ -33,6 +34,9 @@ class RateLimitingFilterTest {
 
     @Mock
     private ObjectMapper objectMapper;
+
+    @Mock
+    private TrustedProxyService trustedProxyService;
 
     @Mock
     private HttpServletRequest request;
@@ -54,7 +58,8 @@ class RateLimitingFilterTest {
     @BeforeEach
     void setUp() {
         responseWriter = new StringWriter();
-        // Remove universal stubbing - will be done per test as needed
+        lenient().when(trustedProxyService.isTrustedProxy(anyString())).thenReturn(false);
+        lenient().when(request.getRemoteAddr()).thenReturn("192.168.0.10");
     }
 
     @Test
@@ -62,7 +67,6 @@ class RateLimitingFilterTest {
     void doFilterInternal_AuthEndpointAllowed_PassesFilter() throws ServletException, IOException {
         // given
         when(request.getRequestURI()).thenReturn("/auth/login");
-        when(request.getRemoteAddr()).thenReturn("192.168.1.1");
         when(rateLimitingService.tryConsumeAuthRequest(anyString())).thenReturn(true);
         
         RateLimitingService.RateLimitInfo rateLimitInfo = 
@@ -85,7 +89,6 @@ class RateLimitingFilterTest {
     void doFilterInternal_AuthEndpointExceeded_ReturnsTooManyRequests() throws ServletException, IOException {
         // given
         when(request.getRequestURI()).thenReturn("/auth/login");
-        when(request.getRemoteAddr()).thenReturn("192.168.1.1");
         when(response.getWriter()).thenReturn(printWriter);
         when(rateLimitingService.tryConsumeAuthRequest(anyString())).thenReturn(false);
         when(objectMapper.writeValueAsString(any())).thenReturn("{\"error\":\"Too Many Requests\"}");
@@ -128,7 +131,6 @@ class RateLimitingFilterTest {
     void doFilterInternal_ProtectedEndpointExceeded_ReturnsTooManyRequests() throws ServletException, IOException {
         // given
         when(request.getRequestURI()).thenReturn("/medication-schedule/create");
-        when(request.getRemoteAddr()).thenReturn("192.168.1.1");
         when(response.getWriter()).thenReturn(printWriter);
         when(rateLimitingService.tryConsumeApiRequest(anyString())).thenReturn(false);
         when(objectMapper.writeValueAsString(any())).thenReturn("{\"error\":\"Too Many Requests\"}");
@@ -163,6 +165,8 @@ class RateLimitingFilterTest {
     void getClientIpAddress_XForwardedForHeader_ExtractsIp() throws ServletException, IOException {
         // given
         when(request.getRequestURI()).thenReturn("/auth/login");
+        when(trustedProxyService.isTrustedProxy(anyString())).thenReturn(true);
+        when(trustedProxyService.extractClientIp(anyString())).thenReturn(Optional.of("203.0.113.1"));
         when(request.getHeader("X-Forwarded-For")).thenReturn("203.0.113.1, 198.51.100.1");
         when(rateLimitingService.tryConsumeAuthRequest(contains("203.0.113.1"))).thenReturn(true);
         
@@ -183,7 +187,8 @@ class RateLimitingFilterTest {
     void getClientIpAddress_NoXForwardedFor_UsesRemoteAddr() throws ServletException, IOException {
         // given
         when(request.getRequestURI()).thenReturn("/auth/login");
-        when(request.getHeader("X-Forwarded-For")).thenReturn(null);
+        when(trustedProxyService.isTrustedProxy(anyString())).thenReturn(true);
+        when(trustedProxyService.extractClientIp(any())).thenReturn(Optional.empty());
         when(request.getRemoteAddr()).thenReturn("192.168.1.100");
         when(rateLimitingService.tryConsumeAuthRequest(contains("192.168.1.100"))).thenReturn(true);
         
@@ -204,6 +209,8 @@ class RateLimitingFilterTest {
     void getClientIpAddress_XForwardedForUnknown_UsesRemoteAddr() throws ServletException, IOException {
         // given
         when(request.getRequestURI()).thenReturn("/auth/login");
+        when(trustedProxyService.isTrustedProxy(anyString())).thenReturn(true);
+        when(trustedProxyService.extractClientIp(any())).thenReturn(Optional.empty());
         when(request.getHeader("X-Forwarded-For")).thenReturn("unknown");
         when(request.getRemoteAddr()).thenReturn("192.168.1.200");
         when(rateLimitingService.tryConsumeAuthRequest(contains("192.168.1.200"))).thenReturn(true);
@@ -394,7 +401,6 @@ class RateLimitingFilterTest {
     void handleRateLimitExceeded_AuthEndpoint_ReturnsAuthSpecificMessage() throws ServletException, IOException {
         // given
         when(request.getRequestURI()).thenReturn("/auth/login");
-        when(request.getRemoteAddr()).thenReturn("192.168.1.1");
         when(response.getWriter()).thenReturn(printWriter);
         when(rateLimitingService.tryConsumeAuthRequest(anyString())).thenReturn(false);
         
@@ -415,7 +421,6 @@ class RateLimitingFilterTest {
     void handleRateLimitExceeded_ApiEndpoint_ReturnsApiSpecificMessage() throws ServletException, IOException {
         // given
         when(request.getRequestURI()).thenReturn("/medication-record/list");
-        when(request.getRemoteAddr()).thenReturn("192.168.1.1");
         when(response.getWriter()).thenReturn(printWriter);
         when(rateLimitingService.tryConsumeApiRequest(anyString())).thenReturn(false);
         

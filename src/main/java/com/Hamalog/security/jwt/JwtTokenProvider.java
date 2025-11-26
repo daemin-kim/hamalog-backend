@@ -9,6 +9,7 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.core.env.Environment;
 import org.springframework.stereotype.Component;
+import org.springframework.util.StringUtils;
 
 import javax.crypto.SecretKey;
 import java.security.SecureRandom;
@@ -26,14 +27,17 @@ public class JwtTokenProvider {
     private final long validityInMilliseconds;
     private final TokenBlacklistService tokenBlacklistService;
     private final Environment environment;
+    private final String issuer;
 
     public JwtTokenProvider(
             @Value("${jwt.secret:}") String fallbackSecret,
             @Value("${jwt.expiry:3600000}") long validityInMilliseconds,
+            @Value("${jwt.issuer:hamalog}") String issuer,
             TokenBlacklistService tokenBlacklistService,
             Environment environment) {
         this.fallbackSecret = fallbackSecret;
         this.validityInMilliseconds = validityInMilliseconds;
+        this.issuer = issuer;
         this.tokenBlacklistService = tokenBlacklistService;
         this.environment = environment;
     }
@@ -58,14 +62,12 @@ public class JwtTokenProvider {
             if (isProduction) {
                 String errorMessage = String.format(
                     "⛔ JWT 비밀키가 설정되지 않았습니다. 프로덕션 환경에서는 반드시 설정해야 합니다.\n" +
-                    "현재 jwt.secret 상태: [%s]\n" +
-                    "현재 jwt.secret 길이: %d\n" +
+                    "현재 jwt.secret 상태: %s\n" +
                     "해결 방법:\n" +
                     "1. 환경 변수 설정: export JWT_SECRET=$(openssl rand -base64 32)\n" +
                     "2. application-prod.properties: jwt.secret=<Base64 인코딩된 256비트 키>\n" +
                     "3. 키 생성 예시: openssl rand -base64 32",
-                    secret == null ? "null" : "'" + secret + "'",
-                    secret == null ? 0 : secret.length()
+                    describeSecret(secret)
                 );
                 log.error("[JWT_PROVIDER] {}", errorMessage);
                 throw new IllegalStateException(errorMessage);
@@ -114,7 +116,8 @@ public class JwtTokenProvider {
         JwtBuilder builder = Jwts.builder()
                 .setSubject(loginId)
                 .setIssuedAt(now)
-                .setExpiration(expiry);
+                .setExpiration(expiry)
+                .setIssuer(issuer);
 
         if (extraClaims != null && !extraClaims.isEmpty()) {
             builder.addClaims(extraClaims);
@@ -130,13 +133,8 @@ public class JwtTokenProvider {
             log.info("JWT 토큰이 블랙리스트에 있습니다");
             return false;
         }
-        
         try {
-            Jwts.parser()
-                    .clockSkewSeconds(60)
-                    .verifyWith(secretKey)
-                    .build()
-                    .parseSignedClaims(token);
+            parseClaims(token);
             return true;
         } catch (ExpiredJwtException e) {
             log.info("JWT 만료됨");
@@ -146,20 +144,37 @@ public class JwtTokenProvider {
             log.warn("JWT 위조 또는 변조 가능");
         } catch (SignatureException | IllegalArgumentException e) {
             log.warn("JWT 서명 오류 및 잘못된 토큰");
+        } catch (IllegalStateException e) {
+            log.warn("JWT 유효성 검증 실패: {}", e.getMessage());
         }
         return false;
     }
 
     public String getLoginIdFromToken(String token) {
-        return getAllClaims(token).getSubject();
+        return parseClaims(token).getSubject();
     }
 
     public Claims getAllClaims(String token) {
-        return Jwts.parser()
+        return parseClaims(token);
+    }
+
+    private Claims parseClaims(String token) {
+        Claims claims = Jwts.parser()
                 .clockSkewSeconds(60)
                 .verifyWith(secretKey)
                 .build()
                 .parseSignedClaims(token)
                 .getPayload();
+        if (!issuer.equals(claims.getIssuer())) {
+            throw new IllegalStateException("Unexpected token issuer: " + claims.getIssuer());
+        }
+        return claims;
+    }
+
+    private String describeSecret(String secret) {
+        if (!StringUtils.hasText(secret)) {
+            return "<empty>";
+        }
+        return "<configured, length=" + secret.length() + ">";
     }
 }

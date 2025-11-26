@@ -1,131 +1,111 @@
 package com.Hamalog.logging;
 
-import lombok.experimental.UtilityClass;
+import java.util.ArrayList;
+import java.util.Collection;
+import java.util.HashMap;
+import java.util.List;
+import java.util.Map;
+import java.util.regex.Pattern;
 
 /**
- * 로그에서 민감정보를 마스킹하는 유틸리티 클래스
+ * Utility for masking sensitive values before they are written to logs.
  */
-@UtilityClass
-public class SensitiveDataMasker {
+public final class SensitiveDataMasker {
 
-    private static final String MASK_CHAR = "*";
-    private static final int VISIBLE_PREFIX_LENGTH = 3;
-    private static final int VISIBLE_SUFFIX_LENGTH = 2;
+    private static final String MASK = "***";
+    private static final Pattern SENSITIVE_KEY_PATTERN = Pattern.compile("(?i).*(password|secret|token|credential|authorization|session|cookie|ssn|phone|email|account).*");
+    private static final Pattern EMAIL_PATTERN = Pattern.compile("(^[^@]+)@(.+$)");
 
-    /**
-     * 이메일 주소 마스킹
-     * 예: user@example.com -> use***@ex***le.com
-     */
+    private SensitiveDataMasker() {
+        // Utility class
+    }
+
+    public static void mask(Map<String, Object> payload) {
+        if (payload == null || payload.isEmpty()) {
+            return;
+        }
+        maskMap(payload);
+    }
+
+    @SuppressWarnings("unchecked")
+    private static void maskMap(Map<String, Object> map) {
+        for (Map.Entry<String, Object> entry : new ArrayList<>(map.entrySet())) {
+            String key = entry.getKey();
+            Object value = entry.getValue();
+
+            if (key != null && SENSITIVE_KEY_PATTERN.matcher(key).matches()) {
+                entry.setValue(MASK);
+                continue;
+            }
+
+            if (value instanceof Map<?, ?> childMap) {
+                // Defensive copy to avoid ClassCastException when original value isn't Map<String, Object>
+                Map<String, Object> nested = new HashMap<>();
+                childMap.forEach((childKey, childValue) -> nested.put(String.valueOf(childKey), childValue));
+                maskMap(nested);
+                entry.setValue(nested);
+            } else if (value instanceof Collection<?> collection) {
+                entry.setValue(maskCollection(collection));
+            } else if (value instanceof Object[] array) {
+                entry.setValue(maskArray(array));
+            }
+        }
+    }
+
+    private static List<Object> maskCollection(Collection<?> collection) {
+        List<Object> sanitized = new ArrayList<>(collection.size());
+        for (Object element : collection) {
+            sanitized.add(maskNestedValue(element));
+        }
+        return sanitized;
+    }
+
+    private static List<Object> maskArray(Object[] array) {
+        List<Object> sanitized = new ArrayList<>(array.length);
+        for (Object element : array) {
+            sanitized.add(maskNestedValue(element));
+        }
+        return sanitized;
+    }
+
+    private static Object maskNestedValue(Object value) {
+        if (value instanceof Map<?, ?> mapValue) {
+            Map<String, Object> nested = new HashMap<>();
+            mapValue.forEach((k, v) -> nested.put(String.valueOf(k), v));
+            maskMap(nested);
+            return nested;
+        }
+        if (value instanceof Collection<?> collection) {
+            return maskCollection(collection);
+        }
+        if (value instanceof Object[] array) {
+            return maskArray(array);
+        }
+        return value;
+    }
+
     public static String maskEmail(String email) {
-        if (email == null || email.isEmpty()) {
-            return "N/A";
+        if (email == null) {
+            return MASK;
         }
-
-        int atIndex = email.indexOf('@');
-        if (atIndex <= 0) {
-            return maskString(email);
+        var matcher = EMAIL_PATTERN.matcher(email);
+        if (matcher.matches()) {
+            String local = matcher.group(1);
+            String domain = matcher.group(2);
+            String maskedLocal = local.length() <= 2 ? MASK : local.substring(0, 2) + "***";
+            return maskedLocal + "@" + domain;
         }
-
-        String localPart = email.substring(0, atIndex);
-        String domain = email.substring(atIndex + 1);
-
-        String maskedLocal = maskString(localPart);
-        String maskedDomain = maskString(domain);
-
-        return maskedLocal + "@" + maskedDomain;
+        return MASK;
     }
 
-    /**
-     * 전화번호 마스킹
-     * 예: 01012345678 -> 010****5678
-     */
-    public static String maskPhoneNumber(String phoneNumber) {
-        if (phoneNumber == null || phoneNumber.isEmpty()) {
-            return "N/A";
-        }
-
-        if (phoneNumber.length() < 7) {
-            return MASK_CHAR.repeat(phoneNumber.length());
-        }
-
-        String prefix = phoneNumber.substring(0, 3);
-        String suffix = phoneNumber.substring(phoneNumber.length() - 4);
-        String masked = MASK_CHAR.repeat(phoneNumber.length() - 7);
-
-        return prefix + masked + suffix;
-    }
-
-    /**
-     * 사용자 ID 마스킹
-     * 예: 123456 -> 12***6
-     */
     public static String maskUserId(Long userId) {
         if (userId == null) {
-            return "N/A";
+            return MASK;
         }
-        return maskString(userId.toString());
-    }
-
-    /**
-     * 일반 문자열 마스킹
-     * 예: abcdefgh -> abc***gh
-     */
-    public static String maskString(String str) {
-        if (str == null || str.isEmpty()) {
-            return "N/A";
+        String idStr = String.valueOf(userId);
+        if (idStr.length() <= 2) {
+            return MASK;
         }
-
-        int length = str.length();
-
-        if (length <= VISIBLE_PREFIX_LENGTH + VISIBLE_SUFFIX_LENGTH) {
-            return MASK_CHAR.repeat(length);
-        }
-
-        String prefix = str.substring(0, VISIBLE_PREFIX_LENGTH);
-        String suffix = str.substring(length - VISIBLE_SUFFIX_LENGTH);
-        String masked = MASK_CHAR.repeat(Math.min(3, length - VISIBLE_PREFIX_LENGTH - VISIBLE_SUFFIX_LENGTH));
-
-        return prefix + masked + suffix;
-    }
-
-    /**
-     * 토큰 마스킹
-     * 예: eyJhbGciOiJIUzI1NiJ9... -> eyJ***9 (앞 3자, 뒤 1자만 표시)
-     */
-    public static String maskToken(String token) {
-        if (token == null || token.isEmpty()) {
-            return "N/A";
-        }
-
-        if (token.length() <= 4) {
-            return MASK_CHAR.repeat(token.length());
-        }
-
-        return token.substring(0, 3) + MASK_CHAR.repeat(3) + token.substring(token.length() - 1);
-    }
-
-    /**
-     * 비밀번호 완전 마스킹
-     */
-    public static String maskPassword() {
-        return "********";
-    }
-
-    /**
-     * IP 주소 마스킹
-     * 예: 192.168.1.100 -> 192.168.***.***
-     */
-    public static String maskIpAddress(String ipAddress) {
-        if (ipAddress == null || ipAddress.isEmpty()) {
-            return "N/A";
-        }
-
-        String[] parts = ipAddress.split("\\.");
-        if (parts.length != 4) {
-            return maskString(ipAddress);
-        }
-
-        return parts[0] + "." + parts[1] + ".***. ***";
+        return idStr.substring(0, idStr.length() - 2) + "**";
     }
 }
-

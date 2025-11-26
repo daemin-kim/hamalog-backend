@@ -133,7 +133,12 @@ public class CsrfController {
      * 클라이언트 IP 주소 추출
      */
     private String getClientIp(HttpServletRequest request) {
-        return trustedProxyService.resolveClientIp(request).orElse(request.getRemoteAddr());
+        String clientIp = trustedProxyService.resolveClientIp(request)
+                .orElseGet(() -> !StringUtils.hasText(request.getRemoteAddr()) ? "unknown" : request.getRemoteAddr());
+        if (!StringUtils.hasText(clientIp)) {
+            throw new IllegalStateException("Unable to resolve client IP");
+        }
+        return clientIp;
     }
 
     /**

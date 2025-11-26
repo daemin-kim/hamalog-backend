@@ -2,6 +2,7 @@ package com.Hamalog.logging;
 
 import com.Hamalog.logging.events.*;
 import com.fasterxml.jackson.databind.ObjectMapper;
+import com.fasterxml.jackson.databind.ObjectWriter;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.slf4j.MDC;
@@ -26,10 +27,12 @@ public class StructuredLogger {
     private static final Logger APPLICATION_LOGGER = LoggerFactory.getLogger(StructuredLogger.class);
     
     private final ObjectMapper objectMapper;
+    private final ObjectWriter jsonWriter;
     private final DateTimeFormatter ISO_FORMATTER = DateTimeFormatter.ofPattern("yyyy-MM-dd'T'HH:mm:ss.SSS'Z'").withZone(ZoneOffset.UTC);
 
     public StructuredLogger() {
         this.objectMapper = new ObjectMapper();
+        this.jsonWriter = objectMapper.writer();
     }
 
     /**
@@ -48,9 +51,7 @@ public class StructuredLogger {
             context.put("audit_details", event.getDetails());
             
             setMDCContext(context);
-            AUDIT_LOGGER.info("AUDIT_EVENT: {} on {} [{}] by user {} from {}", 
-                    event.getOperation(), event.getEntityType(), event.getEntityId(), 
-                    event.getUserId(), event.getIpAddress());
+            AUDIT_LOGGER.info(buildJsonMessage(context, "AUDIT_EVENT"));
         } finally {
             clearMDCContext();
         }
@@ -73,15 +74,11 @@ public class StructuredLogger {
             context.put("security_details", event.getDetails());
             
             setMDCContext(context);
-            
+            String marker = "SECURITY_EVENT";
             if ("HIGH".equals(event.getRiskLevel()) || "CRITICAL".equals(event.getRiskLevel())) {
-                SECURITY_LOGGER.error("SECURITY_EVENT: {} - {} attempted {} on {} from {} - Result: {}", 
-                        event.getEventType(), event.getUserId(), event.getAction(), 
-                        event.getResource(), event.getIpAddress(), event.getResult());
+                SECURITY_LOGGER.error(buildJsonMessage(context, marker));
             } else {
-                SECURITY_LOGGER.info("SECURITY_EVENT: {} - {} attempted {} on {} from {} - Result: {}", 
-                        event.getEventType(), event.getUserId(), event.getAction(), 
-                        event.getResource(), event.getIpAddress(), event.getResult());
+                SECURITY_LOGGER.info(buildJsonMessage(context, marker));
             }
         } finally {
             clearMDCContext();
@@ -108,15 +105,12 @@ public class StructuredLogger {
             context.put("perf_cpu_time", event.getCpuTime());
             
             setMDCContext(context);
-            
+            String marker = event.getDurationMs() > 3000 ? "PERFORMANCE_SLOW" : "PERFORMANCE";
+            String message = buildJsonMessage(context, marker);
             if (event.getDurationMs() > 3000) {
-                PERFORMANCE_LOGGER.warn("PERFORMANCE_SLOW: {} took {}ms [{}] - Success: {}", 
-                        event.getOperation(), event.getDurationMs(), 
-                        event.getPerformanceLevel(), event.isSuccess());
+                PERFORMANCE_LOGGER.warn(message);
             } else {
-                PERFORMANCE_LOGGER.info("PERFORMANCE: {} took {}ms [{}] - Success: {}", 
-                        event.getOperation(), event.getDurationMs(), 
-                        event.getPerformanceLevel(), event.isSuccess());
+                PERFORMANCE_LOGGER.info(message);
             }
         } finally {
             clearMDCContext();
@@ -137,8 +131,7 @@ public class StructuredLogger {
             context.put("business_metadata", event.getMetadata());
             
             setMDCContext(context);
-            APPLICATION_LOGGER.info("BUSINESS_EVENT: {} performed {} on {} - Result: {}", 
-                    event.getUserId(), event.getAction(), event.getEntity(), event.getResult());
+            APPLICATION_LOGGER.info(buildJsonMessage(context, "BUSINESS_EVENT"));
         } finally {
             clearMDCContext();
         }
@@ -165,15 +158,10 @@ public class StructuredLogger {
             context.put("api_parameters", event.getParameters());
             
             setMDCContext(context);
-            
             if (event.getStatusCode() >= 400) {
-                APPLICATION_LOGGER.error("API_ERROR: [{}] {} {} - User: {} - Status: {} - Duration: {}ms", 
-                        event.getRequestType(), event.getHttpMethod(), event.getPath(), event.getUserId(), 
-                        event.getStatusCode(), event.getDurationMs());
+                APPLICATION_LOGGER.error(buildJsonMessage(context, "API_ERROR"));
             } else {
-                APPLICATION_LOGGER.info("API_SUCCESS: [{}] {} {} - User: {} - Status: {} - Duration: {}ms", 
-                        event.getRequestType(), event.getHttpMethod(), event.getPath(), event.getUserId(), 
-                        event.getStatusCode(), event.getDurationMs());
+                APPLICATION_LOGGER.info(buildJsonMessage(context, "API_SUCCESS"));
             }
         } finally {
             clearMDCContext();
@@ -194,7 +182,7 @@ public class StructuredLogger {
             }
             
             setMDCContext(context);
-            APPLICATION_LOGGER.error("ERROR: {} - Type: {}", message, throwable.getClass().getSimpleName(), throwable);
+            APPLICATION_LOGGER.error(buildJsonMessage(context, "ERROR_EVENT"), throwable);
         } finally {
             clearMDCContext();
         }
@@ -217,11 +205,22 @@ public class StructuredLogger {
      * Set MDC context from map
      */
     private void setMDCContext(Map<String, Object> context) {
+        SensitiveDataMasker.mask(context);
         context.forEach((key, value) -> {
             if (value != null) {
                 MDC.put(key, String.valueOf(value));
             }
         });
+    }
+
+    private String buildJsonMessage(Map<String, Object> context, String marker) {
+        Map<String, Object> payload = new HashMap<>(context);
+        payload.put("marker", marker);
+        try {
+            return jsonWriter.writeValueAsString(payload);
+        } catch (Exception ex) {
+            return marker + " " + context;
+        }
     }
 
     /**

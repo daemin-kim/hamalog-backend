@@ -7,6 +7,8 @@ import org.junit.jupiter.api.Test;
 import org.mockito.InjectMocks;
 import org.mockito.Mock;
 import org.mockito.MockitoAnnotations;
+import org.mockito.junit.jupiter.MockitoSettings;
+import org.mockito.quality.Strictness;
 import org.springframework.core.env.Environment;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
@@ -26,6 +28,7 @@ import static org.junit.jupiter.api.Assertions.*;
 import static org.mockito.ArgumentMatchers.anyString;
 import static org.mockito.Mockito.*;
 
+@MockitoSettings(strictness = Strictness.LENIENT)
 class SecureErrorHandlerTest {
 
     @InjectMocks
@@ -49,7 +52,7 @@ class SecureErrorHandlerTest {
         when(request.getRequestURI()).thenReturn("/api/test");
         when(request.getRemoteAddr()).thenReturn("127.0.0.1");
         when(inputValidationUtil.sanitizeForLog(anyString())).thenAnswer(i -> i.getArgument(0));
-        when(trustedProxyService.resolveClientIp(any())).thenReturn(Optional.of("127.0.0.1"));
+        lenient().when(trustedProxyService.resolveClientIp(any())).thenReturn(Optional.of("127.0.0.1"));
     }
 
     @Test

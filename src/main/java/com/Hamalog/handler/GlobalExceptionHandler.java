@@ -13,8 +13,10 @@ import com.Hamalog.exception.validation.InvalidInputException;
 import com.Hamalog.logging.MDCUtil;
 import com.Hamalog.logging.StructuredLogger;
 import com.Hamalog.logging.events.SecurityEvent;
+import com.Hamalog.security.filter.TrustedProxyService;
 import jakarta.persistence.OptimisticLockException;
 import jakarta.servlet.http.HttpServletRequest;
+import lombok.RequiredArgsConstructor;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.slf4j.MDC;
@@ -33,8 +35,11 @@ import org.springframework.web.bind.annotation.RestControllerAdvice;
 import java.util.HashMap;
 import java.util.Map;
 
+@RequiredArgsConstructor
 @RestControllerAdvice
 public class GlobalExceptionHandler {
+
+    private final TrustedProxyService trustedProxyService;
 
     private static final Logger log = LoggerFactory.getLogger(GlobalExceptionHandler.class);
     
@@ -359,7 +364,7 @@ public class GlobalExceptionHandler {
             context.put("request_path", request.getRequestURI());
             context.put("request_query", request.getQueryString());
             context.put("user_agent", sanitizeUserAgent(request.getHeader("User-Agent")));
-            context.put("client_ip", extractClientIpAddress(request));
+            context.put("client_ip", resolveClientIpAddress(request));
         }
         
         // User context
@@ -450,20 +455,8 @@ public class GlobalExceptionHandler {
     /**
      * Extract client IP address with proxy support
      */
-    private String extractClientIpAddress(HttpServletRequest request) {
-        if (request == null) return "unknown";
-        
-        String xForwardedFor = request.getHeader("X-Forwarded-For");
-        if (xForwardedFor != null && !xForwardedFor.isEmpty() && !"unknown".equalsIgnoreCase(xForwardedFor)) {
-            return xForwardedFor.split(",")[0].trim();
-        }
-        
-        String xRealIp = request.getHeader("X-Real-IP");
-        if (xRealIp != null && !xRealIp.isEmpty() && !"unknown".equalsIgnoreCase(xRealIp)) {
-            return xRealIp;
-        }
-        
-        return request.getRemoteAddr();
+    private String resolveClientIpAddress(HttpServletRequest request) {
+        return trustedProxyService.resolveClientIp(request).orElse("unknown");
     }
     
     /**

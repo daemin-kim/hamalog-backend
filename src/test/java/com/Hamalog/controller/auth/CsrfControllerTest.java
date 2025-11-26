@@ -2,6 +2,7 @@ package com.Hamalog.controller.auth;
 
 import com.Hamalog.security.csrf.CsrfTokenProvider;
 import com.Hamalog.security.jwt.JwtTokenProvider;
+import com.Hamalog.security.filter.TrustedProxyService;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;
@@ -10,16 +11,22 @@ import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.InjectMocks;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
+import org.mockito.junit.jupiter.MockitoSettings;
+import org.mockito.quality.Strictness;
 import org.springframework.http.MediaType;
 import org.springframework.test.web.servlet.MockMvc;
 import org.springframework.test.web.servlet.setup.MockMvcBuilders;
 
+import java.util.Optional;
+
+import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.anyString;
 import static org.mockito.Mockito.*;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.*;
 
 @ExtendWith(MockitoExtension.class)
+@MockitoSettings(strictness = Strictness.LENIENT)
 @DisplayName("CSRF Controller Tests")
 class CsrfControllerTest {
 
@@ -28,6 +35,9 @@ class CsrfControllerTest {
 
     @Mock
     private JwtTokenProvider jwtTokenProvider;
+
+    @Mock
+    private TrustedProxyService trustedProxyService;
 
     @InjectMocks
     private CsrfController csrfController;
@@ -39,6 +49,7 @@ class CsrfControllerTest {
     void setUp() {
         mockMvc = MockMvcBuilders.standaloneSetup(csrfController).build();
         objectMapper = new ObjectMapper();
+        lenient().when(trustedProxyService.resolveClientIp(any())).thenReturn(Optional.empty());
     }
 
     @Test
@@ -52,6 +63,7 @@ class CsrfControllerTest {
         when(jwtTokenProvider.validateToken(validToken)).thenReturn(true);
         when(jwtTokenProvider.getLoginIdFromToken(validToken)).thenReturn(userId);
         when(csrfTokenProvider.generateToken(userId)).thenReturn(csrfToken);
+        when(trustedProxyService.resolveClientIp(any())).thenReturn(Optional.of("203.0.113.1"));
 
         // when & then
         mockMvc.perform(get("/auth/csrf-token")
@@ -143,6 +155,7 @@ class CsrfControllerTest {
         when(jwtTokenProvider.validateToken(validToken)).thenReturn(true);
         when(jwtTokenProvider.getLoginIdFromToken(validToken)).thenReturn(userId);
         when(csrfTokenProvider.generateToken(userId)).thenReturn(csrfToken);
+        when(trustedProxyService.resolveClientIp(any())).thenReturn(Optional.of("192.168.1.100"));
 
         // when & then
         mockMvc.perform(get("/auth/csrf-token")
@@ -165,6 +178,7 @@ class CsrfControllerTest {
         when(jwtTokenProvider.validateToken(validJwtToken)).thenReturn(true);
         when(jwtTokenProvider.getLoginIdFromToken(validJwtToken)).thenReturn(userId);
         when(csrfTokenProvider.validateToken(userId, csrfToken)).thenReturn(true);
+        when(trustedProxyService.resolveClientIp(any())).thenReturn(Optional.of("192.168.1.100"));
 
         // when & then
         mockMvc.perform(get("/auth/csrf-status")
@@ -190,6 +204,7 @@ class CsrfControllerTest {
         when(jwtTokenProvider.validateToken(validJwtToken)).thenReturn(true);
         when(jwtTokenProvider.getLoginIdFromToken(validJwtToken)).thenReturn(userId);
         when(csrfTokenProvider.validateToken(userId, invalidCsrfToken)).thenReturn(false);
+        when(trustedProxyService.resolveClientIp(any())).thenReturn(Optional.of("192.168.1.100"));
 
         // when & then
         mockMvc.perform(get("/auth/csrf-status")
@@ -210,6 +225,7 @@ class CsrfControllerTest {
         
         when(jwtTokenProvider.validateToken(validJwtToken)).thenReturn(true);
         when(jwtTokenProvider.getLoginIdFromToken(validJwtToken)).thenReturn(userId);
+        when(trustedProxyService.resolveClientIp(any())).thenReturn(Optional.of("192.168.1.100"));
 
         // when & then
         mockMvc.perform(get("/auth/csrf-status")

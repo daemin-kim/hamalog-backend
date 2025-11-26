@@ -1,9 +1,11 @@
 package com.Hamalog.security.filter;
 
+import com.Hamalog.security.filter.TrustedProxyService;
 import jakarta.servlet.FilterChain;
 import jakarta.servlet.ServletException;
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.servlet.http.HttpServletResponse;
+import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.http.HttpStatus;
@@ -17,7 +19,10 @@ import java.util.Set;
 
 @Slf4j
 @Component
+@RequiredArgsConstructor
 public class RequestSizeMonitoringFilter extends OncePerRequestFilter {
+
+    private final TrustedProxyService trustedProxyService;
 
     @Value("${hamalog.security.request.max-size-mb:10}")
     private long maxRequestSizeMB;
@@ -116,24 +121,7 @@ public class RequestSizeMonitoringFilter extends OncePerRequestFilter {
     }
 
     private String getClientIpAddress(HttpServletRequest request) {
-        String[] headerNames = {
-            "X-Forwarded-For",
-            "X-Real-IP", 
-            "Proxy-Client-IP",
-            "WL-Proxy-Client-IP"
-        };
-        
-        for (String headerName : headerNames) {
-            String ip = request.getHeader(headerName);
-            if (StringUtils.hasText(ip) && !"unknown".equalsIgnoreCase(ip)) {
-                if (ip.contains(",")) {
-                    ip = ip.split(",")[0].trim();
-                }
-                return ip;
-            }
-        }
-        
-        return request.getRemoteAddr();
+        return trustedProxyService.resolveClientIp(request).orElse("unknown");
     }
 
     @Override

@@ -2,6 +2,8 @@ package com.Hamalog.aop;
 
 import com.Hamalog.logging.StructuredLogger;
 import com.Hamalog.logging.events.ApiEvent;
+import com.Hamalog.security.filter.TrustedProxyService;
+import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.aspectj.lang.ProceedingJoinPoint;
 import org.aspectj.lang.annotation.*;
@@ -23,7 +25,10 @@ import java.util.Map;
 @Aspect
 @Component
 @Order(1)
+@RequiredArgsConstructor
 public class ApiLoggingAspect {
+
+    private final TrustedProxyService trustedProxyService;
 
     @Autowired
     private StructuredLogger structuredLogger;
@@ -186,18 +191,7 @@ public class ApiLoggingAspect {
      */
     private String getClientIpAddress(HttpServletRequest request) {
         if (request == null) return "unknown";
-        
-        String xForwardedFor = request.getHeader("X-Forwarded-For");
-        if (xForwardedFor != null && !xForwardedFor.isEmpty() && !"unknown".equalsIgnoreCase(xForwardedFor)) {
-            return xForwardedFor.split(",")[0];
-        }
-        
-        String xRealIp = request.getHeader("X-Real-IP");
-        if (xRealIp != null && !xRealIp.isEmpty() && !"unknown".equalsIgnoreCase(xRealIp)) {
-            return xRealIp;
-        }
-        
-        return request.getRemoteAddr();
+        return trustedProxyService.resolveClientIp(request).orElse("unknown");
     }
 
     /**

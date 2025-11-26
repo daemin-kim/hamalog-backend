@@ -4,6 +4,7 @@ import com.Hamalog.exception.CustomException;
 import com.Hamalog.exception.ErrorCode;
 import com.Hamalog.logging.StructuredLogger;
 import com.Hamalog.logging.events.ApiEvent;
+import com.Hamalog.security.filter.TrustedProxyService;
 import org.aspectj.lang.ProceedingJoinPoint;
 import org.aspectj.lang.reflect.MethodSignature;
 import org.junit.jupiter.api.AfterEach;
@@ -22,9 +23,11 @@ import org.springframework.security.core.context.SecurityContext;
 import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.web.context.request.RequestContextHolder;
 import org.springframework.web.context.request.ServletRequestAttributes;
+import org.springframework.test.util.ReflectionTestUtils;
 
 import java.lang.reflect.Method;
 import java.util.Map;
+import java.util.Optional;
 
 import static org.assertj.core.api.Assertions.*;
 import static org.mockito.Mockito.*;
@@ -35,6 +38,9 @@ class ApiLoggingAspectTest {
 
     @Mock
     private StructuredLogger structuredLogger;
+
+    @Mock
+    private TrustedProxyService trustedProxyService;
 
     @Mock
     private ProceedingJoinPoint proceedingJoinPoint;
@@ -64,6 +70,9 @@ class ApiLoggingAspectTest {
         mockRequest.setRequestURI("/api/test");
         mockRequest.setRemoteAddr("192.168.1.1");
         mockRequest.addHeader("User-Agent", "Test Browser");
+
+        apiLoggingAspect = new ApiLoggingAspect(trustedProxyService);
+        ReflectionTestUtils.setField(apiLoggingAspect, "structuredLogger", structuredLogger);
     }
 
     @AfterEach
@@ -95,6 +104,7 @@ class ApiLoggingAspectTest {
 
         ServletRequestAttributes attributes = new ServletRequestAttributes(mockRequest);
         RequestContextHolder.setRequestAttributes(attributes);
+        when(trustedProxyService.resolveClientIp(any())).thenReturn(Optional.of("192.168.1.1"));
 
         // when
         Object result = apiLoggingAspect.logApiRequestAndResponse(proceedingJoinPoint);
@@ -132,6 +142,7 @@ class ApiLoggingAspectTest {
 
         ServletRequestAttributes attributes = new ServletRequestAttributes(mockRequest);
         RequestContextHolder.setRequestAttributes(attributes);
+        when(trustedProxyService.resolveClientIp(any())).thenReturn(Optional.of("192.168.1.1"));
 
         // when & then
         assertThatThrownBy(() -> apiLoggingAspect.logApiRequestAndResponse(proceedingJoinPoint))
@@ -165,6 +176,7 @@ class ApiLoggingAspectTest {
 
         ServletRequestAttributes attributes = new ServletRequestAttributes(mockRequest);
         RequestContextHolder.setRequestAttributes(attributes);
+        when(trustedProxyService.resolveClientIp(any())).thenReturn(Optional.of("192.168.1.1"));
 
         // when
         apiLoggingAspect.logApiRequestAndResponse(proceedingJoinPoint);
@@ -302,6 +314,7 @@ class ApiLoggingAspectTest {
 
         ServletRequestAttributes attributes = new ServletRequestAttributes(mockRequest);
         RequestContextHolder.setRequestAttributes(attributes);
+        when(trustedProxyService.resolveClientIp(any())).thenReturn(Optional.of("203.0.113.1"));
 
         // when
         apiLoggingAspect.logApiRequestAndResponse(proceedingJoinPoint);
@@ -327,6 +340,7 @@ class ApiLoggingAspectTest {
 
         ServletRequestAttributes attributes = new ServletRequestAttributes(mockRequest);
         RequestContextHolder.setRequestAttributes(attributes);
+        when(trustedProxyService.resolveClientIp(any())).thenReturn(Optional.of("203.0.113.2"));
 
         // when
         apiLoggingAspect.logApiRequestAndResponse(proceedingJoinPoint);
@@ -460,3 +474,4 @@ class ApiLoggingAspectTest {
         }
     }
 }
+

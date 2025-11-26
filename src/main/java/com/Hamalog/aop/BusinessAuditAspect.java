@@ -4,7 +4,8 @@ import com.Hamalog.logging.StructuredLogger;
 import com.Hamalog.logging.events.AuditEvent;
 import com.Hamalog.logging.events.SecurityEvent;
 import com.fasterxml.jackson.databind.ObjectMapper;
-import org.springframework.beans.factory.annotation.Autowired;
+import com.Hamalog.security.filter.TrustedProxyService;
+import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.aspectj.lang.JoinPoint;
 import org.aspectj.lang.ProceedingJoinPoint;
@@ -28,13 +29,12 @@ import java.time.format.DateTimeFormatter;
 @Component
 @ConditionalOnProperty(name = "app.aop.audit.enabled", matchIfMissing = true)
 @Order(3)
+@RequiredArgsConstructor
 public class BusinessAuditAspect {
 
-    @Autowired(required = false)
-    private ObjectMapper objectMapper;
-    
-    @Autowired
-    private StructuredLogger structuredLogger;
+    private final ObjectMapper objectMapper;
+    private final StructuredLogger structuredLogger;
+    private final TrustedProxyService trustedProxyService;
 
     @Pointcut("execution(public * com.Hamalog.service..create*(..))")
     public void createOperations() {}
@@ -267,18 +267,7 @@ public class BusinessAuditAspect {
         if (request == null) {
             return "unknown";
         }
-        
-        String xForwardedFor = request.getHeader("X-Forwarded-For");
-        if (xForwardedFor != null && !xForwardedFor.isEmpty()) {
-            return xForwardedFor.split(",")[0].trim();
-        }
-        
-        String xRealIp = request.getHeader("X-Real-IP");
-        if (xRealIp != null && !xRealIp.isEmpty()) {
-            return xRealIp;
-        }
-        
-        return request.getRemoteAddr();
+        return trustedProxyService.resolveClientIp(request).orElse("unknown");
     }
 
     private String sanitizeUserAgent(String userAgent) {
@@ -394,3 +383,4 @@ public class BusinessAuditAspect {
         MDC.remove("audit.attemptedUser");
     }
 }
+

@@ -1,6 +1,8 @@
 package com.Hamalog.logging;
 
+import com.Hamalog.security.filter.TrustedProxyService;
 import org.slf4j.MDC;
+import org.springframework.stereotype.Component;
 import org.springframework.security.core.Authentication;
 import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.web.context.request.RequestContextHolder;
@@ -20,6 +22,7 @@ import java.util.UUID;
  * Provides centralized management of logging context including correlation IDs, user information,
  * and request tracing.
  */
+@Component
 public class MDCUtil {
 
     // Standard MDC keys for consistent logging
@@ -54,6 +57,11 @@ public class MDCUtil {
 
     private static final String HOSTNAME_VALUE = initializeHostname();
     private static final DateTimeFormatter ISO_FORMATTER = DateTimeFormatter.ofPattern("yyyy-MM-dd'T'HH:mm:ss.SSS'Z'").withZone(ZoneOffset.UTC);
+    private static TrustedProxyService trustedProxyService;
+
+    public MDCUtil(TrustedProxyService trustedProxyService) {
+        MDCUtil.trustedProxyService = trustedProxyService;
+    }
 
     /**
      * Initialize basic request context with correlation ID and request information
@@ -73,7 +81,7 @@ public class MDCUtil {
         if (request != null) {
             MDC.put(HTTP_METHOD, request.getMethod());
             MDC.put(REQUEST_URI, request.getRequestURI());
-            MDC.put(IP_ADDRESS, extractClientIpAddress(request));
+            MDC.put(IP_ADDRESS, resolveClientIp(request));
             MDC.put(USER_AGENT, sanitizeUserAgent(request.getHeader("User-Agent")));
             MDC.put(SESSION_ID, request.getSession(false) != null ? request.getSession(false).getId() : "no-session");
         }
@@ -248,36 +256,27 @@ public class MDCUtil {
     /**
      * Extract client IP address with support for load balancers and proxies
      */
-    private static String extractClientIpAddress(HttpServletRequest request) {
+    private static String resolveClientIp(HttpServletRequest request) {
         if (request == null) return "unknown";
-
-        // Check X-Forwarded-For header (most common)
+        if (trustedProxyService != null) {
+            return trustedProxyService.resolveClientIp(request).orElse("unknown");
+        }
+        // Fallback: basic header inspection when TrustedProxyService is not yet available
         String xForwardedFor = request.getHeader("X-Forwarded-For");
         if (xForwardedFor != null && !xForwardedFor.isEmpty() && !"unknown".equalsIgnoreCase(xForwardedFor)) {
-            // X-Forwarded-For can contain multiple IPs, the first one is the original client IP
             return xForwardedFor.split(",")[0].trim();
         }
-
-        // Check X-Real-IP header
         String xRealIp = request.getHeader("X-Real-IP");
         if (xRealIp != null && !xRealIp.isEmpty() && !"unknown".equalsIgnoreCase(xRealIp)) {
             return xRealIp;
         }
-
-        // Check other common proxy headers
-        String[] headerNames = {
-            "X-Forwarded", "Forwarded-For", "Forwarded", 
-            "X-Cluster-Client-IP", "X-Original-Forwarded-For"
-        };
-
+        String[] headerNames = {"X-Forwarded", "Forwarded-For", "Forwarded", "X-Cluster-Client-IP", "X-Original-Forwarded-For"};
         for (String headerName : headerNames) {
             String headerValue = request.getHeader(headerName);
             if (headerValue != null && !headerValue.isEmpty() && !"unknown".equalsIgnoreCase(headerValue)) {
                 return headerValue.split(",")[0].trim();
             }
         }
-
-        // Fallback to remote address
         return request.getRemoteAddr();
     }
 

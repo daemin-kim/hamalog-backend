@@ -1,5 +1,6 @@
 package com.Hamalog.handler;
 
+import com.Hamalog.security.filter.TrustedProxyService;
 import com.Hamalog.security.validation.InputValidationUtil;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
@@ -19,6 +20,7 @@ import jakarta.servlet.http.HttpServletRequest;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
+import java.util.Optional;
 
 import static org.junit.jupiter.api.Assertions.*;
 import static org.mockito.ArgumentMatchers.anyString;
@@ -36,6 +38,9 @@ class SecureErrorHandlerTest {
     private InputValidationUtil inputValidationUtil;
 
     @Mock
+    private TrustedProxyService trustedProxyService;
+
+    @Mock
     private HttpServletRequest request;
 
     @BeforeEach
@@ -44,6 +49,7 @@ class SecureErrorHandlerTest {
         when(request.getRequestURI()).thenReturn("/api/test");
         when(request.getRemoteAddr()).thenReturn("127.0.0.1");
         when(inputValidationUtil.sanitizeForLog(anyString())).thenAnswer(i -> i.getArgument(0));
+        when(trustedProxyService.resolveClientIp(any())).thenReturn(Optional.of("127.0.0.1"));
     }
 
     @Test

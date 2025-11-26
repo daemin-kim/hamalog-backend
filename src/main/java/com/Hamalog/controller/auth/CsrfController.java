@@ -2,6 +2,7 @@ package com.Hamalog.controller.auth;
 
 import com.Hamalog.security.csrf.CsrfTokenProvider;
 import com.Hamalog.security.jwt.JwtTokenProvider;
+import com.Hamalog.security.filter.TrustedProxyService;
 import jakarta.servlet.http.HttpServletRequest;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -29,10 +30,12 @@ public class CsrfController {
 
     private final CsrfTokenProvider csrfTokenProvider;
     private final JwtTokenProvider jwtTokenProvider;
+    private final TrustedProxyService trustedProxyService;
 
-    public CsrfController(CsrfTokenProvider csrfTokenProvider, JwtTokenProvider jwtTokenProvider) {
+    public CsrfController(CsrfTokenProvider csrfTokenProvider, JwtTokenProvider jwtTokenProvider, TrustedProxyService trustedProxyService) {
         this.csrfTokenProvider = csrfTokenProvider;
         this.jwtTokenProvider = jwtTokenProvider;
+        this.trustedProxyService = trustedProxyService;
     }
 
     /**
@@ -130,17 +133,7 @@ public class CsrfController {
      * 클라이언트 IP 주소 추출
      */
     private String getClientIp(HttpServletRequest request) {
-        String xForwardedFor = request.getHeader("X-Forwarded-For");
-        if (StringUtils.hasText(xForwardedFor)) {
-            return xForwardedFor.split(",")[0].trim();
-        }
-        
-        String xRealIp = request.getHeader("X-Real-IP");
-        if (StringUtils.hasText(xRealIp)) {
-            return xRealIp;
-        }
-        
-        return request.getRemoteAddr();
+        return trustedProxyService.resolveClientIp(request).orElse(request.getRemoteAddr());
     }
 
     /**

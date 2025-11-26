@@ -3,6 +3,7 @@ package com.Hamalog.aop;
 import com.Hamalog.logging.StructuredLogger;
 import com.Hamalog.logging.events.AuditEvent;
 import com.Hamalog.logging.events.SecurityEvent;
+import com.Hamalog.security.filter.TrustedProxyService;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import jakarta.servlet.http.HttpServletRequest;
 import org.aspectj.lang.JoinPoint;
@@ -24,6 +25,7 @@ import org.springframework.web.context.request.RequestContextHolder;
 import org.springframework.web.context.request.ServletRequestAttributes;
 
 import java.lang.reflect.Method;
+import java.util.Optional;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
@@ -63,6 +65,9 @@ class BusinessAuditAspectTest {
     
     @Mock
     private Authentication authentication;
+
+    @Mock
+    private TrustedProxyService trustedProxyService;
 
     @InjectMocks
     private BusinessAuditAspect businessAuditAspect;

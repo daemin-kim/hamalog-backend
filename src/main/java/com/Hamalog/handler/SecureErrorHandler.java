@@ -1,5 +1,6 @@
 package com.Hamalog.handler;
 
+import com.Hamalog.security.filter.TrustedProxyService;
 import com.Hamalog.security.validation.InputValidationUtil;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -39,6 +40,9 @@ public class SecureErrorHandler {
 
     @Autowired
     private InputValidationUtil inputValidationUtil;
+
+    @Autowired
+    private TrustedProxyService trustedProxyService;
 
     /**
      * 일반적인 예외 처리
@@ -258,11 +262,6 @@ public class SecureErrorHandler {
      * 클라이언트 IP 주소 추출
      */
     private String getClientIp(HttpServletRequest request) {
-        String forwardedFor = request.getHeader("X-Forwarded-For");
-        if (forwardedFor != null && !forwardedFor.isEmpty()) {
-            return forwardedFor.split(",")[0].trim();
-        }
-        return request.getRemoteAddr();
+        return trustedProxyService.resolveClientIp(request).orElse(request.getRemoteAddr());
     }
 }
-

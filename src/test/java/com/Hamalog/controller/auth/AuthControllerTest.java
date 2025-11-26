@@ -35,6 +35,7 @@ import static org.mockito.Mockito.*;
 import static org.mockito.Mockito.lenient;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.*;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.*;
+import com.Hamalog.security.filter.TrustedProxyService;
 
 @ExtendWith(MockitoExtension.class)
 @DisplayName("AuthController 테스트")
@@ -50,6 +51,9 @@ class AuthControllerTest {
 
     @Mock
     private JwtTokenProvider jwtTokenProvider;
+
+    @Mock
+    private TrustedProxyService trustedProxyService;
 
     @InjectMocks
     private AuthController authController;
@@ -69,7 +73,7 @@ class AuthControllerTest {
         jsonConverter.setObjectMapper(objectMapper);
         
         mockMvc = MockMvcBuilders.standaloneSetup(authController)
-                .setControllerAdvice(new GlobalExceptionHandler())
+                .setControllerAdvice(new GlobalExceptionHandler(trustedProxyService))
                 .setMessageConverters(stringConverter, jsonConverter)
                 .defaultResponseCharacterEncoding(StandardCharsets.UTF_8)
                 .build();

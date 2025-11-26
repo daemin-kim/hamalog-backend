@@ -6,6 +6,7 @@ import org.springframework.security.web.util.matcher.IpAddressMatcher;
 import org.springframework.stereotype.Component;
 import org.springframework.util.StringUtils;
 
+import jakarta.servlet.http.HttpServletRequest;
 import java.net.InetAddress;
 import java.net.UnknownHostException;
 import java.util.Collections;
@@ -63,6 +64,26 @@ public class TrustedProxyService {
 
     public List<String> getTrustedProxyCidrs() {
         return Collections.unmodifiableList(trustedProxyCidrs);
+    }
+
+    public Optional<String> resolveClientIp(HttpServletRequest request) {
+        if (request == null) {
+            return Optional.empty();
+        }
+
+        String remoteAddr = request.getRemoteAddr();
+        if (!isTrustedProxy(remoteAddr)) {
+            return Optional.ofNullable(remoteAddr);
+        }
+
+        return extractClientIp(request.getHeader("X-Forwarded-For"))
+                .or(() -> extractSingleIp(request.getHeader("X-Real-IP")))
+                .or(() -> extractSingleIp(request.getHeader("X-Client-IP")))
+                .or(() -> extractSingleIp(request.getHeader("Proxy-Client-IP")))
+                .or(() -> extractSingleIp(request.getHeader("WL-Proxy-Client-IP")))
+                .or(() -> extractSingleIp(request.getHeader("X-Cluster-Client-IP")))
+                .or(() -> extractSingleIp(request.getHeader("X-Original-Forwarded-For")))
+                .or(() -> Optional.ofNullable(remoteAddr));
     }
 
     private List<String> parseProperty(String property) {

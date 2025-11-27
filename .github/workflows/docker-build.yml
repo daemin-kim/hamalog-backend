@@ -28,19 +28,18 @@ jobs:
         uses: actions/checkout@v4
 
       - name: 필수 시크릿 검증
-        shell: bash
+        shell: pwsh
         run: |
-          set -euo pipefail
-          missing=0
-          for var in MYSQL_ROOT_PASSWORD DB_NAME DB_USERNAME DB_PASSWORD JWT_SECRET JWT_EXPIRY KAKAO_CLIENT_ID KAKAO_CLIENT_SECRET; do
-            if [ -z "${!var:-}" ]; then
-              echo "::error::필수 시크릿 ${var} 값이 설정되지 않았습니다."
-              missing=1
-            fi
-          done
-          if [ "$missing" -eq 1 ]; then
+          $missing = $false
+          foreach ($var in 'MYSQL_ROOT_PASSWORD','DB_NAME','DB_USERNAME','DB_PASSWORD','JWT_SECRET','JWT_EXPIRY','KAKAO_CLIENT_ID','KAKAO_CLIENT_SECRET') {
+            if ([string]::IsNullOrWhiteSpace($env:$var)) {
+              Write-Error "::error::필수 시크릿 $var 값이 설정되지 않았습니다."
+              $missing = $true
+            }
+          }
+          if ($missing) {
             exit 1
-          fi
+          }
 
       - name: JDK 설정
         uses: actions/setup-java@v4

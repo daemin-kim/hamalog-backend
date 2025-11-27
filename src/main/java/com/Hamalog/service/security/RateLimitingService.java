@@ -7,8 +7,8 @@ import org.springframework.data.redis.core.RedisTemplate;
 import org.springframework.stereotype.Service;
 
 import java.time.Duration;
-import java.time.LocalDateTime;
 import java.util.concurrent.TimeUnit;
+import java.util.concurrent.atomic.AtomicLong;
 
 @Slf4j
 @Service
@@ -22,6 +22,11 @@ public class RateLimitingService {
     private static final int AUTH_REQUESTS_PER_HOUR = 20;
     private static final int API_REQUESTS_PER_MINUTE = 60;
     private static final int API_REQUESTS_PER_HOUR = 1000;
+    private static final Duration DEGRADE_DURATION = Duration.ofMinutes(5);
+    private static final long MIN_DEGRADED_LOG_INTERVAL_MS = Duration.ofSeconds(30).toMillis();
+
+    private final AtomicLong degradedUntilEpochMs = new AtomicLong(0);
+    private final AtomicLong lastDegradedLogEpochMs = new AtomicLong(0);
 
     public boolean tryConsumeAuthRequest(String key) {
         return checkRateLimit(key, AUTH_REQUESTS_PER_MINUTE, 1, TimeUnit.MINUTES) &&
@@ -34,31 +39,35 @@ public class RateLimitingService {
     }
 
     private boolean checkRateLimit(String key, int maxRequests, long windowSize, TimeUnit timeUnit) {
+        if (isDegradedModeActive()) {
+            logDegradedRequest(key);
+            return true;
+        }
+
         try {
             String redisKey = "rate_limit:" + key + ":" + timeUnit.name().toLowerCase();
             long currentTime = System.currentTimeMillis();
             long windowSizeMs = timeUnit.toMillis(windowSize);
             long windowStart = currentTime - windowSizeMs;
 
-            redisTemplate.opsForZSet().removeRangeByScore(redisKey, 0, windowStart);
+            var zSetOps = redisTemplate.opsForZSet();
+            zSetOps.removeRangeByScore(redisKey, 0, windowStart);
 
-            Long currentCount = redisTemplate.opsForZSet().count(redisKey, windowStart, currentTime);
-            
+            Long currentCount = zSetOps.count(redisKey, windowStart, currentTime);
+
             if (currentCount != null && currentCount >= maxRequests) {
                 log.warn("[RATE_LIMIT] Rate limit exceeded for key: {}, current count: {}, max: {}",
                     key, currentCount, maxRequests);
                 return false;
             }
 
-            redisTemplate.opsForZSet().add(redisKey, String.valueOf(currentTime), currentTime);
+            zSetOps.add(redisKey, String.valueOf(currentTime), currentTime);
             redisTemplate.expire(redisKey, windowSizeMs + 1000, TimeUnit.MILLISECONDS);
-            
+
             return true;
         } catch (Exception e) {
-            log.error("[RATE_LIMIT] Error checking rate limit for key: " + key +
-                ". Denying access for security (fail-safe)", e);
-            // Redis 장애 시 보수적으로 접근 차단 (보안 우선)
-            return false;
+            enterDegradedMode(e);
+            return true;
         }
     }
 
@@ -71,6 +80,10 @@ public class RateLimitingService {
     }
 
     public long getRemainingRequests(String key, boolean isAuthEndpoint) {
+        if (isDegradedModeActive()) {
+            return Long.MAX_VALUE;
+        }
+
         try {
             int maxRequests = isAuthEndpoint ? AUTH_REQUESTS_PER_MINUTE : API_REQUESTS_PER_MINUTE;
             String redisKey = "rate_limit:" + key + ":minutes";
@@ -79,10 +92,10 @@ public class RateLimitingService {
 
             Long currentCount = redisTemplate.opsForZSet().count(redisKey, windowStart, currentTime);
             long remainingRequests = maxRequests - (currentCount != null ? currentCount : 0);
-            
+
             return Math.max(0, remainingRequests);
         } catch (Exception e) {
-            log.error("Error getting remaining requests for key: " + key, e);
+            enterDegradedMode(e);
             return Long.MAX_VALUE;
         }
     }
@@ -91,8 +104,51 @@ public class RateLimitingService {
         int maxPerMinute = isAuthEndpoint ? AUTH_REQUESTS_PER_MINUTE : API_REQUESTS_PER_MINUTE;
         int maxPerHour = isAuthEndpoint ? AUTH_REQUESTS_PER_HOUR : API_REQUESTS_PER_HOUR;
         long remainingMinute = getRemainingRequests(key, isAuthEndpoint);
-        
+
         return new RateLimitInfo(maxPerMinute, maxPerHour, remainingMinute);
+    }
+
+    public boolean isDegraded() {
+        return isDegradedModeActive();
+    }
+
+    private boolean isDegradedModeActive() {
+        long until = degradedUntilEpochMs.get();
+        if (until == 0L) {
+            return false;
+        }
+
+        long now = System.currentTimeMillis();
+        if (now >= until && degradedUntilEpochMs.compareAndSet(until, 0L)) {
+            log.info("[RATE_LIMIT] Fail-open window expired. Resuming normal rate limiting.");
+            return false;
+        }
+
+        return true;
+    }
+
+    private void enterDegradedMode(Exception e) {
+        long now = System.currentTimeMillis();
+        degradedUntilEpochMs.set(now + DEGRADE_DURATION.toMillis());
+        logDegradedTransition(now, e);
+    }
+
+    private void logDegradedTransition(long now, Exception e) {
+        long lastLog = lastDegradedLogEpochMs.get();
+        if (now - lastLog >= MIN_DEGRADED_LOG_INTERVAL_MS &&
+                lastDegradedLogEpochMs.compareAndSet(lastLog, now)) {
+            log.error("[RATE_LIMIT] Redis unavailable. Entering fail-open mode for {} seconds.",
+                DEGRADE_DURATION.toSeconds(), e);
+        }
+    }
+
+    private void logDegradedRequest(String key) {
+        long now = System.currentTimeMillis();
+        long lastLog = lastDegradedLogEpochMs.get();
+        if (now - lastLog >= MIN_DEGRADED_LOG_INTERVAL_MS &&
+                lastDegradedLogEpochMs.compareAndSet(lastLog, now)) {
+            log.warn("[RATE_LIMIT] Fail-open mode active. Allowing request from key {} without Redis enforcement.", key);
+        }
     }
 
     public record RateLimitInfo(

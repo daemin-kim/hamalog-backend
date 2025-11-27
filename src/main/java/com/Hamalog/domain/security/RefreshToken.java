@@ -36,6 +36,23 @@ public class RefreshToken {
     @Column(nullable = false)
     private LocalDateTime rotatedAt;
 
+    @Column
+    private LocalDateTime lastUsedAt;
+
+    @Column
+    private LocalDateTime reuseDetectedAt;
+
+    @Column(length = 255)
+    private String reuseClientFingerprint;
+
+    @Column(nullable = false)
+    @Builder.Default
+    private boolean reuseDetected = false;
+
+    @Column(nullable = false)
+    @Builder.Default
+    private long reuseCount = 0L;
+
     @Column(nullable = false)
     @Builder.Default
     private boolean revoked = false;
@@ -45,7 +62,20 @@ public class RefreshToken {
     }
 
     public boolean isValid() {
-        return !revoked && !isExpired();
+        return !revoked && !isExpired() && !reuseDetected;
+    }
+
+    public void markReuse(String fingerprint) {
+        this.reuseDetected = true;
+        this.reuseDetectedAt = LocalDateTime.now();
+        this.reuseClientFingerprint = fingerprint;
+    }
+
+    public void touchUsage() {
+        this.lastUsedAt = LocalDateTime.now();
+    }
+
+    public void incrementReuseCounter() {
+        this.reuseCount += 1;
     }
 }
-

@@ -110,6 +110,7 @@ public class SecurityConfig {
                                 "/api/auth/kakao/callback",
                                 "/actuator/health"
                         ).permitAll()
+                        .requestMatchers("/auth/csrf-token", "/auth/csrf-status").authenticated()
                         .requestMatchers(HttpMethod.GET, "/test").permitAll()
                         .anyRequest().authenticated()
                 )

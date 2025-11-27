@@ -47,8 +47,8 @@
 | 토큰 갱신 | `/auth/refresh` | `POST` | 토큰 갱신 요청 데이터 | 토큰 갱신 응답 데이터 | Refresh Token 로테이션. 새 Access/Refresh Token 반환 |
 | 로그아웃 | `/auth/logout` | `POST` | Authorization 헤더 | `"로그아웃이 성공적으로 처리되었습니다"` | Access Token 블랙리스트 등록으로 즉시 무효화 |
 | 회원 탈퇴 | `/auth/account` | `DELETE` | Authorization 헤더 | `"회원 탈퇴가 완료되었습니다"` | 인증 필요. 관련 데이터(스케줄, 기록, 부작용 등) 모두 삭제 |
-| CSRF 토큰 발급 | `/auth/csrf-token` | `GET` | Authorization 헤더 | CSRF 토큰 응답 데이터 | JWT 인증 필요. `csrfToken`, `headerName`, `expiryMinutes`, `timestamp` 반환 |
-| CSRF 토큰 상태 확인 | `/auth/csrf-status` | `GET` | Authorization 헤더, 선택적으로 `X-CSRF-TOKEN` | CSRF 상태 응답 데이터 | 토큰 존재 여부 및 유효성 반환 |
+| CSRF 토큰 발급 | `/auth/csrf-token` | `GET` | Authorization 헤더 | CSRF 토큰 응답 데이터 | **JWT 인증 필수**. Redis 기반 토큰 저장소에 60분 TTL로 저장됩니다. |
+| CSRF 토큰 상태 확인 | `/auth/csrf-status` | `GET` | Authorization 헤더, 선택적으로 `X-CSRF-TOKEN` | CSRF 상태 응답 데이터 | **JWT 인증 필수**. Redis에 저장된 토큰 존재 여부/TTL 확인. |
 | 카카오 로그인 시작 | `/oauth2/auth/kakao` | `GET` | 없음 | 302 리다이렉션 | state 파라미터 생성·저장 후 카카오 인증 서버로 리다이렉션 |
 | 카카오 로그인 콜백 | `/oauth2/auth/kakao/callback` | `GET` | `?code={authorization_code}&state={state}` | RN 앱 스킴으로 302 리다이렉션 | state 검증(필수), Authorization code로 JWT/Refresh Token 발급 후 `hamalog-rn://auth?token=...` 리다이렉션 |
 

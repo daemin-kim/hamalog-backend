@@ -4,7 +4,9 @@ import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
+import org.mockito.InOrder;
 import org.mockito.Mock;
+import org.mockito.Mockito;
 import org.mockito.junit.jupiter.MockitoExtension;
 import org.springframework.data.redis.core.RedisTemplate;
 import org.springframework.data.redis.core.ZSetOperations;
@@ -17,6 +19,7 @@ import static org.mockito.BDDMockito.given;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.lenient;
 import static org.mockito.Mockito.times;
+import static org.mockito.Mockito.never;
 
 /**
  * RateLimitingService 테스트
@@ -170,17 +173,42 @@ class RateLimitingServiceTest {
     }
 
     @Test
-    @DisplayName("Redis 오류 시 차단 (fail-safe)")
-    void tryConsumeAuthRequest_RedisError_FailSafe() {
+    @DisplayName("Redis 오류 시 fail-open 모드 진입")
+    void tryConsumeAuthRequest_RedisError_EntersFailOpen() {
         // Given
         String key = "test-key";
         given(zSetOperations.removeRangeByScore(anyString(), anyDouble(), anyDouble()))
             .willThrow(new RuntimeException("Redis connection error"));
 
         // When
-        boolean result = rateLimitingService.tryConsumeAuthRequest(key);
+        boolean firstAttempt = rateLimitingService.tryConsumeAuthRequest(key);
+        boolean secondAttempt = rateLimitingService.tryConsumeAuthRequest(key);
 
         // Then
-        assertThat(result).isFalse(); // fail-safe behavior (보안 우선)
+        assertThat(firstAttempt).isTrue();
+        assertThat(secondAttempt).isTrue();
+        assertThat(rateLimitingService.isDegraded()).isTrue();
+        verify(zSetOperations).removeRangeByScore(anyString(), anyDouble(), anyDouble());
+    }
+
+    @Test
+    @DisplayName("Fail-open 모드에서는 Redis 호출 없이 허용")
+    void tryConsumeAuthRequest_DegradedMode_AllowsRequests() {
+        // Given
+        String key = "test-key";
+        given(zSetOperations.removeRangeByScore(anyString(), anyDouble(), anyDouble()))
+            .willThrow(new RuntimeException("Redis connection error"));
+        rateLimitingService.tryConsumeAuthRequest(key); // enter degraded
+
+        // Reset interactions
+        Mockito.clearInvocations(zSetOperations, redisTemplate);
+
+        // When
+        boolean allowed = rateLimitingService.tryConsumeAuthRequest(key);
+
+        // Then
+        assertThat(allowed).isTrue();
+        assertThat(rateLimitingService.isDegraded()).isTrue();
+        verify(zSetOperations, never()).removeRangeByScore(anyString(), anyDouble(), anyDouble());
     }
 }

@@ -18,9 +18,13 @@ import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.stereotype.Component;
 import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.RequestParam;
+import org.springframework.util.StringUtils;
 
 import java.lang.reflect.Field;
+import java.lang.reflect.Method;
 import java.lang.reflect.Parameter;
+import java.util.Map;
+import java.util.Optional;
 
 /**
  * 리소스 소유권 검증을 위한 AOP Aspect
@@ -87,90 +91,161 @@ public class ResourceOwnershipAspect {
             case PATH_VARIABLE:
             case REQUEST_PARAM:
                 return extractFromParameters(parameters, args, paramName, source);
-                
+
             case REQUEST_BODY:
                 return extractFromRequestBody(args, annotation.bodyField());
-                
+
             default:
                 // Fallback to original logic for backward compatibility
                 return extractFromParameters(parameters, args, paramName, RequireResourceOwnership.ParameterSource.PATH_VARIABLE);
         }
     }
-    
-    /**
-     * 메서드 파라미터에서 리소스 ID를 추출합니다 (PATH_VARIABLE, REQUEST_PARAM).
-     */
+
     private Long extractFromParameters(Parameter[] parameters, Object[] args, String paramName, RequireResourceOwnership.ParameterSource source) {
         for (int i = 0; i < parameters.length; i++) {
             Parameter parameter = parameters[i];
             boolean matches = false;
-            
+
             if (source == RequireResourceOwnership.ParameterSource.PATH_VARIABLE) {
                 matches = parameter.getName().equals(paramName) || paramName.equals(getPathVariableName(parameter));
             } else if (source == RequireResourceOwnership.ParameterSource.REQUEST_PARAM) {
                 matches = parameter.getName().equals(paramName) || paramName.equals(getRequestParamName(parameter));
             }
-            
+
             if (matches) {
                 return convertToLong(args[i]);
             }
         }
-        
+
         return null;
     }
-    
-    /**
-     * 요청 바디에서 리소스 ID를 추출합니다.
-     */
-    private Long extractFromRequestBody(Object[] args, String fieldName) {
+
+    private Long extractFromRequestBody(Object[] args, String fieldPath) {
+        if (!StringUtils.hasText(fieldPath)) {
+            log.error("[AUTHORIZATION_ERROR] Request body field path is empty. Check @RequireResourceOwnership on method.");
+            return null;
+        }
+
         for (Object arg : args) {
-            if (arg != null && !isPrimitiveType(arg.getClass())) {
-                try {
-                    Field field = findField(arg.getClass(), fieldName);
-                    if (field != null) {
-                        field.setAccessible(true);
-                        Object value = field.get(arg);
-                        return convertToLong(value);
-                    }
-                } catch (Exception e) {
-                    log.warn("Failed to extract field '{}' from request body: {}", fieldName, e.getMessage());
-                }
+            if (arg == null || isPrimitiveType(arg.getClass())) {
+                continue;
+            }
+
+            Object extractedValue = extractNestedFieldValue(arg, fieldPath);
+            if (extractedValue != null) {
+                return convertToLong(extractedValue);
             }
         }
-        
+
+        log.warn("Request body does not contain field '{}' required for ownership validation", fieldPath);
         return null;
     }
-    
-    /**
-     * 클래스에서 필드를 찾습니다 (상속 포함).
-     */
-    private Field findField(Class<?> clazz, String fieldName) {
-        while (clazz != null) {
-            try {
-                return clazz.getDeclaredField(fieldName);
-            } catch (NoSuchFieldException e) {
-                clazz = clazz.getSuperclass();
-            }
+
+    private Object extractNestedFieldValue(Object source, String fieldPath) {
+        if (source == null) {
+            return null;
         }
-        return null;
-    }
-    
-    /**
-     * 값을 Long으로 변환합니다.
-     */
-    private Long convertToLong(Object value) {
-        if (value instanceof Long) {
-            return (Long) value;
-        } else if (value instanceof String) {
-            try {
-                return Long.parseLong((String) value);
-            } catch (NumberFormatException e) {
-                log.warn("Could not parse resource ID from string: {}", value);
+
+        String[] segments = fieldPath.split("\\.");
+        Object current = source;
+        for (String segment : segments) {
+            if (!StringUtils.hasText(segment) || current == null) {
                 return null;
             }
-        } else if (value instanceof Number) {
-            return ((Number) value).longValue();
+            current = readSingleFieldValue(current, segment);
         }
+        return current;
+    }
+
+    private Object readSingleFieldValue(Object target, String fieldName) {
+        if (target == null) {
+            return null;
+        }
+
+        if (target instanceof Map<?, ?> mapTarget) {
+            return mapTarget.get(fieldName);
+        }
+
+        Method accessor = findAccessor(target.getClass(), fieldName);
+        if (accessor != null) {
+            try {
+                accessor.setAccessible(true);
+                return accessor.invoke(target);
+            } catch (Exception ex) {
+                log.debug("Failed to invoke accessor '{}' on {}: {}", fieldName, target.getClass().getSimpleName(), ex.getMessage());
+            }
+        }
+
+        Field field = findField(target.getClass(), fieldName);
+        if (field != null) {
+            try {
+                field.setAccessible(true);
+                return field.get(target);
+            } catch (IllegalAccessException ex) {
+                log.debug("Failed to read field '{}' on {}: {}", fieldName, target.getClass().getSimpleName(), ex.getMessage());
+            }
+        }
+
+        return null;
+    }
+
+    private Method findAccessor(Class<?> clazz, String fieldName) {
+        Class<?> current = clazz;
+        String capitalized = Character.toUpperCase(fieldName.charAt(0)) + fieldName.substring(1);
+        while (current != null) {
+            try {
+                return current.getDeclaredMethod(fieldName);
+            } catch (NoSuchMethodException ignored) { }
+            try {
+                return current.getDeclaredMethod("get" + capitalized);
+            } catch (NoSuchMethodException ignored) { }
+            try {
+                return current.getDeclaredMethod("is" + capitalized);
+            } catch (NoSuchMethodException ignored) { }
+            current = current.getSuperclass();
+        }
+        return null;
+    }
+
+    private Field findField(Class<?> clazz, String fieldName) {
+        Class<?> current = clazz;
+        while (current != null) {
+            try {
+                return current.getDeclaredField(fieldName);
+            } catch (NoSuchFieldException e) {
+                current = current.getSuperclass();
+            }
+        }
+        return null;
+    }
+
+    private Long convertToLong(Object value) {
+        if (value == null) {
+            return null;
+        }
+
+        if (value instanceof Optional<?> optional) {
+            return optional.map(this::convertToLong).orElse(null);
+        }
+
+        if (value instanceof Long l) {
+            return l;
+        }
+
+        if (value instanceof Number number) {
+            return number.longValue();
+        }
+
+        if (value instanceof String str) {
+            try {
+                return Long.parseLong(str);
+            } catch (NumberFormatException e) {
+                log.warn("Could not parse resource ID from string: {}", str);
+                return null;
+            }
+        }
+
+        log.warn("Unsupported resource identifier type: {}", value.getClass().getName());
         return null;
     }
     
@@ -283,3 +358,4 @@ public class ResourceOwnershipAspect {
         return sideEffectService.isOwner(resourceId, loginId);
     }
 }
+

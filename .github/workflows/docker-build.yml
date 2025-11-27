@@ -6,17 +6,44 @@ on:
 
 jobs:
   build-and-push:
-    runs-on: self-hosted  # 반드시 self-hosted 러너에서 실행되어야 함
+    runs-on: self-hosted
+    environment:
+      name: production
     permissions:
       contents: read
       packages: write
+    env:
+      SPRING_PROFILES_ACTIVE: prod
+      MYSQL_ROOT_PASSWORD: ${{ secrets.MYSQL_ROOT_PASSWORD }}
+      DB_NAME: ${{ secrets.DB_NAME }}
+      DB_USERNAME: ${{ secrets.DB_USERNAME }}
+      DB_PASSWORD: ${{ secrets.DB_PASSWORD }}
+      JWT_SECRET: ${{ secrets.JWT_SECRET }}
+      JWT_EXPIRY: ${{ secrets.JWT_EXPIRY }}
+      KAKAO_CLIENT_ID: ${{ secrets.KAKAO_CLIENT_ID }}
+      KAKAO_CLIENT_SECRET: ${{ secrets.KAKAO_CLIENT_SECRET }}
 
     steps:
       - name: 코드 체크아웃
-        uses: actions/checkout@v3
+        uses: actions/checkout@v4
+
+      - name: 필수 시크릿 검증
+        shell: bash
+        run: |
+          set -euo pipefail
+          missing=0
+          for var in MYSQL_ROOT_PASSWORD DB_NAME DB_USERNAME DB_PASSWORD JWT_SECRET JWT_EXPIRY KAKAO_CLIENT_ID KAKAO_CLIENT_SECRET; do
+            if [ -z "${!var:-}" ]; then
+              echo "::error::필수 시크릿 ${var} 값이 설정되지 않았습니다."
+              missing=1
+            fi
+          done
+          if [ "$missing" -eq 1 ]; then
+            exit 1
+          fi
 
       - name: JDK 설정
-        uses: actions/setup-java@v3
+        uses: actions/setup-java@v4
         with:
           distribution: 'temurin'
           java-version: '21'
@@ -28,14 +55,14 @@ jobs:
           arguments: build
 
       - name: Docker 로그인
-        uses: docker/login-action@v2
+        uses: docker/login-action@v3
         with:
           registry: ghcr.io
           username: ${{ github.actor }}
           password: ${{ secrets.GITHUB_TOKEN }}
 
       - name: Docker 빌드 및 푸시
-        uses: docker/build-push-action@v4
+        uses: docker/build-push-action@v5
         with:
           context: .
           push: true
@@ -44,13 +71,13 @@ jobs:
 
       - name: 서버에 배포
         shell: powershell
+        env:
+          SPRING_DATASOURCE_URL: jdbc:mysql://mysql-hamalog:3306/${{ env.DB_NAME }}
         run: |
-          # 1. 사용자 정의 네트워크가 없다면 생성
           if (-not (docker network ls --format "{{.Name}}" | Select-String "hamalog-network")) {
             docker network create hamalog-network
           }
 
-          # 2. Redis 컨테이너가 없으면 실행
           if (-not (docker ps -a --format "{{.Names}}" | Select-String "redis-hamalog")) {
             docker run -d `
               --name redis-hamalog `
@@ -58,52 +85,43 @@ jobs:
               --network hamalog-network `
               -v C:/redis-data:/data `
               redis:7-alpine redis-server --appendonly yes
-            Write-Output "Redis 컨테이너가 생성되었습니다"
-            Start-Sleep -Seconds 5  # Redis 부팅 대기
-          } else {
-            Write-Output "Redis 컨테이너가 이미 존재합니다"
+            Start-Sleep -Seconds 5
           }
 
-          # 3. MySQL 컨테이너가 없으면 실행
           if (-not (docker ps -a --format "{{.Names}}" | Select-String "mysql-hamalog")) {
             docker run -d `
               --name mysql-hamalog `
-              -e MYSQL_ROOT_PASSWORD=mypassword `
-              -e MYSQL_DATABASE=Hamalog `
-              -e MYSQL_USER=user `
-              -e MYSQL_PASSWORD=password `
+              -e MYSQL_ROOT_PASSWORD=${{ env.MYSQL_ROOT_PASSWORD }} `
+              -e MYSQL_DATABASE=${{ env.DB_NAME }} `
+              -e MYSQL_USER=${{ env.DB_USERNAME }} `
+              -e MYSQL_PASSWORD=${{ env.DB_PASSWORD }} `
               -v C:/mysql-data:/var/lib/mysql `
               -p 3306:3306 `
               --network hamalog-network `
               mysql:8.0
-            Write-Output "MySQL 컨테이너가 생성되었습니다"
-            Start-Sleep -Seconds 20  # MySQL 부팅 대기
-          } else {
-            Write-Output "MySQL 컨테이너가 이미 존재합니다"
+            Start-Sleep -Seconds 20
           }
 
-          # 4. 기존 앱 컨테이너 정리
           docker stop hamalog-container -ErrorAction SilentlyContinue
           docker rm hamalog-container -ErrorAction SilentlyContinue
 
-          # 5. 최신 Spring Boot 앱 이미지 pull
-          docker pull ghcr.io/daemin-kim/hamalog-backend:latest
+          docker pull ghcr.io/${{ github.repository }}:latest
 
-          # 6. 앱 컨테이너 실행
           docker run -d `
             --name hamalog-container `
             --network hamalog-network `
             -p 8080:8080 `
-            -e SPRING_DATASOURCE_URL=jdbc:mysql://mysql-hamalog:3306/Hamalog `
-            -e SPRING_DATASOURCE_USERNAME=user `
-            -e SPRING_DATASOURCE_PASSWORD=password `
+            -e SPRING_DATASOURCE_URL=${{ env.SPRING_DATASOURCE_URL }} `
+            -e SPRING_DATASOURCE_USERNAME=${{ env.DB_USERNAME }} `
+            -e SPRING_DATASOURCE_PASSWORD=${{ env.DB_PASSWORD }} `
             -e SPRING_DATA_REDIS_HOST=redis-hamalog `
             -e SPRING_DATA_REDIS_PORT=6379 `
-            -e JWT_SECRET=xcrVqYlPMcLeEoEX+h8vjxZ97lS6AETwQJXJSLJ/h8g= `
-            -e JWT_EXPIRY=3600000 `
-            -e KAKAO_CLIENT_ID=${{ secrets.KAKAO_CLIENT_ID }} `
-            -e KAKAO_CLIENT_SECRET=${{ secrets.KAKAO_CLIENT_SECRET }} `
-            ghcr.io/daemin-kim/hamalog-backend:latest
+            -e SPRING_PROFILES_ACTIVE=${{ env.SPRING_PROFILES_ACTIVE }} `
+            -e JWT_SECRET=${{ env.JWT_SECRET }} `
+            -e JWT_EXPIRY=${{ env.JWT_EXPIRY }} `
+            -e KAKAO_CLIENT_ID=${{ env.KAKAO_CLIENT_ID }} `
+            -e KAKAO_CLIENT_SECRET=${{ env.KAKAO_CLIENT_SECRET }} `
+            ghcr.io/${{ github.repository }}:latest
 
           Start-Sleep -Seconds 10
           docker logs hamalog-container

@@ -181,3 +181,14 @@ jobs:
 
           Start-Sleep -Seconds 10
           docker logs hamalog-container
+
+      - name: DB 자격 증명 및 연결 확인
+        shell: powershell
+        run: |
+          Write-Host "애플리케이션과 동일한 계정으로 MySQL 연결 테스트"
+          docker run --rm `
+            --network hamalog-network `
+            -e MYSQL_PWD=${{ env.DB_PASSWORD }} `
+            mysql:8.0 mysql -hmysql-hamalog -u${{ env.DB_USERNAME }} -e "SELECT 1" | Out-Null
+          Write-Host "MySQL 연결 테스트 성공"
+

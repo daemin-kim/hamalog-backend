@@ -125,6 +125,25 @@ jobs:
             Start-Sleep -Seconds 20
           }
 
+      - name: MySQL 준비 대기
+        shell: powershell
+        run: |
+          $maxAttempts = 20
+          for ($i = 1; $i -le $maxAttempts; $i++) {
+            try {
+              docker exec mysql-hamalog sh -c 'mysqladmin ping -h localhost -uroot -p$MYSQL_ROOT_PASSWORD' | Out-Null
+              Write-Host "MySQL이 준비되었습니다."
+              break
+            } catch {
+              if ($i -eq $maxAttempts) {
+                Write-Error "MySQL 준비 확인 실패"
+                throw
+              }
+              Write-Host "MySQL 준비 중... ($i/$maxAttempts)"
+              Start-Sleep -Seconds 5
+            }
+          }
+
       - name: 기존 컨테이너 정리
         shell: powershell
         run: |

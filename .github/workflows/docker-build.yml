@@ -128,8 +128,14 @@ jobs:
       - name: 기존 컨테이너 정리
         shell: powershell
         run: |
-          docker stop hamalog-container -ErrorAction SilentlyContinue
-          docker rm hamalog-container -ErrorAction SilentlyContinue
+          $containerExists = docker ps -a --format "{{.Names}}" | Select-String -SimpleMatch "hamalog-container" -Quiet
+          if ($containerExists) {
+            Write-Host "기존 hamalog-container 중지 및 삭제"
+            docker stop hamalog-container | Out-Null
+            docker rm hamalog-container | Out-Null
+          } else {
+            Write-Host "기존 hamalog-container 없음"
+          }
 
       - name: 최신 이미지 Pull
         shell: powershell

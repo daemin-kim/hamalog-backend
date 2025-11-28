@@ -144,6 +144,19 @@ jobs:
             }
           }
 
+      - name: 애플리케이션 DB 사용자 동기화
+        shell: powershell
+        run: |
+          $ErrorActionPreference = 'Stop'
+          $mysqlStatements = @"
+CREATE DATABASE IF NOT EXISTS ${env:DB_NAME} CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci;
+CREATE USER IF NOT EXISTS '${env:DB_USERNAME}'@'%' IDENTIFIED BY '${env:DB_PASSWORD}';
+ALTER USER '${env:DB_USERNAME}'@'%' IDENTIFIED BY '${env:DB_PASSWORD}';
+GRANT ALL PRIVILEGES ON ${env:DB_NAME}.* TO '${env:DB_USERNAME}'@'%';
+FLUSH PRIVILEGES;
+"@
+          docker exec mysql-hamalog mysql -uroot "-p$env:MYSQL_ROOT_PASSWORD" -e "$mysqlStatements"
+
       - name: 기존 컨테이너 정리
         shell: powershell
         run: |
@@ -185,9 +198,13 @@ jobs:
       - name: DB 자격 증명 및 연결 확인
         shell: powershell
         run: |
+          $ErrorActionPreference = 'Stop'
           Write-Host 'Testing MySQL connection with application credentials'
           docker run --rm `
             --network hamalog-network `
             -e MYSQL_PWD=${{ env.DB_PASSWORD }} `
-            mysql:8.0 mysql -hmysql-hamalog -u${{ env.DB_USERNAME }} -e "SELECT 1" | Out-Null
+            mysql:8.0 mysql -hmysql-hamalog -u${{ env.DB_USERNAME }} -e "SELECT 1"
+          if ($LASTEXITCODE -ne 0) {
+            throw 'MySQL connection test failed'
+          }
           Write-Host 'MySQL connection test succeeded'

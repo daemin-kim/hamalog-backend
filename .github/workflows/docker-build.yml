@@ -118,13 +118,13 @@ jobs:
           $dataDir = 'C:/mysql-data'
 
           if (docker ps -a --format "{{.Names}}" | Select-String -SimpleMatch $containerName -Quiet) {
-            Write-Host "기존 $containerName 컨테이너를 중지 및 삭제합니다"
+            Write-Host "Stopping and removing existing $containerName container"
             docker stop $containerName | Out-Null
             docker rm $containerName | Out-Null
           }
 
           if (Test-Path $dataDir) {
-            Write-Host "기존 MySQL 데이터 디렉터리를 삭제합니다: $dataDir"
+            Write-Host "Removing existing MySQL data directory: $dataDir"
             Remove-Item $dataDir -Recurse -Force
           }
           New-Item -ItemType Directory -Path $dataDir | Out-Null

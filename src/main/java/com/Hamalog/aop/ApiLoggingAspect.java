@@ -1,5 +1,7 @@
 package com.Hamalog.aop;
 
+import com.Hamalog.logging.LoggingConstants;
+import com.Hamalog.logging.SensitiveDataMasker;
 import com.Hamalog.logging.StructuredLogger;
 import com.Hamalog.logging.events.ApiEvent;
 import com.Hamalog.security.filter.TrustedProxyService;
@@ -18,6 +20,7 @@ import org.springframework.web.context.request.RequestContextHolder;
 import org.springframework.web.context.request.ServletRequestAttributes;
 
 import jakarta.servlet.http.HttpServletRequest;
+import jakarta.servlet.http.HttpServletResponse;
 import java.util.HashMap;
 import java.util.Map;
 
@@ -29,9 +32,7 @@ import java.util.Map;
 public class ApiLoggingAspect {
 
     private final TrustedProxyService trustedProxyService;
-
-    @Autowired
-    private StructuredLogger structuredLogger;
+    private final StructuredLogger structuredLogger;
 
     @Pointcut("execution(public * com.Hamalog.controller..*(..))")
     public void allControllerMethods() {}
@@ -49,7 +50,6 @@ public class ApiLoggingAspect {
 
         MethodSignature signature = (MethodSignature) joinPoint.getSignature();
         String methodName = signature.getDeclaringType().getSimpleName() + "." + signature.getName();
-        String params = getParameterInfo(signature, joinPoint.getArgs());
         String user = getAuthenticatedUser();
 
         HttpServletRequest request = getCurrentRequest();
@@ -63,11 +63,12 @@ public class ApiLoggingAspect {
         MDC.put("api.user", user);
         
         Map<String, Object> parametersMap = createParametersMap(signature, joinPoint.getArgs());
+        parametersMap = SensitiveDataMasker.maskParameters(parametersMap);
 
         try {
             Object result = joinPoint.proceed();
             long elapsed = System.currentTimeMillis() - startTime;
-            int statusCode = getActualStatusCode();
+            int statusCode = getActualStatusCode(request);
             String performanceLevel = getPerformanceText(elapsed);
             
             MDC.put("api.duration", String.valueOf(elapsed));
@@ -93,7 +94,7 @@ public class ApiLoggingAspect {
             return result;
         } catch (Exception e) {
             long elapsed = System.currentTimeMillis() - startTime;
-            int statusCode = determineErrorStatusCode(e);
+            int statusCode = determineErrorStatusCode(request, e);
             String performanceLevel = getPerformanceText(elapsed);
             
             MDC.put("api.duration", String.valueOf(elapsed));
@@ -132,25 +133,6 @@ public class ApiLoggingAspect {
         }
     }
 
-    private String getParameterInfo(MethodSignature signature, Object[] args) {
-        String[] paramNames = signature.getParameterNames();
-        if (paramNames == null || args == null) return "";
-        StringBuilder sb = new StringBuilder();
-        for (int i = 0; i < paramNames.length; i++) {
-            String name = paramNames[i];
-            String value = String.valueOf(args[i]);
-            if (isSensitive(name)) {
-                value = "***";
-            }
-            sb.append(name).append('=').append(shorten(value)).append(", ");
-        }
-        return !sb.isEmpty() ? sb.substring(0, sb.length() - 2) : "";
-    }
-
-    private boolean isSensitive(String name) {
-        String n = name == null ? "" : name.toLowerCase();
-        return n.contains("password") || n.contains("token") || n.contains("authorization") || n.contains("secret");
-    }
 
     private String getAuthenticatedUser() {
         Authentication auth = SecurityContextHolder.getContext().getAuthentication();
@@ -178,10 +160,14 @@ public class ApiLoggingAspect {
      * Get current HTTP request
      */
     private HttpServletRequest getCurrentRequest() {
+        ServletRequestAttributes attributes = getServletRequestAttributes();
+        return attributes != null ? attributes.getRequest() : null;
+    }
+
+    private ServletRequestAttributes getServletRequestAttributes() {
         try {
-            ServletRequestAttributes attributes = (ServletRequestAttributes) RequestContextHolder.currentRequestAttributes();
-            return attributes.getRequest();
-        } catch (Exception e) {
+            return (ServletRequestAttributes) RequestContextHolder.currentRequestAttributes();
+        } catch (IllegalStateException e) {
             return null;
         }
     }
@@ -259,25 +245,56 @@ public class ApiLoggingAspect {
     /**
      * Get actual HTTP response status code from current request context
      */
-    private int getActualStatusCode() {
-        try {
-            ServletRequestAttributes attributes = (ServletRequestAttributes) RequestContextHolder.currentRequestAttributes();
-            HttpServletRequest request = attributes.getRequest();
-            // Try to get response from request attributes
-            Object response = attributes.getAttribute("org.springframework.web.servlet.HandlerMapping.bestMatchingHandler", 0);
-            
-            // For successful operations, assume 200 unless we can determine otherwise
-            // In a real-world scenario, this would need integration with response interceptors
-            return 200;
-        } catch (Exception e) {
-            return 200; // Default to success status
+    private int getActualStatusCode(HttpServletRequest request) {
+        Integer statusFromRequest = getStatusFromRequest(request);
+        if (statusFromRequest != null) {
+            return statusFromRequest;
         }
+        Integer responseStatus = getCurrentResponseStatus();
+        return responseStatus != null ? responseStatus : 200;
     }
-    
+
+    private Integer getStatusFromRequest(HttpServletRequest request) {
+        if (request == null) {
+            return null;
+        }
+        Object attr = request.getAttribute(LoggingConstants.RESPONSE_STATUS_ATTRIBUTE);
+        if (attr instanceof Integer status) {
+            return status;
+        }
+        if (attr instanceof String statusString) {
+            try {
+                return Integer.parseInt(statusString);
+            } catch (NumberFormatException ignored) {
+            }
+        }
+        return null;
+    }
+
+    private Integer getCurrentResponseStatus() {
+        ServletRequestAttributes attributes = getServletRequestAttributes();
+        if (attributes == null) {
+            return null;
+        }
+        HttpServletResponse response = attributes.getResponse();
+        if (response == null || response.getStatus() == 0) {
+            return null;
+        }
+        return response.getStatus();
+    }
+
     /**
      * Determine appropriate HTTP status code based on exception type
      */
-    private int determineErrorStatusCode(Exception e) {
+    private int determineErrorStatusCode(HttpServletRequest request, Exception e) {
+        Integer statusFromRequest = getStatusFromRequest(request);
+        if (statusFromRequest != null && statusFromRequest >= 400) {
+            return statusFromRequest;
+        }
+        Integer responseStatus = getCurrentResponseStatus();
+        if (responseStatus != null && responseStatus >= 400) {
+            return responseStatus;
+        }
         String exceptionName = e.getClass().getSimpleName().toLowerCase();
         
         // Common Spring/validation exceptions
@@ -302,5 +319,10 @@ public class ApiLoggingAspect {
         
         // Default to 500 for unhandled exceptions
         return 500; // Internal Server Error
+    }
+
+    private boolean isSensitive(String name) {
+        String n = name == null ? "" : name.toLowerCase();
+        return n.contains("password") || n.contains("token") || n.contains("authorization") || n.contains("secret");
     }
 }

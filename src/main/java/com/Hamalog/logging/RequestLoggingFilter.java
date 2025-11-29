@@ -1,5 +1,6 @@
 package com.Hamalog.logging;
 
+import com.Hamalog.logging.LoggingConstants;
 import com.Hamalog.logging.events.ApiEvent;
 import jakarta.servlet.FilterChain;
 import jakarta.servlet.ServletException;
@@ -27,9 +28,13 @@ public class RequestLoggingFilter extends OncePerRequestFilter {
 
     private static final Logger log = LoggerFactory.getLogger(RequestLoggingFilter.class);
     public static final String REQUEST_ID_HEADER = "X-Request-Id";
-    
+
+    private final StructuredLogger structuredLogger;
+
     @Autowired
-    private StructuredLogger structuredLogger;
+    public RequestLoggingFilter(StructuredLogger structuredLogger) {
+        this.structuredLogger = structuredLogger;
+    }
 
     @Override
     protected void doFilterInternal(HttpServletRequest request, HttpServletResponse response, FilterChain filterChain)
@@ -53,21 +58,23 @@ public class RequestLoggingFilter extends OncePerRequestFilter {
         String referer = safeHeader(request, "Referer");
         String requestType = determineRequestType(request.getRequestURI());
 
-        // Create request parameters map
         Map<String, Object> requestParams = new HashMap<>();
         if (request.getQueryString() != null) {
             requestParams.put("queryString", request.getQueryString());
         }
         requestParams.put("referer", shorten(referer));
+        requestParams.put("headers", SensitiveDataMasker.maskHeaders(collectSafeHeaders(request)));
+
+        StatusAwareResponseWrapper statusAwareResponse = wrapResponse(response);
 
         try {
             log.debug("REQ [{}] {} {} | User: {} | IP: {} | UA: {} | Ref: {}", 
                     requestType, request.getMethod(), request.getRequestURI(), user, ip, shorten(ua), shorten(referer));
-            filterChain.doFilter(request, response);
+            filterChain.doFilter(request, statusAwareResponse);
         } catch (Exception ex) {
             long took = System.currentTimeMillis() - start;
-            int status = response.getStatus() == 0 ? 500 : response.getStatus();
-            
+            int status = statusAwareResponse.getStatusCode() == 0 ? 500 : statusAwareResponse.getStatusCode();
+
             // Create structured error event
             ApiEvent errorEvent = ApiEvent.builder()
                     .httpMethod(request.getMethod())
@@ -90,9 +97,13 @@ public class RequestLoggingFilter extends OncePerRequestFilter {
             throw ex;
         } finally {
             long took = System.currentTimeMillis() - start;
-            int status = response.getStatus();
+            int status = statusAwareResponse.getStatusCode();
+            if (status == 0) {
+                status = 500;
+            }
             String statusText = getStatusText(status);
-            
+            request.setAttribute(LoggingConstants.RESPONSE_STATUS_ATTRIBUTE, status);
+
             // Create structured success event
             ApiEvent successEvent = ApiEvent.builder()
                     .httpMethod(request.getMethod())
@@ -137,11 +148,28 @@ public class RequestLoggingFilter extends OncePerRequestFilter {
     }
 
     private String safeHeader(HttpServletRequest request, String name) {
-        if ("Authorization".equalsIgnoreCase(name) || "Cookie".equalsIgnoreCase(name)) {
+        if (name == null) {
+            return "";
+        }
+        String lower = name.toLowerCase();
+        if (lower.contains("authorization") || lower.contains("cookie") || lower.contains("token")) {
             return "***";
         }
         String v = request.getHeader(name);
-        return v == null ? "" : v;
+        return v == null ? "" : shorten(v);
+    }
+
+    private Map<String, String> collectSafeHeaders(HttpServletRequest request) {
+        Map<String, String> headers = new HashMap<>();
+        var names = request.getHeaderNames();
+        if (names == null) {
+            return headers;
+        }
+        while (names.hasMoreElements()) {
+            String header = names.nextElement();
+            headers.put(header, safeHeader(request, header));
+        }
+        return headers;
     }
 
     private String shorten(String s) {
@@ -170,5 +198,12 @@ public class RequestLoggingFilter extends OncePerRequestFilter {
         
         // All other requests are considered external
         return "외부 요청";
+    }
+
+    private StatusAwareResponseWrapper wrapResponse(HttpServletResponse response) {
+        if (response instanceof StatusAwareResponseWrapper existingWrapper) {
+            return existingWrapper;
+        }
+        return new StatusAwareResponseWrapper(response);
     }
 }

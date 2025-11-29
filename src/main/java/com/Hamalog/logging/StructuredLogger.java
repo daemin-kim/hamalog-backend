@@ -155,8 +155,8 @@ public class StructuredLogger {
             context.put("api_request_size", event.getRequestSize());
             context.put("api_response_size", event.getResponseSize());
             context.put("api_request_type", event.getRequestType());
-            context.put("api_parameters", event.getParameters());
-            
+            context.put("api_parameters", SensitiveDataMasker.maskHeadersIfPresent(event.getParameters()));
+
             setMDCContext(context);
             if (event.getStatusCode() >= 400) {
                 APPLICATION_LOGGER.error(buildJsonMessage(context, "API_ERROR"));
@@ -193,7 +193,7 @@ public class StructuredLogger {
      * Optimized with initial capacity to reduce HashMap resizing overhead
      */
     private Map<String, Object> createBaseContext(String logType) {
-        Map<String, Object> context = new HashMap<>(8); // Initial capacity to avoid resizing
+        Map<String, Object> context = new HashMap<>(8);
         context.put("log_type", logType);
         context.put("timestamp", ISO_FORMATTER.format(Instant.now()));
         context.put("correlation_id", MDC.get("requestId"));

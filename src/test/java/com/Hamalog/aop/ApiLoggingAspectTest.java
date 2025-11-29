@@ -70,9 +70,6 @@ class ApiLoggingAspectTest {
         mockRequest.setRequestURI("/api/test");
         mockRequest.setRemoteAddr("192.168.1.1");
         mockRequest.addHeader("User-Agent", "Test Browser");
-
-        apiLoggingAspect = new ApiLoggingAspect(trustedProxyService);
-        ReflectionTestUtils.setField(apiLoggingAspect, "structuredLogger", structuredLogger);
     }
 
     @AfterEach

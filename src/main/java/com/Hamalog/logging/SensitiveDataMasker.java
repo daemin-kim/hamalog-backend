@@ -5,6 +5,7 @@ import java.util.Collection;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.Set;
 import java.util.regex.Pattern;
 
 /**
@@ -13,8 +14,14 @@ import java.util.regex.Pattern;
 public final class SensitiveDataMasker {
 
     private static final String MASK = "***";
-    private static final Pattern SENSITIVE_KEY_PATTERN = Pattern.compile("(?i).*(password|secret|token|credential|authorization|session|cookie|ssn|phone|email|account).*");
+    private static final Pattern SENSITIVE_KEY_PATTERN = Pattern.compile("(?i).*(password|secret|token|credential|authorization|session|cookie|ssn|phone|email|account|birth|resident|card|pin).*");
     private static final Pattern EMAIL_PATTERN = Pattern.compile("(^[^@]+)@(.+$)");
+    private static final Pattern PHONE_PATTERN = Pattern.compile("^(010|011|016|017|018|019)\\d{7,8}$");
+    private static final Pattern NUMERIC_ID_PATTERN = Pattern.compile("\\d{6,}");
+    private static final Set<String> SENSITIVE_HEADER_NAMES = Set.of(
+            "authorization", "cookie", "set-cookie", "x-api-key", "x-forwarded-for",
+            "x-refresh-token", "refresh-token", "x-id-token", "x-request-token"
+    );
 
     private SensitiveDataMasker() {
         // Utility class
@@ -33,7 +40,12 @@ public final class SensitiveDataMasker {
             String key = entry.getKey();
             Object value = entry.getValue();
 
-            if (key != null && SENSITIVE_KEY_PATTERN.matcher(key).matches()) {
+            if (key != null && isSensitiveKey(key)) {
+                entry.setValue(MASK);
+                continue;
+            }
+
+            if (value instanceof String stringValue && isSensitiveValue(stringValue)) {
                 entry.setValue(MASK);
                 continue;
             }
@@ -107,5 +119,69 @@ public final class SensitiveDataMasker {
             return MASK;
         }
         return idStr.substring(0, idStr.length() - 2) + "**";
+    }
+
+    private static boolean isSensitiveKey(String key) {
+        return key != null && SENSITIVE_KEY_PATTERN.matcher(key).matches();
+    }
+
+    private static boolean isSensitiveValue(String value) {
+        if (value == null || value.isBlank()) {
+            return false;
+        }
+        String trimmed = value.trim();
+        if (trimmed.length() > 256) {
+            trimmed = trimmed.substring(0, 256);
+        }
+        if (trimmed.contains("@")) {
+            return true;
+        }
+        if (PHONE_PATTERN.matcher(trimmed).matches()) {
+            return true;
+        }
+        return NUMERIC_ID_PATTERN.matcher(trimmed).matches();
+    }
+
+    public static Map<String, String> maskHeaders(Map<String, String> headers) {
+        if (headers == null || headers.isEmpty()) {
+            return headers;
+        }
+        Map<String, String> sanitized = new HashMap<>(headers.size());
+        headers.forEach((key, value) -> {
+            if (key == null) {
+                return;
+            }
+            String lower = key.toLowerCase();
+            if (SENSITIVE_HEADER_NAMES.contains(lower) || isSensitiveKey(lower)) {
+                sanitized.put(key, MASK);
+            } else if (value != null && isSensitiveValue(value)) {
+                sanitized.put(key, MASK);
+            } else {
+                sanitized.put(key, value);
+            }
+        });
+        return sanitized;
+    }
+
+    public static Map<String, Object> maskParameters(Map<String, Object> parameters) {
+        if (parameters == null || parameters.isEmpty()) {
+            return parameters;
+        }
+        Map<String, Object> copy = new HashMap<>(parameters);
+        mask(copy);
+        return copy;
+    }
+
+    public static Map<String, Object> maskHeadersIfPresent(Map<String, Object> parameters) {
+        if (parameters == null || parameters.isEmpty()) {
+            return parameters;
+        }
+        if (parameters.containsKey("headers") && parameters.get("headers") instanceof Map<?, ?> headerMap) {
+            Map<String, String> headers = new HashMap<>();
+            headerMap.forEach((k, v) -> headers.put(String.valueOf(k), v == null ? null : String.valueOf(v)));
+            parameters.put("headers", maskHeaders(headers));
+        }
+        mask(parameters);
+        return parameters;
     }
 }

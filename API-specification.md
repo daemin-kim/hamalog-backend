@@ -2,7 +2,7 @@
 
 ## 공통 사항
 
-⚠️ **로그인 및 회원가입, CSRF 토큰 발급을 제외한 모든 엔드포인트는 JWT 토큰 기반 인증이 필요합니다.** ⚠️
+⚠️ **로그인 및 회원가입을 제외한 모든 엔드포인트는 JWT 토큰 기반 인증이 필요합니다. (`/auth/csrf-token`, `/auth/csrf-status` 포함)** ⚠️
 
 - 토큰은 요청 헤더에 포함해야 합니다. (예: `Authorization: Bearer {token}`)
 - 인증되지 않은 사용자가 API에 접근하는 것을 방지하기 위함입니다.
@@ -11,6 +11,7 @@
 - 모든 API는 리소스 소유권 검증을 통해 본인의 데이터만 접근 가능하도록 보안이 강화되었습니다.
 - AOP 기반 성능 모니터링, 비즈니스 감사, 캐싱, 재시도 메커니즘이 적용되었습니다.
 - SPA 클라이언트는 `/auth/csrf-token` 으로 발급받은 CSRF 토큰을 `X-CSRF-TOKEN` 헤더에 포함해 안전하지 않은 메서드(POST, PUT, DELETE)에 함께 전송해야 합니다.
+- `/auth/csrf-token` 및 `/auth/csrf-status` 엔드포인트 역시 JWT 인증이 선행되어야 하며, 토큰 및 헤더 유효성을 모두 검사합니다.
 
 **Base URL**: `http://localhost:8080`
 
@@ -130,10 +131,14 @@ hamalog-rn://auth?token=eyJhbGciOiJIUzI1NiJ9...
 | 기능 | EndPoint | Method | Request Data | Response Data | 비고 |
 |------|----------|--------|--------------|---------------|------|
 | 복약 스케줄 목록 조회 | `/medication-schedule/list/{member-id}` | `GET` | 쿼리: `page`, `size` (최대 size=100) | 복약 스케줄 목록 응답 데이터 | 해당 회원의 스케줄을 페이지네이션된 형태로 반환 |
-| 특정 복약 스케줄 조회 | `/medication-schedule/{medication-schedule-id}` | `GET` | 없음 | 복약 스케줄 상세 응답 데이터 | memberId만 포함하는 간소화된 구조 |
-| 복약 스케줄 등록 | `/medication-schedule` | `POST` (`multipart/form-data`) | data(JSON), image(선택) | 복약 스케줄 상세 응답 | `memberId`, `name`, `hospitalName`, `prescriptionDate`, `memo`, `startOfAd`, `prescriptionDays`, `perDay`, `alarmType` 필수. 이미지 5MB 제한 |
-| 복약 스케줄 수정 | `/medication-schedule/{medication-schedule-id}` | `PUT` | 복약 스케줄 수정 요청 데이터 | 복약 스케줄 상세 응답 | 모든 필드는 지정 DTO 구조에 맞게 전송 |
+| 특정 복약 스케줄 조회 | `/medication-schedule/{medication-schedule-id}` | `GET` | 없음 | 복약 스케줄 상세 응답 데이터 | `MedicationScheduleResponse` DTO 구조(아래 예시)로 반환 |
+| 복약 스케줄 등록 | `/medication-schedule` | `POST` (`multipart/form-data`) | data(JSON), image(선택) | 복약 스케줄 상세 응답 | `memberId`, `name`, `hospitalName`, `prescriptionDate`, `startOfAd`, `prescriptionDays`, `perDay`, `alarmType` 필수. `memo` 선택, `alarmType` 값은 `SOUND` 또는 `VIBE` |
+| 복약 스케줄 수정 | `/medication-schedule/{medication-schedule-id}` | `PUT` | 복약 스케줄 수정 요청 데이터 | 복약 스케줄 상세 응답 | 모든 필드는 DTO 구조에 맞는 값 전송 (`alarmType` = `SOUND`/`VIBE` ) |
 | 복약 스케줄 삭제 | `/medication-schedule/{medication-schedule-id}` | `DELETE` | 없음 | (본문 없음, 204) | 삭제 성공 시 204 반환 |
+
+#### AlarmType 값
+- `SOUND`: 소리 알람
+- `VIBE`: 진동 알람
 
 ##### 복약 스케줄 목록 응답 데이터 {#schedule-list-response}
 ```json
@@ -149,7 +154,7 @@ hamalog-rn://auth?token=eyJhbGciOiJIUzI1NiJ9...
       "startOfAd": "2025-08-02",
       "prescriptionDays": 30,
       "perDay": 1,
-      "alarmType": "SOUND"
+      "alarmType": "VIBE"
     }
   ],
   "totalCount": 10,
@@ -188,7 +193,7 @@ hamalog-rn://auth?token=eyJhbGciOiJIUzI1NiJ9...
   "startOfAd": "2025-08-11",
   "prescriptionDays": 90,
   "perDay": 1,
-  "alarmType": "VIBRATION"
+  "alarmType": "VIBE"
 }
 ```
 - **Part `image` (선택, image/*)**
@@ -203,7 +208,7 @@ hamalog-rn://auth?token=eyJhbGciOiJIUzI1NiJ9...
   "startOfAd": "2025-08-11",
   "prescriptionDays": 120,
   "perDay": 1,
-  "alarmType": "SOUND_AND_VIBRATION"
+  "alarmType": "SOUND"
 }
 ```
 
@@ -212,7 +217,7 @@ hamalog-rn://auth?token=eyJhbGciOiJIUzI1NiJ9...
 | 기능 | EndPoint | Method | Request Data | Response Data | 비고 |
 |------|----------|--------|--------------|---------------|------|
 | 복약 기록 목록 조회 | `/medication-record/list/{medication-schedule-id}` | `GET` | 없음 | 복약 기록 목록 응답 데이터 | 특정 스케줄의 모든 기록 배열 반환 (페이지네이션 없음) |
-| 특정 복약 기록 조회 | `/medication-record/{medication-record-id}` | `GET` | 없음 | 복약 기록 상세 응답 데이터 | `medicationScheduleId`, `medicationTimeId`만 포함 |
+| 특정 복약 기록 조회 | `/medication-record/{medication-record-id}` | `GET` | 없음 | 복약 기록 상세 응답 데이터 | `MedicationRecordResponse` DTO 구조(아래 예시)로 반환 |
 | 복약 기록 생성 | `/medication-record` | `POST` | 복약 기록 생성 요청 데이터 | 복약 기록 상세 응답 | `medicationScheduleId`, `medicationTimeId`, `isTakeMedication`, `realTakeTime` 필드 |
 | 복약 기록 수정 | `/medication-record/{medication-record-id}` | `PUT` | 복약 기록 수정 요청 데이터 | 복약 기록 상세 응답 | `isTakeMedication`, `realTakeTime` 수정 |
 | 복약 기록 삭제 | `/medication-record/{medication-record-id}` | `DELETE` | 없음 | (본문 없음, 204) | 삭제 성공 시 204 반환 |

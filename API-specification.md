@@ -394,6 +394,55 @@ hamalog-rn://auth?token=eyJhbGciOiJIUzI1NiJ9...
 }
 ```
 
+#### 마음 일기 검증 규칙
+
+##### 공통 검증
+- `memberId`: 필수, 존재하는 회원 ID
+- `diaryDate`: 필수, ISO-8601 날짜 형식 (yyyy-MM-dd)
+- `moodType`: 필수, 7가지 타입 중 하나 (HAPPY, EXCITED, PEACEFUL, ANXIOUS, LETHARGIC, ANGRY, SAD)
+- `diaryType`: 필수, 2가지 타입 중 하나 (TEMPLATE, FREE_FORM)
+- **하루 1회 제한**: 동일 회원의 동일 날짜에 중복 작성 불가 (UNIQUE 제약)
+
+##### 템플릿 형식 검증 (DiaryType.TEMPLATE)
+- `templateAnswer1`: 필수, 공백 불가, 최대 500자
+- `templateAnswer2`: 필수, 공백 불가, 최대 500자
+- `templateAnswer3`: 필수, 공백 불가, 최대 500자
+- `templateAnswer4`: 필수, 공백 불가, 최대 500자
+- `freeContent`: null 또는 생략
+
+##### 자유 형식 검증 (DiaryType.FREE_FORM)
+- `freeContent`: 필수, 공백 불가, 최대 1500자
+- `templateAnswer1~4`: null 또는 생략
+
+#### 마음 일기 에러 코드
+
+| 에러 코드 | HTTP 상태 | 설명 |
+|-----------|-----------|------|
+| `MOOD_DIARY_NOT_FOUND` | 404 | 마음 일기를 찾을 수 없습니다 |
+| `DIARY_ALREADY_EXISTS` | 409 | 해당 날짜에 이미 일기가 작성되어 있습니다 (하루 1회 제한) |
+| `INVALID_DIARY_TYPE` | 400 | 유효하지 않은 일기 형식입니다 (템플릿/자유 형식 검증 실패) |
+| `INVALID_MOOD_TYPE` | 400 | 유효하지 않은 기분 타입입니다 |
+| `TEMPLATE_ANSWER_REQUIRED` | 400 | 템플릿 형식에서는 모든 질문에 답변이 필요합니다 |
+| `FREE_CONTENT_REQUIRED` | 400 | 자유 형식에서는 내용이 필요합니다 |
+| `MEMBER_NOT_FOUND` | 404 | 회원을 찾을 수 없습니다 |
+| `FORBIDDEN` | 403 | 접근 권한이 없습니다 (다른 사용자의 일기) |
+
+#### 마음 일기 보안 및 성능
+
+##### 보안
+- **JWT 인증 필수**: 모든 엔드포인트
+- **리소스 소유권 검증**: @RequireResourceOwnership AOP를 통한 자동 검증
+  - 단건 조회/삭제: MOOD_DIARY 타입으로 일기 ID 기반 소유권 확인
+  - 목록 조회/날짜별 조회: MOOD_DIARY_BY_MEMBER 타입으로 회원 ID 기반 소유권 확인
+- **XSS 방지**: 모든 입력값 검증 및 이스케이프 처리
+- **SQL Injection 방지**: JPA 파라미터 바인딩 사용
+
+##### 성능
+- **인덱스**: member_id, diary_date에 인덱스 적용
+- **Optimistic Locking**: version 필드를 통한 동시성 제어
+- **페이지네이션**: 최대 size 100 제한 (DoS 방지)
+- **성능 모니터링**: AOP 기반 자동 성능 측정 및 로깅
+
 ## 수정 마일스톤
 
 - **2025/4/28**: 초안 작성
@@ -448,11 +497,14 @@ hamalog-rn://auth?token=eyJhbGciOiJIUzI1NiJ9...
     - 모든 에러 응답 포맷을 `error`, `message`, `timestamp` 구조로 정리
     - JWT/Refresh Token 로테이션, 로그아웃 블랙리스트 처리 등 실제 구현과 문서 동기화 완료
 - **2025/12/01**: **마음 일기 API 추가**
-    - 마음 일기 CRD (Create, Read, Delete) API 명세 추가
+    - 마음 일기 CRD (Create, Read, Delete) API 명세 추가 (Update 불가)
     - 하루 1회 작성 제한, 템플릿 형식(4개 질문) 또는 자유 형식 선택 가능
     - 7가지 기분 타입 (행복, 신남, 평온, 불안&긴장, 무기력, 분노, 슬픔) 지원
     - 템플릿 형식: 각 질문당 500자 제한, 자유 형식: 1500자 제한
     - 페이지네이션 지원 목록 조회, 날짜별 조회 기능 포함
+    - 데이터베이스 스키마: `mood_diary` 테이블 추가 (12번째 테이블)
+    - 보안: 리소스 소유권 자동 검증, JWT 인증 필수
+    - 엔드포인트: 생성(POST), 단건 조회(GET), 목록 조회(GET), 날짜별 조회(GET), 삭제(DELETE)
 ---
 
 ## 데이터베이스 스키마
@@ -612,6 +664,26 @@ CREATE TABLE refresh_tokens (
     INDEX idx_token_value (token_value),
     INDEX idx_expires_at (expires_at)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci COMMENT='Refresh Token 저장소';
+
+-- 12. 마음 일기 테이블
+CREATE TABLE mood_diary (
+    mood_diary_id BIGINT AUTO_INCREMENT PRIMARY KEY COMMENT '마음 일기 고유 ID',
+    member_id BIGINT NOT NULL COMMENT '회원 ID',
+    diary_date DATE NOT NULL COMMENT '일기 날짜',
+    mood_type VARCHAR(20) NOT NULL COMMENT '오늘의 기분 (HAPPY, EXCITED, PEACEFUL, ANXIOUS, LETHARGIC, ANGRY, SAD)',
+    diary_type VARCHAR(20) NOT NULL COMMENT '일기 형식 (TEMPLATE: 템플릿, FREE_FORM: 자유형식)',
+    template_answer1 VARCHAR(500) COMMENT '템플릿 답변 1: 오늘 나에게 가장 인상 깊었던 사건은 무엇이었나요?',
+    template_answer2 VARCHAR(500) COMMENT '템플릿 답변 2: 그 순간, 나는 어떤 감정을 느꼈나요?',
+    template_answer3 VARCHAR(500) COMMENT '템플릿 답변 3: 그 감정을 느낀 이유는 무엇이라고 생각하나요?',
+    template_answer4 VARCHAR(500) COMMENT '템플릿 답변 4: 지금 이 감정에 대해 내가 해주고 싶은 말은 무엇인가요?',
+    free_content VARCHAR(1500) COMMENT '자유 형식 내용',
+    created_at DATETIME NOT NULL COMMENT '일기 작성일시',
+    version BIGINT DEFAULT 0 COMMENT '낙관적 락 버전',
+    UNIQUE KEY unique_member_diary_date (member_id, diary_date) COMMENT '하루 1회 작성 제한',
+    FOREIGN KEY (member_id) REFERENCES member(member_id) ON DELETE CASCADE,
+    INDEX idx_member_id (member_id),
+    INDEX idx_diary_date (diary_date)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci COMMENT='마음 일기';
 
 -- =====================================================
 -- 초기 데이터 (부작용 목록)

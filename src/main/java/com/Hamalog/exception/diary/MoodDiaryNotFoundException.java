@@ -5,7 +5,4 @@ public class MoodDiaryNotFoundException extends CustomException {
     public MoodDiaryNotFoundException() {
         super(ErrorCode.MOOD_DIARY_NOT_FOUND);
     }
-    public MoodDiaryNotFoundException(String message) {
-        super(ErrorCode.MOOD_DIARY_NOT_FOUND, message);
-    }
 }

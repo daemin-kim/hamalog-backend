@@ -458,7 +458,7 @@ hamalog-rn://auth?token=eyJhbGciOiJIUzI1NiJ9...
 ## 데이터베이스 스키마
 
 ### ERD 개요
-Hamalog 시스템은 총 11개의 테이블로 구성되어 있으며, 회원 관리, 복약 스케줄 관리, 복약 기록, 부작용 관리, 인증 토큰 관리 도메인으로 나뉩니다.
+Hamalog 시스템은 총 12개의 테이블로 구성되어 있으며, 회원 관리, 복약 스케줄 관리, 복약 기록, 부작용 관리, 인증 토큰 관리, 마음 일기 도메인으로 나뉩니다.
 
 ### 테이블 목록
 1. `member` - 회원 정보
@@ -472,6 +472,7 @@ Hamalog 시스템은 총 11개의 테이블로 구성되어 있으며, 회원 �
 9. `side_effect_side_effect_record` - 부작용-기록 매핑
 10. `side_effect_degree` - 부작용 정도 (deprecated)
 11. `refresh_tokens` - Refresh Token 저장
+12. `mood_diary` - 마음 일기
 
 ---
 

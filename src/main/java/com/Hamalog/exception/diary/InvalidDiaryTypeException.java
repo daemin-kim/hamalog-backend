@@ -5,7 +5,4 @@ public class InvalidDiaryTypeException extends CustomException {
     public InvalidDiaryTypeException() {
         super(ErrorCode.INVALID_DIARY_TYPE);
     }
-    public InvalidDiaryTypeException(String message) {
-        super(ErrorCode.INVALID_DIARY_TYPE, message);
-    }
 }

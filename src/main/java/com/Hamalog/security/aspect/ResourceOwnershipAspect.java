@@ -3,6 +3,7 @@ package com.Hamalog.security.aspect;
 import com.Hamalog.exception.CustomException;
 import com.Hamalog.exception.ErrorCode;
 import com.Hamalog.security.annotation.RequireResourceOwnership;
+import com.Hamalog.service.diary.MoodDiaryService;
 import com.Hamalog.service.medication.MedicationRecordService;
 import com.Hamalog.service.medication.MedicationScheduleService;
 import com.Hamalog.service.sideEffect.SideEffectService;
@@ -39,7 +40,8 @@ public class ResourceOwnershipAspect {
     private final MedicationRecordService medicationRecordService;
     private final MedicationScheduleService medicationScheduleService;
     private final SideEffectService sideEffectService;
-    
+    private final MoodDiaryService moodDiaryService;
+
     @Around("@annotation(requireResourceOwnership)")
     public Object checkResourceOwnership(ProceedingJoinPoint joinPoint, RequireResourceOwnership requireResourceOwnership) throws Throwable {
         String requestId = MDC.get("requestId");
@@ -292,6 +294,10 @@ public class ResourceOwnershipAspect {
                 return checkMedicationScheduleByMemberOwnership(resourceId, loginId, strategy);
             case MEMBER:
                 return checkMemberOwnership(resourceId, loginId, strategy);
+            case MOOD_DIARY:
+                return checkMoodDiaryOwnership(resourceId, loginId, strategy);
+            case MOOD_DIARY_BY_MEMBER:
+                return checkMoodDiaryByMemberOwnership(resourceId, loginId, strategy);
             default:
                 log.error("Unknown resource type: {}", resourceType);
                 return false;

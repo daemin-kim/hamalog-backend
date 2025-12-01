@@ -36,12 +36,14 @@ class RequireResourceOwnershipTest {
         RequireResourceOwnership.ResourceType[] resourceTypes = RequireResourceOwnership.ResourceType.values();
 
         // then
-        assertThat(resourceTypes).hasSize(4);
+        assertThat(resourceTypes).hasSize(6);
         assertThat(resourceTypes).containsExactly(
             RequireResourceOwnership.ResourceType.MEDICATION_RECORD,
             RequireResourceOwnership.ResourceType.MEDICATION_SCHEDULE,
             RequireResourceOwnership.ResourceType.MEDICATION_SCHEDULE_BY_MEMBER,
-            RequireResourceOwnership.ResourceType.MEMBER
+            RequireResourceOwnership.ResourceType.MEMBER,
+            RequireResourceOwnership.ResourceType.MOOD_DIARY,
+            RequireResourceOwnership.ResourceType.MOOD_DIARY_BY_MEMBER
         );
     }
 
@@ -57,6 +59,10 @@ class RequireResourceOwnershipTest {
             .isEqualTo("medication-schedule-by-member");
         assertThat(RequireResourceOwnership.ResourceType.MEMBER.getValue())
             .isEqualTo("member");
+        assertThat(RequireResourceOwnership.ResourceType.MOOD_DIARY.getValue())
+            .isEqualTo("mood-diary");
+        assertThat(RequireResourceOwnership.ResourceType.MOOD_DIARY_BY_MEMBER.getValue())
+            .isEqualTo("mood-diary-by-member");
     }
 
     @Test

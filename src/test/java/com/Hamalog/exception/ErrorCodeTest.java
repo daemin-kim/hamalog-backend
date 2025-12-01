@@ -73,7 +73,7 @@ class ErrorCodeTest {
         ErrorCode[] errorCodes = ErrorCode.values();
 
         // then
-        assertThat(errorCodes).hasSize(44); // 예외처리 강화로 44개
+        assertThat(errorCodes).hasSize(50); // 마음 일기 포함 50개
     }
 
     @Test

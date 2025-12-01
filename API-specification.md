@@ -295,6 +295,105 @@ hamalog-rn://auth?token=eyJhbGciOiJIUzI1NiJ9...
 }
 ```
 
+### 마음 일기 (Mood Diary) API (`/mood-diary`)
+
+| 기능 | EndPoint | Method | Request Data | Response Data | 비고 |
+|------|----------|--------|--------------|---------------|------|
+| 마음 일기 생성 | `/mood-diary` | `POST` | 마음 일기 생성 요청 데이터 | 마음 일기 상세 응답 | 하루에 1번만 작성 가능. 템플릿 또는 자유 형식 중 선택 |
+| 특정 마음 일기 조회 | `/mood-diary/{mood-diary-id}` | `GET` | 없음 | 마음 일기 상세 응답 | `MoodDiaryResponse` DTO 구조로 반환 |
+| 회원의 마음 일기 목록 조회 | `/mood-diary/list/{member-id}` | `GET` | 쿼리: `page`, `size` (최대 size=100) | 마음 일기 목록 응답 데이터 | 최신 순 정렬, 페이지네이션 지원 |
+| 특정 날짜의 마음 일기 조회 | `/mood-diary/date/{member-id}` | `GET` | 쿼리: `diaryDate` (yyyy-MM-dd) | 마음 일기 상세 응답 | 특정 회원의 특정 날짜 일기 조회 |
+| 마음 일기 삭제 | `/mood-diary/{mood-diary-id}` | `DELETE` | 없음 | (본문 없음, 204) | 삭제 성공 시 204 반환 |
+
+#### 마음 일기 API 데이터 구조
+
+##### 마음 일기 생성 요청 데이터 {#mood-diary-create-request}
+```json
+{
+  "memberId": 1,
+  "diaryDate": "2025-12-01",
+  "moodType": "HAPPY",
+  "diaryType": "TEMPLATE",
+  "templateAnswer1": "오늘 친구와 오랜만에 만나서 즐거운 대화를 나눴습니다.",
+  "templateAnswer2": "편안하고 행복한 감정을 느꼈어요.",
+  "templateAnswer3": "친구가 진심으로 내 이야기를 들어줘서 그런 것 같아요.",
+  "templateAnswer4": "오늘 같은 감정을 자주 느낄 수 있었으면 좋겠어요."
+}
+```
+
+**템플릿 질문:**
+1. 오늘 나에게 가장 인상 깊었던 사건은 무엇이었나요?
+2. 그 순간, 나는 어떤 감정을 느꼈나요?
+3. 그 감정을 느낀 이유는 무엇이라고 생각하나요?
+4. 지금 이 감정에 대해 내가 해주고 싶은 말은 무엇인가요?
+
+**자유 형식 예시:**
+```json
+{
+  "memberId": 1,
+  "diaryDate": "2025-12-01",
+  "moodType": "PEACEFUL",
+  "diaryType": "FREE_FORM",
+  "freeContent": "오늘은 전반적으로 평온한 하루였다. 아침에 일찍 일어나 산책을 했고, 저녁에는 책을 읽으며 여유로운 시간을 보냈다..."
+}
+```
+
+**기분 타입 (MoodType):**
+- `HAPPY`: 행복
+- `EXCITED`: 신남
+- `PEACEFUL`: 평온
+- `ANXIOUS`: 불안&긴장
+- `LETHARGIC`: 무기력
+- `ANGRY`: 분노
+- `SAD`: 슬픔
+
+**일기 형식 (DiaryType):**
+- `TEMPLATE`: 템플릿 형식 (4개 질문, 각 500자 제한)
+- `FREE_FORM`: 자유 형식 (1500자 제한)
+
+##### 마음 일기 상세 응답 데이터 {#mood-diary-response}
+```json
+{
+  "moodDiaryId": 1,
+  "memberId": 1,
+  "diaryDate": "2025-12-01",
+  "moodType": "HAPPY",
+  "diaryType": "TEMPLATE",
+  "templateAnswer1": "오늘 친구와 오랜만에 만나서 즐거운 대화를 나눴습니다.",
+  "templateAnswer2": "편안하고 행복한 감정을 느꼈어요.",
+  "templateAnswer3": "친구가 진심으로 내 이야기를 들어줘서 그런 것 같아요.",
+  "templateAnswer4": "오늘 같은 감정을 자주 느낄 수 있었으면 좋겠어요.",
+  "freeContent": null,
+  "createdAt": "2025-12-01T20:30:00"
+}
+```
+
+##### 마음 일기 목록 응답 데이터 {#mood-diary-list-response}
+```json
+{
+  "diaries": [
+    {
+      "moodDiaryId": 2,
+      "memberId": 1,
+      "diaryDate": "2025-12-01",
+      "moodType": "HAPPY",
+      "diaryType": "TEMPLATE",
+      "templateAnswer1": "...",
+      "templateAnswer2": "...",
+      "templateAnswer3": "...",
+      "templateAnswer4": "...",
+      "freeContent": null,
+      "createdAt": "2025-12-01T20:30:00"
+    }
+  ],
+  "totalCount": 15,
+  "currentPage": 0,
+  "pageSize": 20,
+  "hasNext": false,
+  "hasPrevious": false
+}
+```
+
 ## 수정 마일스톤
 
 - **2025/4/28**: 초안 작성
@@ -348,6 +447,12 @@ hamalog-rn://auth?token=eyJhbGciOiJIUzI1NiJ9...
     - `/auth/csrf-token`, `/auth/csrf-status` 엔드포인트 명세 추가 (JWT 인증 + CSRF 토큰 이중 검증 흐름 명시)
     - 모든 에러 응답 포맷을 `error`, `message`, `timestamp` 구조로 정리
     - JWT/Refresh Token 로테이션, 로그아웃 블랙리스트 처리 등 실제 구현과 문서 동기화 완료
+- **2025/12/01**: **마음 일기 API 추가**
+    - 마음 일기 CRD (Create, Read, Delete) API 명세 추가
+    - 하루 1회 작성 제한, 템플릿 형식(4개 질문) 또는 자유 형식 선택 가능
+    - 7가지 기분 타입 (행복, 신남, 평온, 불안&긴장, 무기력, 분노, 슬픔) 지원
+    - 템플릿 형식: 각 질문당 500자 제한, 자유 형식: 1500자 제한
+    - 페이지네이션 지원 목록 조회, 날짜별 조회 기능 포함
 ---
 
 ## 데이터베이스 스키마

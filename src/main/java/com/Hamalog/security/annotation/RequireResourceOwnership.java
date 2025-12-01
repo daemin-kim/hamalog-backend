@@ -16,8 +16,10 @@ public @interface RequireResourceOwnership {
         MEDICATION_RECORD("medication-record"),
         MEDICATION_SCHEDULE("medication-schedule"),
         MEDICATION_SCHEDULE_BY_MEMBER("medication-schedule-by-member"),
-        MEMBER("member");
-        
+        MEMBER("member"),
+        MOOD_DIARY("mood-diary"),
+        MOOD_DIARY_BY_MEMBER("mood-diary-by-member");
+
         private final String value;
         
         ResourceType(String value) {

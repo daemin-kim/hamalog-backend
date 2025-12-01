@@ -357,5 +357,25 @@ public class ResourceOwnershipAspect {
     private boolean checkMemberOwnership(Long resourceId, String loginId, RequireResourceOwnership.OwnershipStrategy strategy) {
         return sideEffectService.isOwner(resourceId, loginId);
     }
+
+    /**
+     * 마음 일기 소유권을 검증합니다.
+     */
+    private boolean checkMoodDiaryOwnership(Long resourceId, String loginId, RequireResourceOwnership.OwnershipStrategy strategy) {
+        switch (strategy) {
+            case DIRECT:
+                return moodDiaryService.isOwnerOfDiary(resourceId, loginId);
+            default:
+                log.warn("Unsupported ownership strategy '{}' for mood diary", strategy);
+                return false;
+        }
+    }
+
+    /**
+     * 멤버를 통한 마음 일기 소유권을 검증합니다.
+     */
+    private boolean checkMoodDiaryByMemberOwnership(Long resourceId, String loginId, RequireResourceOwnership.OwnershipStrategy strategy) {
+        return moodDiaryService.isOwnerOfMember(resourceId, loginId);
+    }
 }
 

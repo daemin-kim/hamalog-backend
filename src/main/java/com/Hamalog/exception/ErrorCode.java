@@ -23,6 +23,14 @@ public enum ErrorCode {
     INVALID_SIDE_EFFECT_DEGREE("INVALID_DEGREE", "부작용 정도는 1-5 사이여야 합니다."),
     EMPTY_SIDE_EFFECT_LIST("EMPTY_SIDE_EFFECT_LIST", "부작용 목록이 비어있습니다."),
 
+    // Business Logic Errors - Mood Diary
+    MOOD_DIARY_NOT_FOUND("MOOD_DIARY_NOT_FOUND", "마음 일기를 찾을 수 없습니다."),
+    DIARY_ALREADY_EXISTS("DIARY_ALREADY_EXISTS", "해당 날짜에 이미 일기가 작성되어 있습니다."),
+    INVALID_DIARY_TYPE("INVALID_DIARY_TYPE", "유효하지 않은 일기 형식입니다."),
+    INVALID_MOOD_TYPE("INVALID_MOOD_TYPE", "유효하지 않은 기분 타입입니다."),
+    TEMPLATE_ANSWER_REQUIRED("TEMPLATE_ANSWER_REQUIRED", "템플릿 형식에서는 모든 질문에 답변이 필요합니다."),
+    FREE_CONTENT_REQUIRED("FREE_CONTENT_REQUIRED", "자유 형식에서는 내용이 필요합니다."),
+
     // Authorization and Security Errors
     UNAUTHORIZED("UNAUTHORIZED", "인증이 필요합니다."),
     FORBIDDEN("FORBIDDEN", "접근 권한이 없습니다."),

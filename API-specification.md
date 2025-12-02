@@ -299,11 +299,17 @@ hamalog-rn://auth?token=eyJhbGciOiJIUzI1NiJ9...
 
 | 기능 | EndPoint | Method | Request Data | Response Data | 비고 |
 |------|----------|--------|--------------|---------------|------|
-| 마음 일기 생성 | `/mood-diary` | `POST` | 마음 일기 생성 요청 데이터 | 마음 일기 상세 응답 | 하루에 1번만 작성 가능. 템플릿 또는 자유 형식 중 선택 |
-| 특정 마음 일기 조회 | `/mood-diary/{mood-diary-id}` | `GET` | 없음 | 마음 일기 상세 응답 | `MoodDiaryResponse` DTO 구조로 반환 |
-| 회원의 마음 일기 목록 조회 | `/mood-diary/list/{member-id}` | `GET` | 쿼리: `page`, `size` (최대 size=100) | 마음 일기 목록 응답 데이터 | 최신 순 정렬, 페이지네이션 지원 |
-| 특정 날짜의 마음 일기 조회 | `/mood-diary/date/{member-id}` | `GET` | 쿼리: `diaryDate` (yyyy-MM-dd) | 마음 일기 상세 응답 | 특정 회원의 특정 날짜 일기 조회 |
-| 마음 일기 삭제 | `/mood-diary/{mood-diary-id}` | `DELETE` | 없음 | (본문 없음, 204) | 삭제 성공 시 204 반환 |
+| 마음 일기 생성 | `/mood-diary` | `POST` | 마음 일기 생성 요청 데이터 | 마음 일기 상세 응답 | 본인 계정만 작성 가능, 하루 1회 제한, 템플릿/자유 형식 선택 |
+| 특정 마음 일기 조회 | `/mood-diary/{mood-diary-id}` | `GET` | 없음 | 마음 일기 상세 응답 | 소유자만 접근 가능, `MoodDiaryResponse` DTO |
+| 회원의 마음 일기 목록 조회 | `/mood-diary/list/{member-id}` | `GET` | 쿼리: `page`, `size` (최대 size=100) | 마음 일기 목록 응답 데이터 | 본인만 요청 가능, 최신 순, 페이지네이션 |
+| 특정 날짜의 마음 일기 조회 | `/mood-diary/date/{member-id}` | `GET` | 쿼리: `diaryDate` (yyyy-MM-dd) | 마음 일기 상세 응답 | 본인만 조회 가능, 특정 날짜 필터 |
+| 마음 일기 삭제 | `/mood-diary/{mood-diary-id}` | `DELETE` | 없음 | (본문 없음, 204) | 소유자만 삭제 가능, 성공 시 204 |
+
+**인증/권한:** 모든 마음 일기 API는 인증 토큰이 필요하며, `@RequireResourceOwnership` 검증을 통해 로그인한 사용자와 리소스 소유자가 일치하지 않으면 `403 FORBIDDEN`을 반환합니다. 생성 시에도 요청 `memberId`와 인증된 회원 ID가 다르면 거부됩니다.
+
+**검증/제약 업데이트:**
+- 모든 생성·조회·삭제는 서비스 계층에서 회원 ID를 다시 확인하여 요청 바디를 임의 조작해도 다른 회원 리소스를 접근할 수 없습니다.
+- 하루 1회 제한은 기존과 동일하게 `memberId + diaryDate` 유니크 검증을 통과해야 하며, 중복 시 `DIARY_ALREADY_EXISTS (409)`를 반환합니다.
 
 #### 마음 일기 API 데이터 구조
 

@@ -3,6 +3,9 @@ package com.Hamalog.controller.diary;
 import com.Hamalog.dto.diary.request.MoodDiaryCreateRequest;
 import com.Hamalog.dto.diary.response.MoodDiaryListResponse;
 import com.Hamalog.dto.diary.response.MoodDiaryResponse;
+import com.Hamalog.exception.CustomException;
+import com.Hamalog.exception.ErrorCode;
+import com.Hamalog.security.CustomUserDetails;
 import com.Hamalog.security.annotation.RequireResourceOwnership;
 import com.Hamalog.service.diary.MoodDiaryService;
 import io.swagger.v3.oas.annotations.Operation;
@@ -44,12 +47,23 @@ public class MoodDiaryController {
             @ApiResponse(responseCode = "409", description = "해당 날짜에 이미 일기가 존재함", content = @Content)
     })
     @PostMapping
+    @RequireResourceOwnership(
+            resourceType = RequireResourceOwnership.ResourceType.MOOD_DIARY_BY_MEMBER,
+            paramName = "request",
+            source = RequireResourceOwnership.ParameterSource.REQUEST_BODY,
+            bodyField = "memberId",
+            strategy = RequireResourceOwnership.OwnershipStrategy.DIRECT
+    )
     public ResponseEntity<MoodDiaryResponse> createMoodDiary(
             @Parameter(description = "마음 일기 생성 요청 데이터", required = true)
             @Valid @RequestBody MoodDiaryCreateRequest request,
-            @AuthenticationPrincipal UserDetails userDetails
+            @AuthenticationPrincipal CustomUserDetails userDetails
     ) {
-        MoodDiaryResponse response = moodDiaryService.createMoodDiary(request);
+        Long memberId = getAuthenticatedMemberId(userDetails);
+        if (!memberId.equals(request.getMemberId())) {
+            throw new CustomException(ErrorCode.FORBIDDEN);
+        }
+        MoodDiaryResponse response = moodDiaryService.createMoodDiary(memberId, request);
         return ResponseEntity.status(HttpStatus.CREATED).body(response);
     }
 
@@ -71,9 +85,9 @@ public class MoodDiaryController {
     public ResponseEntity<MoodDiaryResponse> getMoodDiary(
             @Parameter(description = "마음 일기 ID", required = true, example = "1", in = ParameterIn.PATH)
             @PathVariable("mood-diary-id") Long moodDiaryId,
-            @AuthenticationPrincipal UserDetails userDetails
+            @AuthenticationPrincipal CustomUserDetails userDetails
     ) {
-        Long memberId = Long.parseLong(userDetails.getUsername());
+        Long memberId = getAuthenticatedMemberId(userDetails);
         MoodDiaryResponse response = moodDiaryService.getMoodDiary(moodDiaryId, memberId);
         return ResponseEntity.ok(response);
     }
@@ -101,8 +115,12 @@ public class MoodDiaryController {
             @RequestParam(defaultValue = "0") int page,
             @Parameter(description = "페이지 크기 (최대 100)", example = "20")
             @RequestParam(defaultValue = "20") int size,
-            @AuthenticationPrincipal UserDetails userDetails
+            @AuthenticationPrincipal CustomUserDetails userDetails
     ) {
+        Long authenticatedMemberId = getAuthenticatedMemberId(userDetails);
+        if (!authenticatedMemberId.equals(memberId)) {
+            throw new CustomException(ErrorCode.FORBIDDEN);
+        }
         MoodDiaryListResponse response = moodDiaryService.getMoodDiariesByMember(memberId, page, size);
         return ResponseEntity.ok(response);
     }
@@ -128,8 +146,12 @@ public class MoodDiaryController {
             @PathVariable("member-id") Long memberId,
             @Parameter(description = "일기 날짜 (yyyy-MM-dd)", required = true, example = "2025-12-01")
             @RequestParam @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate diaryDate,
-            @AuthenticationPrincipal UserDetails userDetails
+            @AuthenticationPrincipal CustomUserDetails userDetails
     ) {
+        Long authenticatedMemberId = getAuthenticatedMemberId(userDetails);
+        if (!authenticatedMemberId.equals(memberId)) {
+            throw new CustomException(ErrorCode.FORBIDDEN);
+        }
         MoodDiaryResponse response = moodDiaryService.getMoodDiaryByDate(memberId, diaryDate);
         return ResponseEntity.ok(response);
     }
@@ -150,11 +172,20 @@ public class MoodDiaryController {
     public ResponseEntity<Void> deleteMoodDiary(
             @Parameter(description = "마음 일기 ID", required = true, example = "1", in = ParameterIn.PATH)
             @PathVariable("mood-diary-id") Long moodDiaryId,
-            @AuthenticationPrincipal UserDetails userDetails
+            @AuthenticationPrincipal CustomUserDetails userDetails
     ) {
-        Long memberId = Long.parseLong(userDetails.getUsername());
+        Long memberId = getAuthenticatedMemberId(userDetails);
         moodDiaryService.deleteMoodDiary(moodDiaryId, memberId);
         return ResponseEntity.noContent().build();
     }
-}
 
+    private Long getAuthenticatedMemberId(UserDetails userDetails) {
+        if (!(userDetails instanceof CustomUserDetails customUserDetails)) {
+            throw new CustomException(ErrorCode.UNAUTHORIZED);
+        }
+        if (customUserDetails.getMember() == null || customUserDetails.getMember().getMemberId() == null) {
+            throw new CustomException(ErrorCode.UNAUTHORIZED);
+        }
+        return customUserDetails.getMember().getMemberId();
+    }
+}

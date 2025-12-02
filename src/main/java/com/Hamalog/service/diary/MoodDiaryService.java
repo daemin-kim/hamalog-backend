@@ -34,15 +34,15 @@ public class MoodDiaryService {
     private final MemberRepository memberRepository;
 
     @Transactional
-    public MoodDiaryResponse createMoodDiary(MoodDiaryCreateRequest request) {
-        log.info("마음 일기 생성 시작 - memberId: {}, diaryDate: {}", request.getMemberId(), request.getDiaryDate());
+    public MoodDiaryResponse createMoodDiary(Long memberId, MoodDiaryCreateRequest request) {
+        log.info("마음 일기 생성 시작 - memberId: {}, diaryDate: {}", memberId, request.getDiaryDate());
 
-        Member member = memberRepository.findById(request.getMemberId())
+        Member member = memberRepository.findById(memberId)
                 .orElseThrow(MemberNotFoundException::new);
 
         if (moodDiaryRepository.existsByMemberAndDiaryDate(member, request.getDiaryDate())) {
             log.warn("해당 날짜에 이미 일기가 존재함 - memberId: {}, diaryDate: {}",
-                    request.getMemberId(), request.getDiaryDate());
+                    memberId, request.getDiaryDate());
             throw new DiaryAlreadyExistsException();
         }
 
@@ -178,4 +178,3 @@ public class MoodDiaryService {
         }
     }
 }
-

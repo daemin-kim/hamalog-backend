@@ -84,6 +84,7 @@
   "token_type": "Bearer"
 }
 ```
+- `access_token`의 payload에는 `sub`(loginId)와 함께 `memberId` 클레임이 포함되어 모든 인증이 필요한 API에서 회원 식별에 활용됩니다.
 
 ##### 토큰 갱신 요청 데이터 {#auth-refresh-request}
 ```json

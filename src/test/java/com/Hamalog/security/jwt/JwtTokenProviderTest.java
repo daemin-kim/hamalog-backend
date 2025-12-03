@@ -33,6 +33,7 @@ class JwtTokenProviderTest {
 
     private JwtTokenProvider jwtTokenProvider;
     private String validBase64Secret;
+    private static final Long TEST_MEMBER_ID = 1L;
 
     @BeforeEach
     void setUp() {
@@ -66,7 +67,7 @@ class JwtTokenProviderTest {
         
         // then - should not throw exception
         // Verify by creating a token
-        String token = jwtTokenProvider.createToken("testuser");
+        String token = createTokenWithMemberId("testuser");
         assertThat(token).isNotNull();
         assertThat(token).isNotEmpty();
     }
@@ -158,7 +159,7 @@ class JwtTokenProviderTest {
         initMethod.invoke(providerWithEmptySecret);
         
         // then - should be able to create and validate tokens
-        String token = providerWithEmptySecret.createToken("testuser");
+        String token = providerWithEmptySecret.createToken("testuser", TEST_MEMBER_ID);
         assertThat(token).isNotNull();
         assertThat(providerWithEmptySecret.validateToken(token)).isTrue();
     }
@@ -171,8 +172,8 @@ class JwtTokenProviderTest {
         String loginId = "testuser";
         
         // when
-        String token = jwtTokenProvider.createToken(loginId);
-        
+        String token = createTokenWithMemberId("testuser");
+
         // then
         assertThat(token).isNotNull();
         assertThat(token).isNotEmpty();
@@ -193,8 +194,8 @@ class JwtTokenProviderTest {
         extraClaims.put("level", 1);
         
         // when
-        String token = jwtTokenProvider.createToken(loginId, extraClaims);
-        
+        String token = jwtTokenProvider.createToken(loginId, TEST_MEMBER_ID, extraClaims);
+
         // then
         assertThat(token).isNotNull();
         Claims claims = jwtTokenProvider.getAllClaims(token);
@@ -212,8 +213,8 @@ class JwtTokenProviderTest {
         String loginId = "testuser";
         
         // when
-        String token = jwtTokenProvider.createToken(loginId, null);
-        
+        String token = jwtTokenProvider.createToken(loginId, TEST_MEMBER_ID, null);
+
         // then
         assertThat(token).isNotNull();
         assertThat(jwtTokenProvider.validateToken(token)).isTrue();
@@ -225,8 +226,8 @@ class JwtTokenProviderTest {
     void validateToken_ValidToken_ShouldReturnTrue() throws Exception {
         // given
         initializeProvider();
-        String token = jwtTokenProvider.createToken("testuser");
-        
+        String token = createTokenWithMemberId("testuser");
+
         // when
         boolean isValid = jwtTokenProvider.validateToken(token);
         
@@ -239,7 +240,7 @@ class JwtTokenProviderTest {
     void validateToken_BlacklistedToken_ShouldReturnFalse() throws Exception {
         // given
         initializeProvider();
-        String token = jwtTokenProvider.createToken("testuser");
+        String token = createTokenWithMemberId("testuser");
         when(tokenBlacklistService.isTokenBlacklisted(token)).thenReturn(true);
         
         // when
@@ -280,8 +281,8 @@ class JwtTokenProviderTest {
     void validateToken_InvalidSignature_ShouldReturnFalse() throws Exception {
         // given
         initializeProvider();
-        String token = jwtTokenProvider.createToken("testuser");
-        
+        String token = createTokenWithMemberId("testuser");
+
         // Tamper with the token by corrupting the signature portion significantly
         String[] tokenParts = token.split("\\.");
         String corruptedSignature = tokenParts[2].substring(0, Math.max(1, tokenParts[2].length() - 5)) + "XXXXX";
@@ -300,8 +301,8 @@ class JwtTokenProviderTest {
         // given
         initializeProvider();
         String loginId = "testuser@example.com";
-        String token = jwtTokenProvider.createToken(loginId);
-        
+        String token = createTokenWithMemberId(loginId);
+
         // when
         String extractedLoginId = jwtTokenProvider.getLoginIdFromToken(token);
         
@@ -319,8 +320,8 @@ class JwtTokenProviderTest {
         extraClaims.put("role", "ADMIN");
         extraClaims.put("permissions", "READ_WRITE");
         
-        String token = jwtTokenProvider.createToken(loginId, extraClaims);
-        
+        String token = jwtTokenProvider.createToken(loginId, TEST_MEMBER_ID, extraClaims);
+
         // when
         Claims claims = jwtTokenProvider.getAllClaims(token);
         
@@ -337,8 +338,8 @@ class JwtTokenProviderTest {
     void validateToken_TokenExpiry_ShouldWorkWithClockSkew() throws Exception {
         // given - create provider with standard expiry
         initializeProvider();
-        String token = jwtTokenProvider.createToken("testuser");
-        
+        String token = createTokenWithMemberId("testuser");
+
         // when - validate immediately (should be valid)
         boolean isValid = jwtTokenProvider.validateToken(token);
         
@@ -360,8 +361,8 @@ class JwtTokenProviderTest {
         initializeProvider();
         
         // Create token with future issue date (within clock skew tolerance)
-        String token = jwtTokenProvider.createToken("testuser");
-        
+        String token = createTokenWithMemberId("testuser");
+
         // when - validate immediately (should handle clock skew)
         boolean isValid = jwtTokenProvider.validateToken(token);
         
@@ -377,11 +378,11 @@ class JwtTokenProviderTest {
         String loginId = "testuser";
         
         // when
-        String token1 = jwtTokenProvider.createToken(loginId);
+        String token1 = createTokenWithMemberId(loginId);
         // Add delay to ensure different timestamp (JWT timestamps are in seconds)
         Thread.sleep(1000);
-        String token2 = jwtTokenProvider.createToken(loginId);
-        
+        String token2 = createTokenWithMemberId(loginId);
+
         // then
         assertThat(token1).isNotEqualTo(token2);
         assertThat(jwtTokenProvider.validateToken(token1)).isTrue();
@@ -406,7 +407,7 @@ class JwtTokenProviderTest {
         
         // when & then
         for (String loginId : specialLoginIds) {
-            String token = jwtTokenProvider.createToken(loginId);
+            String token = createTokenWithMemberId(loginId);
             assertThat(token).isNotNull();
             assertThat(jwtTokenProvider.validateToken(token)).isTrue();
             assertThat(jwtTokenProvider.getLoginIdFromToken(token)).isEqualTo(loginId);
@@ -427,8 +428,8 @@ class JwtTokenProviderTest {
         }
         
         // when
-        String token = jwtTokenProvider.createToken(loginId, largeClaims);
-        
+        String token = jwtTokenProvider.createToken(loginId, TEST_MEMBER_ID, largeClaims);
+
         // then
         assertThat(token).isNotNull();
         assertThat(jwtTokenProvider.validateToken(token)).isTrue();
@@ -449,5 +450,9 @@ class JwtTokenProviderTest {
         Method initMethod = JwtTokenProvider.class.getDeclaredMethod("init");
         initMethod.setAccessible(true);
         initMethod.invoke(provider);
+    }
+
+    private String createTokenWithMemberId(String loginId) throws Exception {
+        return jwtTokenProvider.createToken(loginId, TEST_MEMBER_ID, null);
     }
 }

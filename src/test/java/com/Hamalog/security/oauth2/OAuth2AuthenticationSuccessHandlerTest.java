@@ -1,5 +1,7 @@
 package com.Hamalog.security.oauth2;
 
+import com.Hamalog.domain.member.Member;
+import com.Hamalog.repository.member.MemberRepository;
 import com.Hamalog.security.jwt.JwtTokenProvider;
 import jakarta.servlet.ServletException;
 import jakarta.servlet.http.Cookie;
@@ -30,6 +32,9 @@ class OAuth2AuthenticationSuccessHandlerTest {
     private JwtTokenProvider jwtTokenProvider;
 
     @Mock
+    private MemberRepository memberRepository;
+
+    @Mock
     private HttpServletRequest request;
 
     @Mock
@@ -50,12 +55,19 @@ class OAuth2AuthenticationSuccessHandlerTest {
         // Constructor will be created in individual tests to avoid unnecessary stubbing
     }
 
+    private Member buildMember(String loginId) {
+        return Member.builder()
+                .memberId(1L)
+                .loginId(loginId)
+                .build();
+    }
+
     @Test
     @DisplayName("유효한 redirect URI로 생성자 호출 시 성공")
     void constructor_ValidRedirectUri_Success() {
         // given & when & then
         assertDoesNotThrow(() -> 
-            new OAuth2AuthenticationSuccessHandler(jwtTokenProvider, "http://localhost:3000/oauth/kakao")
+            new OAuth2AuthenticationSuccessHandler(jwtTokenProvider, memberRepository, "http://localhost:3000/oauth/kakao")
         );
     }
 
@@ -64,7 +76,7 @@ class OAuth2AuthenticationSuccessHandlerTest {
     void constructor_LocalhostIp_Success() {
         // given & when & then
         assertDoesNotThrow(() -> 
-            new OAuth2AuthenticationSuccessHandler(jwtTokenProvider, "http://127.0.0.1:3000/oauth/kakao")
+            new OAuth2AuthenticationSuccessHandler(jwtTokenProvider, memberRepository, "http://127.0.0.1:3000/oauth/kakao")
         );
     }
 
@@ -73,7 +85,7 @@ class OAuth2AuthenticationSuccessHandlerTest {
     void constructor_ProductionServerIp_Success() {
         // given & when & then
         assertDoesNotThrow(() -> 
-            new OAuth2AuthenticationSuccessHandler(jwtTokenProvider, "http://112.72.248.195:3000/oauth/kakao")
+            new OAuth2AuthenticationSuccessHandler(jwtTokenProvider, memberRepository, "http://112.72.248.195:3000/oauth/kakao")
         );
     }
 
@@ -85,7 +97,7 @@ class OAuth2AuthenticationSuccessHandlerTest {
 
         // when & then
         IllegalStateException exception = assertThrows(IllegalStateException.class, () ->
-            new OAuth2AuthenticationSuccessHandler(jwtTokenProvider, invalidUri)
+            new OAuth2AuthenticationSuccessHandler(jwtTokenProvider, memberRepository, invalidUri)
         );
         
         assertTrue(exception.getMessage().contains("Invalid OAuth2 redirect URI configured"));
@@ -99,7 +111,7 @@ class OAuth2AuthenticationSuccessHandlerTest {
 
         // when & then
         IllegalStateException exception = assertThrows(IllegalStateException.class, () ->
-            new OAuth2AuthenticationSuccessHandler(jwtTokenProvider, malformedUri)
+            new OAuth2AuthenticationSuccessHandler(jwtTokenProvider, memberRepository, malformedUri)
         );
         
         assertTrue(exception.getMessage().contains("Invalid OAuth2 redirect URI configured"));
@@ -109,21 +121,24 @@ class OAuth2AuthenticationSuccessHandlerTest {
     @DisplayName("OAuth2User가 ID를 가지고 있을 때 인증 성공 처리")
     void onAuthenticationSuccess_OAuth2UserWithId_Success() throws IOException, ServletException {
         // given
-        when(jwtTokenProvider.createToken(anyString())).thenReturn(testToken);
-        handler = new OAuth2AuthenticationSuccessHandler(jwtTokenProvider, validRedirectUri);
-        
+        handler = new OAuth2AuthenticationSuccessHandler(jwtTokenProvider, memberRepository, validRedirectUri);
         Map<String, Object> attributes = new HashMap<>();
         attributes.put("id", 12345L);
-        
+
+        String loginId = "kakao_12345@oauth2.internal";
+        Member member = buildMember(loginId);
+
         when(authentication.getPrincipal()).thenReturn(oAuth2User);
         when(oAuth2User.getAttributes()).thenReturn(attributes);
-        
+        when(memberRepository.findByLoginId(loginId)).thenReturn(java.util.Optional.of(member));
+        when(jwtTokenProvider.createToken(loginId, member.getMemberId(), null)).thenReturn(testToken);
+
         // when
         handler.onAuthenticationSuccess(request, response, authentication);
 
         // then
-        verify(jwtTokenProvider).createToken("kakao_12345");
-        verify(response).addCookie(argThat(cookie -> 
+        verify(jwtTokenProvider).createToken(loginId, member.getMemberId(), null);
+        verify(response).addCookie(argThat(cookie ->
             cookie.getName().equals("auth_token") &&
             cookie.getValue().equals(testToken) &&
             cookie.isHttpOnly() &&
@@ -139,21 +154,23 @@ class OAuth2AuthenticationSuccessHandlerTest {
     @DisplayName("OAuth2User가 ID를 가지지 않을 때 인증 성공 처리")
     void onAuthenticationSuccess_OAuth2UserWithoutId_Success() throws IOException, ServletException {
         // given
-        when(jwtTokenProvider.createToken(anyString())).thenReturn(testToken);
-        handler = new OAuth2AuthenticationSuccessHandler(jwtTokenProvider, validRedirectUri);
-        
+        handler = new OAuth2AuthenticationSuccessHandler(jwtTokenProvider, memberRepository, validRedirectUri);
+
         Map<String, Object> attributes = new HashMap<>();
         String authName = "testuser";
-        
+        Member member = buildMember(authName);
+
         when(authentication.getPrincipal()).thenReturn(oAuth2User);
         when(oAuth2User.getAttributes()).thenReturn(attributes);
         when(authentication.getName()).thenReturn(authName);
-        
+        when(memberRepository.findByLoginId(authName)).thenReturn(java.util.Optional.of(member));
+        when(jwtTokenProvider.createToken(authName, member.getMemberId(), null)).thenReturn(testToken);
+
         // when
         handler.onAuthenticationSuccess(request, response, authentication);
 
         // then
-        verify(jwtTokenProvider).createToken(authName);
+        verify(jwtTokenProvider).createToken(authName, member.getMemberId(), null);
         verify(response).addCookie(any(Cookie.class));
         verify(response).setStatus(HttpServletResponse.SC_FOUND);
         verify(response).setHeader("Location", validRedirectUri);
@@ -163,22 +180,24 @@ class OAuth2AuthenticationSuccessHandlerTest {
     @DisplayName("OAuth2User가 null ID를 가질 때 인증 성공 처리")
     void onAuthenticationSuccess_OAuth2UserWithNullId_Success() throws IOException, ServletException {
         // given
-        when(jwtTokenProvider.createToken(anyString())).thenReturn(testToken);
-        handler = new OAuth2AuthenticationSuccessHandler(jwtTokenProvider, validRedirectUri);
-        
+        handler = new OAuth2AuthenticationSuccessHandler(jwtTokenProvider, memberRepository, validRedirectUri);
+
         Map<String, Object> attributes = new HashMap<>();
         attributes.put("id", null);
         String authName = "testuser";
-        
+        Member member = buildMember(authName);
+
         when(authentication.getPrincipal()).thenReturn(oAuth2User);
         when(oAuth2User.getAttributes()).thenReturn(attributes);
         when(authentication.getName()).thenReturn(authName);
-        
+        when(memberRepository.findByLoginId(authName)).thenReturn(java.util.Optional.of(member));
+        when(jwtTokenProvider.createToken(authName, member.getMemberId(), null)).thenReturn(testToken);
+
         // when
         handler.onAuthenticationSuccess(request, response, authentication);
 
         // then
-        verify(jwtTokenProvider).createToken(authName);
+        verify(jwtTokenProvider).createToken(authName, member.getMemberId(), null);
         verify(response).addCookie(any(Cookie.class));
         verify(response).setStatus(HttpServletResponse.SC_FOUND);
         verify(response).setHeader("Location", validRedirectUri);
@@ -188,20 +207,22 @@ class OAuth2AuthenticationSuccessHandlerTest {
     @DisplayName("OAuth2User가 아닌 Principal일 때 인증 성공 처리")
     void onAuthenticationSuccess_NonOAuth2UserPrincipal_Success() throws IOException, ServletException {
         // given
-        when(jwtTokenProvider.createToken(anyString())).thenReturn(testToken);
-        handler = new OAuth2AuthenticationSuccessHandler(jwtTokenProvider, validRedirectUri);
-        
+        handler = new OAuth2AuthenticationSuccessHandler(jwtTokenProvider, memberRepository, validRedirectUri);
+
         String authName = "regularuser";
         Object nonOAuth2Principal = new Object();
-        
+        Member member = buildMember(authName);
+
         when(authentication.getPrincipal()).thenReturn(nonOAuth2Principal);
         when(authentication.getName()).thenReturn(authName);
-        
+        when(memberRepository.findByLoginId(authName)).thenReturn(java.util.Optional.of(member));
+        when(jwtTokenProvider.createToken(authName, member.getMemberId(), null)).thenReturn(testToken);
+
         // when
         handler.onAuthenticationSuccess(request, response, authentication);
 
         // then
-        verify(jwtTokenProvider).createToken(authName);
+        verify(jwtTokenProvider).createToken(authName, member.getMemberId(), null);
         verify(response).addCookie(any(Cookie.class));
         verify(response).setStatus(HttpServletResponse.SC_FOUND);
         verify(response).setHeader("Location", validRedirectUri);
@@ -211,20 +232,23 @@ class OAuth2AuthenticationSuccessHandlerTest {
     @DisplayName("Integer 타입의 Kakao ID 처리")
     void onAuthenticationSuccess_IntegerKakaoId_Success() throws IOException, ServletException {
         // given
-        when(jwtTokenProvider.createToken(anyString())).thenReturn(testToken);
-        handler = new OAuth2AuthenticationSuccessHandler(jwtTokenProvider, validRedirectUri);
-        
+        handler = new OAuth2AuthenticationSuccessHandler(jwtTokenProvider, memberRepository, validRedirectUri);
+
         Map<String, Object> attributes = new HashMap<>();
         attributes.put("id", 98765);
-        
+        String loginId = "kakao_98765@oauth2.internal";
+        Member member = buildMember(loginId);
+
         when(authentication.getPrincipal()).thenReturn(oAuth2User);
         when(oAuth2User.getAttributes()).thenReturn(attributes);
-        
+        when(memberRepository.findByLoginId(loginId)).thenReturn(java.util.Optional.of(member));
+        when(jwtTokenProvider.createToken(loginId, member.getMemberId(), null)).thenReturn(testToken);
+
         // when
         handler.onAuthenticationSuccess(request, response, authentication);
 
         // then
-        verify(jwtTokenProvider).createToken("kakao_98765");
+        verify(jwtTokenProvider).createToken(loginId, member.getMemberId(), null);
         verify(response).addCookie(any(Cookie.class));
         verify(response).setStatus(HttpServletResponse.SC_FOUND);
         verify(response).setHeader("Location", validRedirectUri);
@@ -234,12 +258,15 @@ class OAuth2AuthenticationSuccessHandlerTest {
     @DisplayName("쿠키 속성이 올바르게 설정되는지 확인")
     void onAuthenticationSuccess_CookiePropertiesSetCorrectly() throws IOException, ServletException {
         // given
-        when(jwtTokenProvider.createToken(anyString())).thenReturn(testToken);
-        handler = new OAuth2AuthenticationSuccessHandler(jwtTokenProvider, validRedirectUri);
-        
+        handler = new OAuth2AuthenticationSuccessHandler(jwtTokenProvider, memberRepository, validRedirectUri);
+        String loginId = "kakao_12345@oauth2.internal";
+        Member member = buildMember(loginId);
+
         when(authentication.getPrincipal()).thenReturn(oAuth2User);
         when(oAuth2User.getAttributes()).thenReturn(Map.of("id", 12345L));
-        
+        when(memberRepository.findByLoginId(loginId)).thenReturn(java.util.Optional.of(member));
+        when(jwtTokenProvider.createToken(loginId, member.getMemberId(), null)).thenReturn(testToken);
+
         // when
         handler.onAuthenticationSuccess(request, response, authentication);
 
@@ -259,12 +286,15 @@ class OAuth2AuthenticationSuccessHandlerTest {
     @DisplayName("응답 상태와 헤더가 올바르게 설정되는지 확인")
     void onAuthenticationSuccess_ResponseStatusAndHeaderSetCorrectly() throws IOException, ServletException {
         // given
-        when(jwtTokenProvider.createToken(anyString())).thenReturn(testToken);
-        handler = new OAuth2AuthenticationSuccessHandler(jwtTokenProvider, validRedirectUri);
-        
+        handler = new OAuth2AuthenticationSuccessHandler(jwtTokenProvider, memberRepository, validRedirectUri);
+        String loginId = "kakao_12345@oauth2.internal";
+        Member member = buildMember(loginId);
+
         when(authentication.getPrincipal()).thenReturn(oAuth2User);
         when(oAuth2User.getAttributes()).thenReturn(Map.of("id", 12345L));
-        
+        when(memberRepository.findByLoginId(loginId)).thenReturn(java.util.Optional.of(member));
+        when(jwtTokenProvider.createToken(loginId, member.getMemberId(), null)).thenReturn(testToken);
+
         // when
         handler.onAuthenticationSuccess(request, response, authentication);
 

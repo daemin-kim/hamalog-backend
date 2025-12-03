@@ -15,6 +15,7 @@ import javax.crypto.SecretKey;
 import java.security.SecureRandom;
 import java.util.Base64;
 import java.util.Date;
+import java.util.HashMap;
 import java.util.Map;
 
 @Component
@@ -105,11 +106,14 @@ public class JwtTokenProvider {
         }
     }
 
-    public String createToken(String loginId) {
-        return createToken(loginId, null);
+    public String createToken(String loginId, Long memberId) {
+        return createToken(loginId, memberId, null);
     }
 
-    public String createToken(String loginId, Map<String, Object> extraClaims) {
+    public String createToken(String loginId, Long memberId, Map<String, Object> extraClaims) {
+        if (memberId == null) {
+            throw new IllegalArgumentException("memberId must not be null when creating a token");
+        }
         Date now = new Date();
         Date expiry = new Date(now.getTime() + validityInMilliseconds);
 
@@ -117,10 +121,13 @@ public class JwtTokenProvider {
                 .setSubject(loginId)
                 .setIssuedAt(now)
                 .setExpiration(expiry)
-                .setIssuer(issuer);
+                .setIssuer(issuer)
+                .claim("memberId", memberId);
 
         if (extraClaims != null && !extraClaims.isEmpty()) {
-            builder.addClaims(extraClaims);
+            Map<String, Object> sanitizedClaims = new HashMap<>(extraClaims);
+            sanitizedClaims.remove("memberId");
+            builder.addClaims(sanitizedClaims);
         }
 
         return builder

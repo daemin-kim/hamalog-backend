@@ -191,7 +191,7 @@ class AuthServiceTest {
             .willReturn(authentication);
         given(authentication.getName()).willReturn(loginId);
         given(memberRepository.findByLoginId(loginId)).willReturn(Optional.of(member));
-        given(jwtTokenProvider.createToken(loginId)).willReturn(expectedToken);
+        given(jwtTokenProvider.createToken(loginId, member.getMemberId(), null)).willReturn(expectedToken);
         given(refreshTokenService.createRefreshToken(1L)).willReturn(refreshToken);
 
         // when
@@ -201,7 +201,7 @@ class AuthServiceTest {
         assertThat(response.token()).isEqualTo(expectedToken);
         assertThat(response.refreshToken()).isEqualTo(refreshTokenValue);
         verify(authenticationManager).authenticate(any(UsernamePasswordAuthenticationToken.class));
-        verify(jwtTokenProvider).createToken(loginId);
+        verify(jwtTokenProvider).createToken(loginId, member.getMemberId(), null);
         verify(refreshTokenService).createRefreshToken(1L);
     }
 
@@ -220,7 +220,7 @@ class AuthServiceTest {
             .isInstanceOf(BadCredentialsException.class)
             .hasMessage("Bad credentials");
 
-        verify(jwtTokenProvider, never()).createToken(anyString());
+        verify(jwtTokenProvider, never()).createToken(anyString(), anyLong(), any());
     }
 
     @Test
@@ -389,7 +389,7 @@ class AuthServiceTest {
         
         // Mock existing user
         given(memberRepository.findByLoginId(loginId)).willReturn(Optional.of(existingMember));
-        given(jwtTokenProvider.createToken(loginId)).willReturn(jwtToken);
+        given(jwtTokenProvider.createToken(loginId, existingMember.getMemberId(), null)).willReturn(jwtToken);
         given(refreshTokenService.createRefreshToken(1L)).willReturn(refreshToken);
 
         // when
@@ -399,7 +399,7 @@ class AuthServiceTest {
         assertThat(response.token()).isEqualTo(jwtToken);
         assertThat(response.refreshToken()).isEqualTo(refreshTokenValue);
         verify(clientRegistrationRepository).findByRegistrationId("kakao");
-        verify(jwtTokenProvider).createToken(loginId);
+        verify(jwtTokenProvider).createToken(loginId, existingMember.getMemberId(), null);
         verify(refreshTokenService).createRefreshToken(1L);
     }
 
@@ -522,7 +522,7 @@ class AuthServiceTest {
             .willReturn(Optional.empty())  // First call - user doesn't exist
             .willReturn(Optional.of(newMember));  // Second call - user exists after save
         given(memberRepository.save(any(Member.class))).willReturn(newMember);
-        given(jwtTokenProvider.createToken(loginId)).willReturn(jwtToken);
+        given(jwtTokenProvider.createToken(loginId, newMember.getMemberId(), null)).willReturn(jwtToken);
         given(refreshTokenService.createRefreshToken(1L)).willReturn(refreshToken);
 
         // when
@@ -596,3 +596,4 @@ class AuthServiceTest {
         return realObjectMapper.readTree(userInfoJson);
     }
 }
+

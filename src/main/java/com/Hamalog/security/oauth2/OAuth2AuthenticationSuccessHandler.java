@@ -1,6 +1,10 @@
 package com.Hamalog.security.oauth2;
 
+import com.Hamalog.repository.member.MemberRepository;
 import com.Hamalog.security.jwt.JwtTokenProvider;
+import com.Hamalog.domain.member.Member;
+import com.Hamalog.exception.CustomException;
+import com.Hamalog.exception.ErrorCode;
 import jakarta.servlet.ServletException;
 import jakarta.servlet.http.Cookie;
 import jakarta.servlet.http.HttpServletRequest;
@@ -24,7 +28,8 @@ public class OAuth2AuthenticationSuccessHandler implements AuthenticationSuccess
 
     private final JwtTokenProvider jwtTokenProvider;
     private final String redirectBase;
-    
+    private final MemberRepository memberRepository;
+
     // Security Fix: Define allowed redirect domains to prevent open redirect attacks
     private static final List<String> ALLOWED_REDIRECT_HOSTS = Arrays.asList(
         "localhost",
@@ -35,9 +40,11 @@ public class OAuth2AuthenticationSuccessHandler implements AuthenticationSuccess
 
     public OAuth2AuthenticationSuccessHandler(
             JwtTokenProvider jwtTokenProvider,
+            MemberRepository memberRepository,
             @Value("${hamalog.oauth2.redirect-uri:http://localhost:3000/oauth/kakao}") String redirectBase
     ) {
         this.jwtTokenProvider = jwtTokenProvider;
+        this.memberRepository = memberRepository;
         // Validate redirect URI on startup
         if (!isValidRedirectUri(redirectBase)) {
             throw new IllegalStateException("Invalid OAuth2 redirect URI configured: " + redirectBase);
@@ -68,13 +75,16 @@ public class OAuth2AuthenticationSuccessHandler implements AuthenticationSuccess
                 loginId = authentication.getName();
             } else {
                 long kakaoId = ((Number) idObj).longValue();
-                loginId = "kakao_" + kakaoId;
+                loginId = "kakao_" + kakaoId + "@oauth2.internal";
             }
         } else {
             loginId = authentication.getName();
         }
 
-        String token = jwtTokenProvider.createToken(loginId);
+        Member member = memberRepository.findByLoginId(loginId)
+                .orElseThrow(() -> new CustomException(ErrorCode.MEMBER_NOT_FOUND));
+
+        String token = jwtTokenProvider.createToken(loginId, member.getMemberId(), null);
 
         Cookie tokenCookie = new Cookie("auth_token", token);
         tokenCookie.setHttpOnly(true);

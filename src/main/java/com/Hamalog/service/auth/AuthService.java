@@ -74,7 +74,7 @@ public class AuthService {
             .orElseThrow(() -> new CustomException(ErrorCode.MEMBER_NOT_FOUND));
 
         // AccessToken 생성
-        String accessToken = jwtTokenProvider.createToken(authentication.getName());
+        String accessToken = jwtTokenProvider.createToken(authentication.getName(), member.getMemberId(), null);
         long expiresIn = 900;  // 15분
 
         // RefreshToken 생성
@@ -104,11 +104,10 @@ public class AuthService {
         var refreshToken = refreshTokenService.rotateToken(refreshTokenValue);
 
         // 새 AccessToken 생성
-        String newAccessToken = jwtTokenProvider.createToken(
-            memberRepository.findById(refreshToken.getMemberId())
-                .map(Member::getLoginId)
-                .orElseThrow(() -> new CustomException(ErrorCode.MEMBER_NOT_FOUND))
-        );
+        Member member = memberRepository.findById(refreshToken.getMemberId())
+                .orElseThrow(() -> new CustomException(ErrorCode.MEMBER_NOT_FOUND));
+
+        String newAccessToken = jwtTokenProvider.createToken(member.getLoginId(), member.getMemberId(), null);
 
         long expiresIn = 900;  // 15분
 
@@ -221,7 +220,7 @@ public class AuthService {
                 .orElseThrow(() -> new CustomException(ErrorCode.MEMBER_NOT_FOUND));
 
             // Generate JWT token
-            String jwtToken = jwtTokenProvider.createToken(loginId);
+            String jwtToken = jwtTokenProvider.createToken(loginId, member.getMemberId(), null);
             long expiresIn = 900;  // 15분
 
             // RefreshToken 생성

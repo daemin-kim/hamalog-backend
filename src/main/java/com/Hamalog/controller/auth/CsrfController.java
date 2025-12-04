@@ -63,6 +63,7 @@ public class CsrfController {
             response.put("csrfToken", csrfToken);
             response.put("headerName", "X-CSRF-TOKEN");
             response.put("expiryMinutes", 60);
+            response.put("storage", csrfTokenProvider.isFallbackActive() ? "fallback" : "redis");
             response.put("timestamp", java.time.Instant.now().toString());
             
             log.info("CSRF 토큰 발급 완료. User: {}, IP: {}", userId, getClientIp(request));
@@ -70,6 +71,7 @@ public class CsrfController {
             
         } catch (Exception e) {
             log.error("CSRF 토큰 발급 중 오류 발생", e);
+            log.error("요청자 IP: {}", getClientIp(request));
             return ResponseEntity.status(500)
                 .body(createErrorResponse("INTERNAL_ERROR", "토큰 발급 중 오류가 발생했습니다"));
         }
@@ -97,12 +99,14 @@ public class CsrfController {
             response.put("userId", userId);
             response.put("csrfTokenPresent", StringUtils.hasText(csrfToken));
             response.put("csrfTokenValid", isValid);
+            response.put("storage", csrfTokenProvider.isFallbackActive() ? "fallback" : "redis");
             response.put("timestamp", java.time.Instant.now().toString());
             
             return ResponseEntity.ok(response);
             
         } catch (Exception e) {
             log.error("CSRF 상태 확인 중 오류 발생", e);
+            log.error("요청자 IP: {}", getClientIp(request));
             return ResponseEntity.status(500)
                 .body(createErrorResponse("INTERNAL_ERROR", "상태 확인 중 오류가 발생했습니다"));
         }

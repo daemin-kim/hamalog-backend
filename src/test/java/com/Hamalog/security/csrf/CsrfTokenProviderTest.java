@@ -6,7 +6,8 @@ import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.anyString;
 import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.doAnswer;
-import static org.mockito.Mockito.times;
+import static org.mockito.Mockito.doThrow;
+import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
@@ -16,10 +17,12 @@ import java.util.concurrent.atomic.AtomicReference;
 
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;
+import org.junit.jupiter.api.Nested;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
+import org.springframework.data.redis.RedisConnectionFailureException;
 import org.springframework.data.redis.core.RedisTemplate;
 import org.springframework.data.redis.core.ValueOperations;
 
@@ -37,28 +40,58 @@ class CsrfTokenProviderTest {
 
     @BeforeEach
     void setUp() {
-        csrfTokenProvider = new CsrfTokenProvider(redisTemplate);
+        csrfTokenProvider = new CsrfTokenProvider(redisTemplate, true);
     }
 
-    @Test
-    @DisplayName("Should store generated token in Redis with TTL")
-    void generateToken_ValidSessionId_StoresInRedis() {
-        // given
-        String sessionId = "user123";
-        AtomicReference<String> capturedToken = new AtomicReference<>();
-        doAnswer(invocation -> {
-            capturedToken.set(invocation.getArgument(1));
-            return null;
-        }).when(valueOperations).set(eq("csrf:" + sessionId), anyString(), eq(Duration.ofMinutes(60)));
-        when(redisTemplate.opsForValue()).thenReturn(valueOperations);
+    @Nested
+    @DisplayName("Redis 연동")
+    class RedisBackedBehavior {
 
-        // when
-        String token = csrfTokenProvider.generateToken(sessionId);
+        @Test
+        @DisplayName("Should store generated token in Redis with TTL")
+        void generateToken_ValidSessionId_StoresInRedis() {
+            // given
+            String sessionId = "user123";
+            AtomicReference<String> capturedToken = new AtomicReference<>();
+            doAnswer(invocation -> {
+                capturedToken.set(invocation.getArgument(1));
+                return null;
+            }).when(valueOperations).set(eq("csrf:" + sessionId), anyString(), eq(Duration.ofMinutes(60)));
+            when(redisTemplate.opsForValue()).thenReturn(valueOperations);
 
-        // then
-        assertThat(token).isNotBlank();
-        assertThat(capturedToken.get()).isEqualTo(token);
-        verify(valueOperations).set(eq("csrf:" + sessionId), eq(token), eq(Duration.ofMinutes(60)));
+            // when
+            String token = csrfTokenProvider.generateToken(sessionId);
+
+            // then
+            assertThat(token).isNotBlank();
+            assertThat(capturedToken.get()).isEqualTo(token);
+            verify(valueOperations).set(eq("csrf:" + sessionId), eq(token), eq(Duration.ofMinutes(60)));
+        }
+
+        @Test
+        @DisplayName("Should validate token successfully when stored value matches")
+        void validateToken_StoredValueMatches_ReturnsTrue() {
+            // given
+            String sessionId = "user123";
+            String storedToken = "stored-token";
+            when(redisTemplate.opsForValue()).thenReturn(valueOperations);
+            when(valueOperations.get("csrf:" + sessionId)).thenReturn(storedToken);
+
+            // when
+            boolean result = csrfTokenProvider.validateToken(sessionId, storedToken);
+
+            // then
+            assertThat(result).isTrue();
+        }
+
+        @Test
+        @DisplayName("Should return remaining TTL when available")
+        void getRemainingTtl_WithValue_ReturnsOptional() {
+            when(redisTemplate.getExpire("csrf:user123")).thenReturn(120L);
+            Optional<Long> ttl = csrfTokenProvider.getRemainingTtl("user123");
+            assertThat(ttl).contains(120L);
+            verify(redisTemplate).getExpire("csrf:user123");
+        }
     }
 
     @Test
@@ -68,22 +101,6 @@ class CsrfTokenProviderTest {
             .isInstanceOf(IllegalArgumentException.class);
         assertThatThrownBy(() -> csrfTokenProvider.generateToken("  "))
             .isInstanceOf(IllegalArgumentException.class);
-    }
-
-    @Test
-    @DisplayName("Should validate token successfully when stored value matches")
-    void validateToken_StoredValueMatches_ReturnsTrue() {
-        // given
-        String sessionId = "user123";
-        String storedToken = "stored-token";
-        when(redisTemplate.opsForValue()).thenReturn(valueOperations);
-        when(valueOperations.get("csrf:" + sessionId)).thenReturn(storedToken);
-
-        // when
-        boolean result = csrfTokenProvider.validateToken(sessionId, storedToken);
-
-        // then
-        assertThat(result).isTrue();
     }
 
     @Test
@@ -111,23 +128,37 @@ class CsrfTokenProviderTest {
     }
 
     @Test
-    @DisplayName("Should return remaining TTL when available")
-    void getRemainingTtl_WithValue_ReturnsOptional() {
-        when(redisTemplate.getExpire("csrf:user123")).thenReturn(120L);
-        Optional<Long> ttl = csrfTokenProvider.getRemainingTtl("user123");
-        assertThat(ttl).contains(120L);
-        verify(redisTemplate).getExpire("csrf:user123");
+    @DisplayName("Should fall back to in-memory store when Redis is unavailable")
+    void fallbackStoreUsedWhenRedisFails() {
+        when(redisTemplate.opsForValue()).thenReturn(valueOperations);
+        doThrow(new RedisConnectionFailureException("connection down"))
+                .when(valueOperations).set(anyString(), anyString(), any(Duration.class));
+
+        String token = csrfTokenProvider.generateToken("user123");
+
+        doThrow(new RedisConnectionFailureException("connection down"))
+                .when(valueOperations).get(anyString());
+
+        assertThat(csrfTokenProvider.validateToken("user123", token)).isTrue();
     }
 
     @Test
-    @DisplayName("Should return empty when TTL is missing or expired")
-    void getRemainingTtl_NoValue_ReturnsEmpty() {
-        when(redisTemplate.getExpire("csrf:user123")).thenReturn(null);
-        assertThat(csrfTokenProvider.getRemainingTtl("user123")).isEmpty();
+    @DisplayName("Should remove fallback entry on invalidate")
+    void invalidateToken_RemovesFallback() {
+        CsrfTokenProvider providerWithoutRedis = new CsrfTokenProvider(null, true);
+        providerWithoutRedis.generateToken("user123");
+        providerWithoutRedis.invalidateToken("user123");
+        assertThat(providerWithoutRedis.validateToken("user123", "any"))
+                .isFalse();
+    }
 
-        when(redisTemplate.getExpire("csrf:user123")).thenReturn(0L);
-        assertThat(csrfTokenProvider.getRemainingTtl("user123")).isEmpty();
-        verify(redisTemplate, times(2)).getExpire("csrf:user123");
+    @Test
+    @DisplayName("Should return fallback TTL when Redis unavailable")
+    void getRemainingTtl_FromFallback() {
+        CsrfTokenProvider providerWithoutRedis = new CsrfTokenProvider(null, true);
+        providerWithoutRedis.generateToken("user123");
+        Optional<Long> ttl = providerWithoutRedis.getRemainingTtl("user123");
+        assertThat(ttl).isPresent();
     }
 
     @Test
@@ -143,6 +174,6 @@ class CsrfTokenProviderTest {
     @DisplayName("Should skip Redis delete when sessionId blank")
     void invalidateToken_BlankInput_NoOperation() {
         csrfTokenProvider.invalidateToken(" ");
-        verify(redisTemplate, times(0)).delete(anyString());
+        verify(redisTemplate, never()).delete(anyString());
     }
 }

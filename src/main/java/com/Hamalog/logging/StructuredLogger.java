@@ -196,7 +196,8 @@ public class StructuredLogger {
         Map<String, Object> context = new HashMap<>(8);
         context.put("log_type", logType);
         context.put("timestamp", ISO_FORMATTER.format(Instant.now()));
-        context.put("correlation_id", MDC.get("requestId"));
+        context.put("correlation_id", MDC.get(MDCUtil.CORRELATION_ID));
+        context.put("request_id", MDC.get(MDCUtil.REQUEST_ID));
         context.put("thread_name", Thread.currentThread().getName());
         return context;
     }
@@ -227,15 +228,14 @@ public class StructuredLogger {
      * Clear all MDC context except preserved keys
      */
     private void clearMDCContext() {
-        // Preserve requestId before clearing
-        String requestId = MDC.get("requestId");
-        
-        // Clear all MDC context
+        String requestId = MDC.get(MDCUtil.REQUEST_ID);
+        String correlationId = MDC.get(MDCUtil.CORRELATION_ID);
         MDC.clear();
-        
-        // Restore preserved requestId if it existed
         if (requestId != null) {
-            MDC.put("requestId", requestId);
+            MDC.put(MDCUtil.REQUEST_ID, requestId);
+        }
+        if (correlationId != null) {
+            MDC.put(MDCUtil.CORRELATION_ID, correlationId);
         }
     }
 

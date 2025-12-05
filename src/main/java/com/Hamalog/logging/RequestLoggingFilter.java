@@ -1,6 +1,7 @@
 package com.Hamalog.logging;
 
 import com.Hamalog.logging.LoggingConstants;
+import com.Hamalog.logging.MDCUtil;
 import com.Hamalog.logging.events.ApiEvent;
 import jakarta.servlet.FilterChain;
 import jakarta.servlet.ServletException;
@@ -41,15 +42,22 @@ public class RequestLoggingFilter extends OncePerRequestFilter {
             throws ServletException, IOException {
         long start = System.currentTimeMillis();
 
+        String correlationId = headerOrGenerate(request, LoggingConstants.CORRELATION_ID_HEADER);
+        boolean putCorrelationId = false;
+        if (MDC.get(MDCUtil.CORRELATION_ID) == null) {
+            MDC.put(MDCUtil.CORRELATION_ID, correlationId);
+            putCorrelationId = true;
+        }
         String requestId = headerOrGenerate(request, REQUEST_ID_HEADER);
         boolean putRequestId = false;
-        if (MDC.get("requestId") == null) {
-            MDC.put("requestId", requestId);
+        if (MDC.get(MDCUtil.REQUEST_ID) == null) {
+            MDC.put(MDCUtil.REQUEST_ID, requestId);
             putRequestId = true;
         }
         MDC.put("method", request.getMethod());
         MDC.put("path", request.getRequestURI());
 
+        response.setHeader(LoggingConstants.CORRELATION_ID_HEADER, correlationId);
         response.setHeader(REQUEST_ID_HEADER, requestId);
 
         String user = currentPrincipal();
@@ -68,14 +76,13 @@ public class RequestLoggingFilter extends OncePerRequestFilter {
         StatusAwareResponseWrapper statusAwareResponse = wrapResponse(response);
 
         try {
-            log.debug("REQ [{}] {} {} | User: {} | IP: {} | UA: {} | Ref: {}", 
+            log.debug("REQ [{}] {} {} | User: {} | IP: {} | UA: {} | Ref: {}",
                     requestType, request.getMethod(), request.getRequestURI(), user, ip, shorten(ua), shorten(referer));
             filterChain.doFilter(request, statusAwareResponse);
         } catch (Exception ex) {
             long took = System.currentTimeMillis() - start;
             int status = statusAwareResponse.getStatusCode() == 0 ? 500 : statusAwareResponse.getStatusCode();
 
-            // Create structured error event
             ApiEvent errorEvent = ApiEvent.builder()
                     .httpMethod(request.getMethod())
                     .path(request.getRequestURI())
@@ -89,10 +96,10 @@ public class RequestLoggingFilter extends OncePerRequestFilter {
                     .requestType(requestType)
                     .parameters(requestParams)
                     .build();
-            
-            structuredLogger.api(errorEvent);
-            
-            log.error("ERR [{}] {} {} | User: {} | Status: {} | Error: {}", 
+
+            logStructuredApiOnce(request, errorEvent);
+
+            log.error("ERR [{}] {} {} | User: {} | Status: {} | Error: {}",
                     requestType, request.getMethod(), request.getRequestURI(), user, status, ex.toString(), ex);
             throw ex;
         } finally {
@@ -104,7 +111,6 @@ public class RequestLoggingFilter extends OncePerRequestFilter {
             String statusText = getStatusText(status);
             request.setAttribute(LoggingConstants.RESPONSE_STATUS_ATTRIBUTE, status);
 
-            // Create structured success event
             ApiEvent successEvent = ApiEvent.builder()
                     .httpMethod(request.getMethod())
                     .path(request.getRequestURI())
@@ -118,17 +124,33 @@ public class RequestLoggingFilter extends OncePerRequestFilter {
                     .requestType(requestType)
                     .parameters(requestParams)
                     .build();
-            
-            structuredLogger.api(successEvent);
-            
-            log.debug("RES [{}] {} {} | User: {} | Status: {} {} | Time: {}ms", 
+
+            logStructuredApiOnce(request, successEvent);
+
+            log.debug("RES [{}] {} {} | User: {} | Status: {} {} | Time: {}ms",
                     requestType, request.getMethod(), request.getRequestURI(), user, status, statusText, took);
             MDC.remove("method");
             MDC.remove("path");
             if (putRequestId) {
-                MDC.remove("requestId");
+                MDC.remove(MDCUtil.REQUEST_ID);
+            }
+            if (putCorrelationId) {
+                MDC.remove(MDCUtil.CORRELATION_ID);
             }
         }
+    }
+
+    private void logStructuredApiOnce(HttpServletRequest request, ApiEvent event) {
+        if (request == null) {
+            structuredLogger.api(event);
+            return;
+        }
+        Object alreadyLogged = request.getAttribute(LoggingConstants.API_EVENT_LOGGED_ATTRIBUTE);
+        if (Boolean.TRUE.equals(alreadyLogged)) {
+            return;
+        }
+        structuredLogger.api(event);
+        request.setAttribute(LoggingConstants.API_EVENT_LOGGED_ATTRIBUTE, true);
     }
 
     private String currentPrincipal() {

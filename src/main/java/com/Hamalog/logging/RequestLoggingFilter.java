@@ -41,6 +41,7 @@ public class RequestLoggingFilter extends OncePerRequestFilter {
     protected void doFilterInternal(HttpServletRequest request, HttpServletResponse response, FilterChain filterChain)
             throws ServletException, IOException {
         long start = System.currentTimeMillis();
+        boolean requestFailed = false;
 
         String correlationId = headerOrGenerate(request, LoggingConstants.CORRELATION_ID_HEADER);
         boolean putCorrelationId = false;
@@ -59,6 +60,8 @@ public class RequestLoggingFilter extends OncePerRequestFilter {
 
         response.setHeader(LoggingConstants.CORRELATION_ID_HEADER, correlationId);
         response.setHeader(REQUEST_ID_HEADER, requestId);
+
+        request.setAttribute(LoggingConstants.API_LOGGING_OWNER_ATTRIBUTE, "FILTER");
 
         String user = currentPrincipal();
         String ip = request.getRemoteAddr();
@@ -80,6 +83,7 @@ public class RequestLoggingFilter extends OncePerRequestFilter {
                     requestType, request.getMethod(), request.getRequestURI(), user, ip, shorten(ua), shorten(referer));
             filterChain.doFilter(request, statusAwareResponse);
         } catch (Exception ex) {
+            requestFailed = true;
             long took = System.currentTimeMillis() - start;
             int status = statusAwareResponse.getStatusCode() == 0 ? 500 : statusAwareResponse.getStatusCode();
 
@@ -106,26 +110,29 @@ public class RequestLoggingFilter extends OncePerRequestFilter {
             long took = System.currentTimeMillis() - start;
             int status = statusAwareResponse.getStatusCode();
             if (status == 0) {
-                status = 500;
+                status = requestFailed ? 500 : 500;
             }
             String statusText = getStatusText(status);
             request.setAttribute(LoggingConstants.RESPONSE_STATUS_ATTRIBUTE, status);
 
-            ApiEvent successEvent = ApiEvent.builder()
-                    .httpMethod(request.getMethod())
-                    .path(request.getRequestURI())
-                    .controller("FILTER")
-                    .action("HTTP_REQUEST")
-                    .userId(user)
-                    .ipAddress(ip)
-                    .userAgent(ua)
-                    .durationMs(took)
-                    .statusCode(status)
-                    .requestType(requestType)
-                    .parameters(requestParams)
-                    .build();
+            if (!requestFailed) {
+                ApiEvent successEvent = ApiEvent.builder()
+                        .httpMethod(request.getMethod())
+                        .path(request.getRequestURI())
+                        .controller("FILTER")
+                        .action("HTTP_REQUEST")
+                        .userId(user)
+                        .ipAddress(ip)
+                        .userAgent(ua)
+                        .durationMs(took)
+                        .statusCode(status)
+                        .requestType(requestType)
+                        .parameters(requestParams)
+                        .build();
 
-            logStructuredApiOnce(request, successEvent);
+                logStructuredApiOnce(request, successEvent);
+            }
+            request.setAttribute(LoggingConstants.API_LOGGING_OWNER_ATTRIBUTE, null);
 
             log.debug("RES [{}] {} {} | User: {} | Status: {} {} | Time: {}ms",
                     requestType, request.getMethod(), request.getRequestURI(), user, status, statusText, took);

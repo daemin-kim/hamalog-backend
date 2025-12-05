@@ -40,6 +40,8 @@ public class ApiLoggingAspect {
     @Around("allControllerMethods()")
     public Object logApiRequestAndResponse(ProceedingJoinPoint joinPoint) throws Throwable {
         long startTime = System.currentTimeMillis();
+        HttpServletRequest request = getCurrentRequest();
+        boolean filterOwnsLogging = request != null && "FILTER".equals(request.getAttribute(LoggingConstants.API_LOGGING_OWNER_ATTRIBUTE));
         String existingRequestId = MDC.get("requestId");
         boolean putRequestId = false;
         if (existingRequestId == null) {
@@ -52,7 +54,6 @@ public class ApiLoggingAspect {
         String methodName = signature.getDeclaringType().getSimpleName() + "." + signature.getName();
         String user = getAuthenticatedUser();
 
-        HttpServletRequest request = getCurrentRequest();
         String httpMethod = request != null ? request.getMethod() : "UNKNOWN";
         String path = request != null ? request.getRequestURI() : "UNKNOWN";
         String ipAddress = request != null ? getClientIpAddress(request) : "UNKNOWN";
@@ -88,9 +89,9 @@ public class ApiLoggingAspect {
                     .requestType(requestType)
                     .parameters(parametersMap)
                     .build();
-            
-            structuredLogger.api(apiEvent);
-            
+            if (!filterOwnsLogging) {
+                structuredLogger.api(apiEvent);
+            }
             return result;
         } catch (Exception e) {
             long elapsed = System.currentTimeMillis() - startTime;
@@ -115,9 +116,9 @@ public class ApiLoggingAspect {
                     .requestType(requestType)
                     .parameters(parametersMap)
                     .build();
-            
-            structuredLogger.api(apiErrorEvent);
-            
+            if (!filterOwnsLogging) {
+                structuredLogger.api(apiErrorEvent);
+            }
             throw e;
         } finally {
             MDC.remove("api.method");

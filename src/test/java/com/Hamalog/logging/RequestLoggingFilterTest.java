@@ -92,7 +92,7 @@ class RequestLoggingFilterTest {
     }
 
     @Test
-    @DisplayName("예외 발생 시 500 상태로 두 번 로깅된다")
+    @DisplayName("예외 발생 시 500 상태로 로깅 후 예외를 전파한다")
     void shouldLogErrorAndRethrow() throws Exception {
         MockHttpServletRequest request = baseRequest("POST", "/api/auth/login");
         request.addHeader("X-Request-Id", "req-123");
@@ -106,8 +106,8 @@ class RequestLoggingFilterTest {
                 .hasMessageContaining("boom");
 
         ArgumentCaptor<ApiEvent> captor = ArgumentCaptor.forClass(ApiEvent.class);
-        verify(structuredLogger, org.mockito.Mockito.times(2)).api(captor.capture());
-        assertThat(captor.getAllValues()).allMatch(ev -> ev.getStatusCode() == 500);
+        verify(structuredLogger).api(captor.capture());
+        assertThat(captor.getAllValues()).hasSize(1).allMatch(ev -> ev.getStatusCode() == 500);
     }
 
     @Test

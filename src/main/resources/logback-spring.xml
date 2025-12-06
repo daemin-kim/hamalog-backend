@@ -2,8 +2,9 @@
 <configuration scan="true" scanPeriod="60 seconds">
     <springProperty scope="context" name="LOG_DIR" source="LOG_DIR" defaultValue="./logs"/>
 
+    <!-- Application logs use MDC keys published by MDCUtil (camelCase) to avoid missing context fields -->
     <property name="APP_PATTERN"
-              value="%d{yyyy-MM-dd'T'HH:mm:ss.SSSZ} level=%-5level logType=%X{log_type:-APP} correlationId=%X{correlation_id:-} requestId=%X{requestId:-} user=%X{userId:-} ip=%X{ipAddress:-} thread=%thread logger=%logger{36} - %msg%n"/>
+              value="%d{yyyy-MM-dd'T'HH:mm:ss.SSSZ} level=%-5level logType=%X{log_type:-APP} correlationId=%X{correlationId:-} requestId=%X{requestId:-} user=%X{userId:-} ip=%X{ipAddress:-} thread=%thread logger=%logger{36} - %msg%n"/>
 
     <property name="SEC_PATTERN"
               value="%d{yyyy-MM-dd'T'HH:mm:ss.SSSZ} level=%-5level logType=%X{log_type:-SECURITY} event=%X{security_event_type:-} user=%X{security_user_id:-} ip=%X{security_ip_address:-} resource=%X{security_resource:-} action=%X{security_action:-} result=%X{security_result:-} risk=%X{security_risk_level:-} - %msg%n"/>
@@ -96,4 +97,3 @@
         <appender-ref ref="APP_FILE"/>
     </root>
 </configuration>
-

@@ -31,10 +31,10 @@ public class PerformanceMonitoringAspect {
     @Autowired
     private StructuredLogger structuredLogger;
 
-    @Value("${app.monitoring.performance.slow-threshold:1000}")
+    @Value("${app.aop.performance.slow-threshold:1000}")
     private long slowThreshold;
 
-    @Value("${app.monitoring.performance.very-slow-threshold:3000}")
+    @Value("${app.aop.performance.very-slow-threshold:3000}")
     private long verySlowThreshold;
 
     // 메서드별 성능 통계 저장

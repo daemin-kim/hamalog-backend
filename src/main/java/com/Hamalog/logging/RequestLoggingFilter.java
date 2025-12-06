@@ -82,25 +82,20 @@ public class RequestLoggingFilter extends OncePerRequestFilter {
             log.debug("REQ [{}] {} {} | User: {} | IP: {} | UA: {} | Ref: {}",
                     requestType, request.getMethod(), request.getRequestURI(), user, ip, shorten(ua), shorten(referer));
             filterChain.doFilter(request, statusAwareResponse);
+
+            long took = System.currentTimeMillis() - start;
+            int status = resolveStatus(statusAwareResponse, false);
+            request.setAttribute(LoggingConstants.RESPONSE_STATUS_ATTRIBUTE, status);
+
+            ApiEvent successEvent = buildEvent(request, requestType, user, ip, ua, took, status, requestParams);
+            logStructuredApiOnce(request, successEvent);
         } catch (Exception ex) {
             requestFailed = true;
             long took = System.currentTimeMillis() - start;
-            int status = statusAwareResponse.getStatusCode() == 0 ? 500 : statusAwareResponse.getStatusCode();
+            int status = resolveStatus(statusAwareResponse, true);
+            request.setAttribute(LoggingConstants.RESPONSE_STATUS_ATTRIBUTE, status);
 
-            ApiEvent errorEvent = ApiEvent.builder()
-                    .httpMethod(request.getMethod())
-                    .path(request.getRequestURI())
-                    .controller("FILTER")
-                    .action("HTTP_REQUEST")
-                    .userId(user)
-                    .ipAddress(ip)
-                    .userAgent(ua)
-                    .durationMs(took)
-                    .statusCode(status)
-                    .requestType(requestType)
-                    .parameters(requestParams)
-                    .build();
-
+            ApiEvent errorEvent = buildEvent(request, requestType, user, ip, ua, took, status, requestParams);
             logStructuredApiOnce(request, errorEvent);
 
             log.error("ERR [{}] {} {} | User: {} | Status: {} | Error: {}",
@@ -108,30 +103,9 @@ public class RequestLoggingFilter extends OncePerRequestFilter {
             throw ex;
         } finally {
             long took = System.currentTimeMillis() - start;
-            int status = statusAwareResponse.getStatusCode();
-            if (status == 0) {
-                status = requestFailed ? 500 : 500;
-            }
+            int status = resolveStatus(statusAwareResponse, requestFailed);
             String statusText = getStatusText(status);
             request.setAttribute(LoggingConstants.RESPONSE_STATUS_ATTRIBUTE, status);
-
-            if (!requestFailed) {
-                ApiEvent successEvent = ApiEvent.builder()
-                        .httpMethod(request.getMethod())
-                        .path(request.getRequestURI())
-                        .controller("FILTER")
-                        .action("HTTP_REQUEST")
-                        .userId(user)
-                        .ipAddress(ip)
-                        .userAgent(ua)
-                        .durationMs(took)
-                        .statusCode(status)
-                        .requestType(requestType)
-                        .parameters(requestParams)
-                        .build();
-
-                logStructuredApiOnce(request, successEvent);
-            }
             request.setAttribute(LoggingConstants.API_LOGGING_OWNER_ATTRIBUTE, null);
 
             log.debug("RES [{}] {} {} | User: {} | Status: {} {} | Time: {}ms",
@@ -234,5 +208,30 @@ public class RequestLoggingFilter extends OncePerRequestFilter {
             return existingWrapper;
         }
         return new StatusAwareResponseWrapper(response);
+    }
+
+    private int resolveStatus(StatusAwareResponseWrapper responseWrapper, boolean failed) {
+        int status = responseWrapper.getStatusCode();
+        if (status == 0) {
+            return failed ? HttpServletResponse.SC_INTERNAL_SERVER_ERROR : HttpServletResponse.SC_OK;
+        }
+        return status;
+    }
+
+    private ApiEvent buildEvent(HttpServletRequest request, String requestType, String user, String ip, String ua,
+                                long took, int status, Map<String, Object> requestParams) {
+        return ApiEvent.builder()
+                .httpMethod(request.getMethod())
+                .path(request.getRequestURI())
+                .controller("FILTER")
+                .action("HTTP_REQUEST")
+                .userId(user)
+                .ipAddress(ip)
+                .userAgent(ua)
+                .durationMs(took)
+                .statusCode(status)
+                .requestType(requestType)
+                .parameters(requestParams)
+                .build();
     }
 }

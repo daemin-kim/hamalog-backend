@@ -196,9 +196,9 @@ public class StructuredLogger {
         Map<String, Object> context = new HashMap<>(8);
         context.put("log_type", logType);
         context.put("timestamp", ISO_FORMATTER.format(Instant.now()));
-        context.put("correlation_id", MDC.get(MDCUtil.CORRELATION_ID));
-        context.put("request_id", MDC.get(MDCUtil.REQUEST_ID));
-        context.put("thread_name", Thread.currentThread().getName());
+        context.put("correlationId", MDC.get(MDCUtil.CORRELATION_ID));
+        context.put("requestId", MDC.get(MDCUtil.REQUEST_ID));
+        context.put("threadName", Thread.currentThread().getName());
         return context;
     }
 

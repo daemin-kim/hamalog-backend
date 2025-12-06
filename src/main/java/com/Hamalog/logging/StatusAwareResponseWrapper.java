@@ -10,37 +10,49 @@ import java.io.IOException;
  */
 public class StatusAwareResponseWrapper extends HttpServletResponseWrapper {
 
-    private int httpStatus = 0;
+    private int httpStatus;
+    private boolean statusSet;
 
     public StatusAwareResponseWrapper(HttpServletResponse response) {
         super(response);
+        this.httpStatus = 0;
+        this.statusSet = false;
     }
 
     @Override
     public void sendError(int sc) throws IOException {
         this.httpStatus = sc;
+        this.statusSet = true;
         super.sendError(sc);
     }
 
     @Override
     public void sendError(int sc, String msg) throws IOException {
         this.httpStatus = sc;
+        this.statusSet = true;
         super.sendError(sc, msg);
     }
 
     @Override
     public void sendRedirect(String location) throws IOException {
         this.httpStatus = SC_FOUND;
+        this.statusSet = true;
         super.sendRedirect(location);
     }
 
     @Override
     public void setStatus(int sc) {
         this.httpStatus = sc;
+        this.statusSet = true;
         super.setStatus(sc);
     }
 
+    @Override
+    public int getStatus() {
+        return statusSet ? httpStatus : super.getStatus();
+    }
+
     public int getStatusCode() {
-        return this.httpStatus;
+        return statusSet ? httpStatus : 0;
     }
 }

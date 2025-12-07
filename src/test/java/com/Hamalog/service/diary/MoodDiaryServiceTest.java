@@ -1,0 +1,373 @@
+package com.Hamalog.service.diary;
+
+import com.Hamalog.domain.diary.DiaryType;
+import com.Hamalog.domain.diary.MoodDiary;
+import com.Hamalog.domain.diary.MoodType;
+import com.Hamalog.domain.member.Member;
+import com.Hamalog.dto.diary.request.MoodDiaryCreateRequest;
+import com.Hamalog.dto.diary.response.MoodDiaryListResponse;
+import com.Hamalog.dto.diary.response.MoodDiaryResponse;
+import com.Hamalog.exception.diary.DiaryAlreadyExistsException;
+import com.Hamalog.exception.diary.InvalidDiaryTypeException;
+import com.Hamalog.exception.diary.MoodDiaryNotFoundException;
+import com.Hamalog.exception.member.MemberNotFoundException;
+import com.Hamalog.repository.diary.MoodDiaryRepository;
+import com.Hamalog.repository.member.MemberRepository;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.DisplayName;
+import org.junit.jupiter.api.Nested;
+import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.extension.ExtendWith;
+import org.mockito.ArgumentCaptor;
+import org.mockito.InjectMocks;
+import org.mockito.Mock;
+import org.mockito.junit.jupiter.MockitoExtension;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.PageImpl;
+import org.springframework.data.domain.PageRequest;
+import org.springframework.data.domain.Pageable;
+
+import java.time.LocalDate;
+import java.time.LocalDateTime;
+import java.util.List;
+import java.util.Optional;
+
+import static org.assertj.core.api.Assertions.assertThat;
+import static org.assertj.core.api.Assertions.assertThatThrownBy;
+import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.ArgumentMatchers.eq;
+import static org.mockito.Mockito.*;
+
+@ExtendWith(MockitoExtension.class)
+@DisplayName("MoodDiaryService 테스트")
+class MoodDiaryServiceTest {
+
+    @Mock
+    private MoodDiaryRepository moodDiaryRepository;
+
+    @Mock
+    private MemberRepository memberRepository;
+
+    @InjectMocks
+    private MoodDiaryService moodDiaryService;
+
+    private Member member;
+
+    @BeforeEach
+    void setUp() {
+        member = Member.builder()
+                .memberId(1L)
+                .loginId("user@example.com")
+                .password("encoded")
+                .name("사용자")
+                .phoneNumber("01012345678")
+                .nickName("테스터")
+                .birth(LocalDate.of(1990, 1, 1))
+                .createdAt(LocalDateTime.now())
+                .version(0L)
+                .build();
+    }
+
+    @Test
+    @DisplayName("템플릿 마음 일기 생성 성공")
+    void createMoodDiary_Template_Success() {
+        // given
+        MoodDiaryCreateRequest request = MoodDiaryCreateRequest.builder()
+                .memberId(1L)
+                .diaryDate(LocalDate.of(2025, 12, 1))
+                .moodType(MoodType.HAPPY)
+                .diaryType(DiaryType.TEMPLATE)
+                .templateAnswer1("A1")
+                .templateAnswer2("A2")
+                .templateAnswer3("A3")
+                .templateAnswer4("A4")
+                .build();
+
+        MoodDiary savedDiary = buildTemplateDiary(10L, request.getDiaryDate());
+
+        when(memberRepository.findById(1L)).thenReturn(Optional.of(member));
+        when(moodDiaryRepository.existsByMemberAndDiaryDate(member, request.getDiaryDate())).thenReturn(false);
+        when(moodDiaryRepository.save(any(MoodDiary.class))).thenReturn(savedDiary);
+
+        // when
+        MoodDiaryResponse response = moodDiaryService.createMoodDiary(1L, request);
+
+        // then
+        assertThat(response.getMoodDiaryId()).isEqualTo(10L);
+        assertThat(response.getDiaryType()).isEqualTo(DiaryType.TEMPLATE);
+        assertThat(response.getTemplateAnswer1()).isEqualTo("A1");
+
+        verify(moodDiaryRepository).save(any(MoodDiary.class));
+    }
+
+    @Test
+    @DisplayName("자유 형식 마음 일기 생성 성공")
+    void createMoodDiary_FreeForm_Success() {
+        // given
+        MoodDiaryCreateRequest request = MoodDiaryCreateRequest.builder()
+                .memberId(1L)
+                .diaryDate(LocalDate.of(2025, 12, 2))
+                .moodType(MoodType.PEACEFUL)
+                .diaryType(DiaryType.FREE_FORM)
+                .freeContent("평온한 하루")
+                .build();
+
+        MoodDiary savedDiary = buildFreeFormDiary(11L, request.getDiaryDate(), "평온한 하루");
+
+        when(memberRepository.findById(1L)).thenReturn(Optional.of(member));
+        when(moodDiaryRepository.existsByMemberAndDiaryDate(member, request.getDiaryDate())).thenReturn(false);
+        when(moodDiaryRepository.save(any(MoodDiary.class))).thenReturn(savedDiary);
+
+        // when
+        MoodDiaryResponse response = moodDiaryService.createMoodDiary(1L, request);
+
+        // then
+        assertThat(response.getDiaryType()).isEqualTo(DiaryType.FREE_FORM);
+        assertThat(response.getFreeContent()).isEqualTo("평온한 하루");
+    }
+
+    @Test
+    @DisplayName("하루 1회 제한 위반 시 예외 발생")
+    void createMoodDiary_Duplicate_ThrowsException() {
+        // given
+        MoodDiaryCreateRequest request = MoodDiaryCreateRequest.builder()
+                .memberId(1L)
+                .diaryDate(LocalDate.now())
+                .moodType(MoodType.HAPPY)
+                .diaryType(DiaryType.TEMPLATE)
+                .templateAnswer1("A1")
+                .templateAnswer2("A2")
+                .templateAnswer3("A3")
+                .templateAnswer4("A4")
+                .build();
+
+        when(memberRepository.findById(1L)).thenReturn(Optional.of(member));
+        when(moodDiaryRepository.existsByMemberAndDiaryDate(member, request.getDiaryDate())).thenReturn(true);
+
+        // when & then
+        assertThatThrownBy(() -> moodDiaryService.createMoodDiary(1L, request))
+                .isInstanceOf(DiaryAlreadyExistsException.class);
+
+        verify(moodDiaryRepository, never()).save(any());
+    }
+
+    @Test
+    @DisplayName("유효하지 않은 템플릿 답변 시 예외 발생")
+    void createMoodDiary_InvalidTemplate_ThrowsException() {
+        // given
+        MoodDiaryCreateRequest request = MoodDiaryCreateRequest.builder()
+                .memberId(1L)
+                .diaryDate(LocalDate.now())
+                .moodType(MoodType.HAPPY)
+                .diaryType(DiaryType.TEMPLATE)
+                .templateAnswer1("A1")
+                .templateAnswer2(null)
+                .build();
+
+        when(memberRepository.findById(1L)).thenReturn(Optional.of(member));
+        when(moodDiaryRepository.existsByMemberAndDiaryDate(eq(member), any())).thenReturn(false);
+
+        // when & then
+        assertThatThrownBy(() -> moodDiaryService.createMoodDiary(1L, request))
+                .isInstanceOf(InvalidDiaryTypeException.class);
+    }
+
+    @Test
+    @DisplayName("회원 정보를 찾지 못하면 예외 발생")
+    void createMoodDiary_MemberNotFound() {
+        // given
+        MoodDiaryCreateRequest request = MoodDiaryCreateRequest.builder()
+                .memberId(2L)
+                .diaryDate(LocalDate.now())
+                .moodType(MoodType.HAPPY)
+                .diaryType(DiaryType.FREE_FORM)
+                .freeContent("content")
+                .build();
+
+        when(memberRepository.findById(2L)).thenReturn(Optional.empty());
+
+        // when & then
+        assertThatThrownBy(() -> moodDiaryService.createMoodDiary(2L, request))
+                .isInstanceOf(MemberNotFoundException.class);
+    }
+
+    @Test
+    @DisplayName("마음 일기 단건 조회 성공")
+    void getMoodDiary_Success() {
+        // given
+        MoodDiary diary = buildTemplateDiary(5L, LocalDate.of(2025, 12, 1));
+        when(moodDiaryRepository.findByIdAndMemberId(5L, 1L)).thenReturn(Optional.of(diary));
+
+        // when
+        MoodDiaryResponse response = moodDiaryService.getMoodDiary(5L, 1L);
+
+        // then
+        assertThat(response.getMoodDiaryId()).isEqualTo(5L);
+        assertThat(response.getMemberId()).isEqualTo(member.getMemberId());
+    }
+
+    @Test
+    @DisplayName("마음 일기 단건 조회 실패")
+    void getMoodDiary_NotFound() {
+        // given
+        when(moodDiaryRepository.findByIdAndMemberId(99L, 1L)).thenReturn(Optional.empty());
+
+        // when & then
+        assertThatThrownBy(() -> moodDiaryService.getMoodDiary(99L, 1L))
+                .isInstanceOf(MoodDiaryNotFoundException.class);
+    }
+
+    @Test
+    @DisplayName("마음 일기 목록 조회 시 페이지 크기 최대 100으로 제한")
+    void getMoodDiariesByMember_SizeCapped() {
+        // given
+        LocalDate date = LocalDate.of(2025, 12, 1);
+        MoodDiary diary = buildTemplateDiary(3L, date);
+        Page<MoodDiary> page = new PageImpl<>(List.of(diary), PageRequest.of(0, 100), 1);
+
+        when(memberRepository.findById(1L)).thenReturn(Optional.of(member));
+        when(moodDiaryRepository.findByMemberOrderByDiaryDateDesc(eq(member), any(Pageable.class)))
+                .thenReturn(page);
+
+        // when
+        MoodDiaryListResponse response = moodDiaryService.getMoodDiariesByMember(1L, 0, 200);
+
+        // then
+        assertThat(response.getDiaries()).hasSize(1);
+        assertThat(response.getPageSize()).isEqualTo(100);
+
+        ArgumentCaptor<Pageable> captor = ArgumentCaptor.forClass(Pageable.class);
+        verify(moodDiaryRepository).findByMemberOrderByDiaryDateDesc(eq(member), captor.capture());
+        assertThat(captor.getValue().getPageSize()).isEqualTo(100);
+    }
+
+    @Test
+    @DisplayName("특정 날짜 마음 일기 조회 성공")
+    void getMoodDiaryByDate_Success() {
+        // given
+        LocalDate diaryDate = LocalDate.of(2025, 12, 3);
+        MoodDiary diary = buildTemplateDiary(7L, diaryDate);
+
+        when(memberRepository.findById(1L)).thenReturn(Optional.of(member));
+        when(moodDiaryRepository.findByMemberAndDiaryDate(member, diaryDate)).thenReturn(Optional.of(diary));
+
+        // when
+        MoodDiaryResponse response = moodDiaryService.getMoodDiaryByDate(1L, diaryDate);
+
+        // then
+        assertThat(response.getDiaryDate()).isEqualTo(diaryDate);
+    }
+
+    @Test
+    @DisplayName("특정 날짜 마음 일기 조회 실패")
+    void getMoodDiaryByDate_NotFound() {
+        // given
+        LocalDate diaryDate = LocalDate.of(2025, 12, 3);
+        when(memberRepository.findById(1L)).thenReturn(Optional.of(member));
+        when(moodDiaryRepository.findByMemberAndDiaryDate(member, diaryDate)).thenReturn(Optional.empty());
+
+        // when & then
+        assertThatThrownBy(() -> moodDiaryService.getMoodDiaryByDate(1L, diaryDate))
+                .isInstanceOf(MoodDiaryNotFoundException.class);
+    }
+
+    @Test
+    @DisplayName("마음 일기 삭제 성공")
+    void deleteMoodDiary_Success() {
+        // given
+        MoodDiary diary = buildTemplateDiary(9L, LocalDate.now());
+        when(moodDiaryRepository.findByIdAndMemberId(9L, 1L)).thenReturn(Optional.of(diary));
+
+        // when
+        moodDiaryService.deleteMoodDiary(9L, 1L);
+
+        // then
+        verify(moodDiaryRepository).delete(diary);
+    }
+
+    @Test
+    @DisplayName("마음 일기 삭제 실패")
+    void deleteMoodDiary_NotFound() {
+        // given
+        when(moodDiaryRepository.findByIdAndMemberId(9L, 1L)).thenReturn(Optional.empty());
+
+        // when & then
+        assertThatThrownBy(() -> moodDiaryService.deleteMoodDiary(9L, 1L))
+                .isInstanceOf(MoodDiaryNotFoundException.class);
+    }
+
+    @Nested
+    @DisplayName("소유권 검증")
+    class OwnershipTests {
+
+        @Test
+        @DisplayName("일기 소유자일 때 true 반환")
+        void isOwnerOfDiary_True() {
+            MoodDiary diary = buildTemplateDiary(15L, LocalDate.now());
+            when(moodDiaryRepository.findById(15L)).thenReturn(Optional.of(diary));
+
+            boolean result = moodDiaryService.isOwnerOfDiary(15L, member.getLoginId());
+
+            assertThat(result).isTrue();
+        }
+
+        @Test
+        @DisplayName("일기 소유자가 아니면 false 반환")
+        void isOwnerOfDiary_False() {
+            MoodDiary diary = buildTemplateDiary(16L, LocalDate.now());
+            when(moodDiaryRepository.findById(16L)).thenReturn(Optional.of(diary));
+
+            boolean result = moodDiaryService.isOwnerOfDiary(16L, "other@example.com");
+
+            assertThat(result).isFalse();
+        }
+
+        @Test
+        @DisplayName("회원 소유자일 때 true 반환")
+        void isOwnerOfMember_True() {
+            when(memberRepository.findById(1L)).thenReturn(Optional.of(member));
+
+            boolean result = moodDiaryService.isOwnerOfMember(1L, member.getLoginId());
+
+            assertThat(result).isTrue();
+        }
+
+        @Test
+        @DisplayName("회원 정보를 찾지 못하면 false")
+        void isOwnerOfMember_NotFound() {
+            when(memberRepository.findById(1L)).thenReturn(Optional.empty());
+
+            boolean result = moodDiaryService.isOwnerOfMember(1L, member.getLoginId());
+
+            assertThat(result).isFalse();
+        }
+    }
+
+    private MoodDiary buildTemplateDiary(Long id, LocalDate diaryDate) {
+        return MoodDiary.builder()
+                .moodDiaryId(id)
+                .member(member)
+                .diaryDate(diaryDate)
+                .moodType(MoodType.HAPPY)
+                .diaryType(DiaryType.TEMPLATE)
+                .templateAnswer1("A1")
+                .templateAnswer2("A2")
+                .templateAnswer3("A3")
+                .templateAnswer4("A4")
+                .createdAt(LocalDateTime.of(2025, 12, 1, 10, 0))
+                .build();
+    }
+
+    private MoodDiary buildFreeFormDiary(Long id, LocalDate diaryDate, String content) {
+        return MoodDiary.builder()
+                .moodDiaryId(id)
+                .member(member)
+                .diaryDate(diaryDate)
+                .moodType(MoodType.PEACEFUL)
+                .diaryType(DiaryType.FREE_FORM)
+                .freeContent(content)
+                .createdAt(LocalDateTime.of(2025, 12, 2, 10, 0))
+                .build();
+    }
+}
+

@@ -335,11 +335,13 @@ public class GlobalExceptionHandler {
     private HttpStatus determineHttpStatus(ErrorCode errorCode) {
         return switch (errorCode) {
             case MEMBER_NOT_FOUND, MEDICATION_SCHEDULE_NOT_FOUND, MEDICATION_RECORD_NOT_FOUND,
-                 MEDICATION_TIME_NOT_FOUND, SIDE_EFFECT_NOT_FOUND, FILE_NOT_FOUND -> HttpStatus.NOT_FOUND;
+                 MEDICATION_TIME_NOT_FOUND, SIDE_EFFECT_NOT_FOUND, FILE_NOT_FOUND,
+                 MOOD_DIARY_NOT_FOUND -> HttpStatus.NOT_FOUND;
             case UNAUTHORIZED, INVALID_TOKEN, TOKEN_EXPIRED, TOKEN_BLACKLISTED,
                  INVALID_REFRESH_TOKEN, REFRESH_TOKEN_EXPIRED, REFRESH_TOKEN_REVOKED -> HttpStatus.UNAUTHORIZED;
             case FORBIDDEN -> HttpStatus.FORBIDDEN;
-            case OPTIMISTIC_LOCK_FAILED, RESOURCE_CONFLICT, DUPLICATE_MEMBER -> HttpStatus.CONFLICT;
+            case OPTIMISTIC_LOCK_FAILED, RESOURCE_CONFLICT, DUPLICATE_MEMBER,
+                 DIARY_ALREADY_EXISTS -> HttpStatus.CONFLICT;
             case EXTERNAL_API_TIMEOUT -> HttpStatus.GATEWAY_TIMEOUT;
             case FILE_SIZE_EXCEEDED -> HttpStatus.PAYLOAD_TOO_LARGE;
             default -> HttpStatus.BAD_REQUEST;

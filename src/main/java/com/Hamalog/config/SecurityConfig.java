@@ -9,6 +9,7 @@ import com.Hamalog.security.jwt.JwtAuthenticationFilter;
 import com.Hamalog.security.jwt.JwtTokenProvider;
 import com.Hamalog.security.oauth2.OAuth2AuthenticationSuccessHandler;
 import com.Hamalog.service.oauth2.KakaoOAuth2UserService;
+import jakarta.servlet.http.HttpServletResponse;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -117,6 +118,14 @@ public class SecurityConfig {
                 .oauth2Login(oauth2 -> oauth2
                         .userInfoEndpoint(u -> u.userService(kakaoOAuth2UserService))
                         .successHandler(oAuth2AuthenticationSuccessHandler)
+                )
+                .exceptionHandling(exceptions -> exceptions
+                        .authenticationEntryPoint((request, response, authException) -> {
+                            // API 요청에 대해 401 JSON 응답 반환 (OAuth2 리다이렉트 방지)
+                            response.setStatus(HttpServletResponse.SC_UNAUTHORIZED);
+                            response.setContentType("application/json;charset=UTF-8");
+                            response.getWriter().write("{\"error\":\"Unauthorized\",\"message\":\"JWT 토큰이 필요합니다.\"}");
+                        })
                 )
                 .addFilterBefore(requestSizeMonitoringFilter, UsernamePasswordAuthenticationFilter.class);
         

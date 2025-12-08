@@ -228,3 +228,4 @@ jobs:
             throw 'MySQL connection test failed'
           }
           Write-Host 'MySQL connection test succeeded'
+

@@ -2,31 +2,56 @@
 <configuration scan="true" scanPeriod="60 seconds">
     <springProperty scope="context" name="LOG_DIR" source="LOG_DIR" defaultValue="./logs"/>
 
-    <!-- Application logs use MDC keys published by MDCUtil (camelCase) to avoid missing context fields -->
+    <!-- 한국 시간대 설정 -->
+    <timestamp key="KST" datePattern="yyyy-MM-dd HH:mm:ss" timeZone="Asia/Seoul"/>
+
+    <!-- 간소화된 로그 패턴 - 한국 시간대 적용 -->
     <property name="APP_PATTERN"
-              value="%d{yyyy-MM-dd'T'HH:mm:ss.SSSZ} level=%-5level logType=%X{log_type:-APP} correlationId=%X{correlationId:-} requestId=%X{requestId:-} user=%X{userId:-} ip=%X{ipAddress:-} thread=%thread logger=%logger{36} - %msg%n"/>
+              value="%d{yyyy-MM-dd HH:mm:ss.SSS}{Asia/Seoul} [%-5level] [%X{requestId:-}] %logger{20} - %msg%n"/>
 
     <property name="SEC_PATTERN"
-              value="%d{yyyy-MM-dd'T'HH:mm:ss.SSSZ} level=%-5level logType=%X{log_type:-SECURITY} event=%X{security_event_type:-} user=%X{security_user_id:-} ip=%X{security_ip_address:-} resource=%X{security_resource:-} action=%X{security_action:-} result=%X{security_result:-} risk=%X{security_risk_level:-} - %msg%n"/>
+              value="%d{yyyy-MM-dd HH:mm:ss.SSS}{Asia/Seoul} [%-5level] [SECURITY] user=%X{security_user_id:-} ip=%X{security_ip_address:-} action=%X{security_action:-} - %msg%n"/>
 
     <property name="AUDIT_PATTERN"
-              value="%d{yyyy-MM-dd'T'HH:mm:ss.SSSZ} level=%-5level logType=%X{log_type:-AUDIT} operation=%X{audit_operation:-} entity=%X{audit_entity_type:-}/%X{audit_entity_id:-} user=%X{audit_user_id:-} ip=%X{audit_ip_address:-} status=%X{audit_status:-} - %msg%n"/>
+              value="%d{yyyy-MM-dd HH:mm:ss.SSS}{Asia/Seoul} [%-5level] [AUDIT] op=%X{audit_operation:-} entity=%X{audit_entity_type:-} user=%X{audit_user_id:-} - %msg%n"/>
 
     <property name="PERF_PATTERN"
-              value="%d{yyyy-MM-dd'T'HH:mm:ss.SSSZ} level=%-5level logType=%X{log_type:-PERFORMANCE} operation=%X{perf_operation:-} durationMs=%X{perf_duration_ms:-} level=%X{perf_level:-} success=%X{perf_success:-} method=%X{perf_class:-}.%X{perf_method:-} - %msg%n"/>
+              value="%d{yyyy-MM-dd HH:mm:ss.SSS}{Asia/Seoul} [%-5level] [PERF] op=%X{perf_operation:-} time=%X{perf_duration_ms:-}ms - %msg%n"/>
 
     <!-- Console output for local development -->
     <appender name="APP_CONSOLE" class="ch.qos.logback.core.ConsoleAppender">
+        <!-- 헬스체크 요청 필터링 -->
+        <filter class="ch.qos.logback.core.filter.EvaluatorFilter">
+            <evaluator class="ch.qos.logback.classic.boolex.JaninoEventEvaluator">
+                <expression>
+                    message.contains("/actuator") || message.contains("health")
+                </expression>
+            </evaluator>
+            <onMatch>DENY</onMatch>
+            <onMismatch>NEUTRAL</onMismatch>
+        </filter>
         <encoder>
             <pattern>${APP_PATTERN}</pattern>
+            <charset>UTF-8</charset>
         </encoder>
     </appender>
 
     <!-- Application rolling file -->
     <appender name="APP_FILE" class="ch.qos.logback.core.rolling.RollingFileAppender">
         <file>${LOG_DIR}/application.log</file>
+        <!-- 헬스체크 요청 필터링 -->
+        <filter class="ch.qos.logback.core.filter.EvaluatorFilter">
+            <evaluator class="ch.qos.logback.classic.boolex.JaninoEventEvaluator">
+                <expression>
+                    message.contains("/actuator") || message.contains("health")
+                </expression>
+            </evaluator>
+            <onMatch>DENY</onMatch>
+            <onMismatch>NEUTRAL</onMismatch>
+        </filter>
         <encoder>
             <pattern>${APP_PATTERN}</pattern>
+            <charset>UTF-8</charset>
         </encoder>
         <rollingPolicy class="ch.qos.logback.core.rolling.SizeAndTimeBasedRollingPolicy">
             <fileNamePattern>${LOG_DIR}/application.%d{yyyy-MM-dd}.%i.log.gz</fileNamePattern>
@@ -41,6 +66,7 @@
         <file>${LOG_DIR}/audit.log</file>
         <encoder>
             <pattern>${AUDIT_PATTERN}</pattern>
+            <charset>UTF-8</charset>
         </encoder>
         <rollingPolicy class="ch.qos.logback.core.rolling.SizeAndTimeBasedRollingPolicy">
             <fileNamePattern>${LOG_DIR}/audit.%d{yyyy-MM-dd}.%i.log.gz</fileNamePattern>
@@ -55,6 +81,7 @@
         <file>${LOG_DIR}/security.log</file>
         <encoder>
             <pattern>${SEC_PATTERN}</pattern>
+            <charset>UTF-8</charset>
         </encoder>
         <rollingPolicy class="ch.qos.logback.core.rolling.SizeAndTimeBasedRollingPolicy">
             <fileNamePattern>${LOG_DIR}/security.%d{yyyy-MM-dd}.%i.log.gz</fileNamePattern>
@@ -69,6 +96,7 @@
         <file>${LOG_DIR}/performance.log</file>
         <encoder>
             <pattern>${PERF_PATTERN}</pattern>
+            <charset>UTF-8</charset>
         </encoder>
         <rollingPolicy class="ch.qos.logback.core.rolling.SizeAndTimeBasedRollingPolicy">
             <fileNamePattern>${LOG_DIR}/performance.%d{yyyy-MM-dd}.%i.log.gz</fileNamePattern>

@@ -137,7 +137,7 @@ hamalog-rn://auth?token=eyJhbGciOiJIUzI1NiJ9...
 |------|----------|--------|--------------|---------------|------|
 | 복약 스케줄 목록 조회 | `/medication-schedule/list/{member-id}` | `GET` | 쿼리: `page`, `size` (최대 size=100) | 복약 스케줄 목록 응답 데이터 | 해당 회원의 스케줄을 페이지네이션된 형태로 반환 |
 | 특정 복약 스케줄 조회 | `/medication-schedule/{medication-schedule-id}` | `GET` | 없음 | 복약 스케줄 상세 응답 데이터 | `MedicationScheduleResponse` DTO 구조(아래 예시)로 반환 |
-| 복약 스케줄 등록 | `/medication-schedule` | `POST` (`multipart/form-data`) | data(JSON), image(선택) | 복약 스케줄 상세 응답 | `memberId`, `name`, `hospitalName`, `prescriptionDate`, `startOfAd`, `prescriptionDays`, `perDay`, `alarmType` 필수. `memo` 선택, `alarmType` 값은 `SOUND` 또는 `VIBE`. **⚠️ `data` 파트에 `Content-Type: application/json` 명시 필수** |
+| 복약 스케줄 등록 | `/medication-schedule` | `POST` (`multipart/form-data`) | data(JSON), image(선택) | 복약 스케줄 상세 응답 | `memberId`, `name`, `hospitalName`, `prescriptionDate`, `startOfAd`, `prescriptionDays`, `perDay`, `alarmType` 필수. `memo` 선택, `alarmType` 값은 `SOUND` 또는 `VIBE`. **`data` 파트는 `application/json` 또는 `text/plain` (JSON 문자열) 모두 지원** |
 | 복약 스케줄 수정 | `/medication-schedule/{medication-schedule-id}` | `PUT` | 복약 스케줄 수정 요청 데이터 | 복약 스케줄 상세 응답 | 모든 필드는 DTO 구조에 맞는 값 전송 (`alarmType` = `SOUND`/`VIBE` ) |
 | 복약 스케줄 삭제 | `/medication-schedule/{medication-schedule-id}` | `DELETE` | 없음 | (본문 없음, 204) | 삭제 성공 시 204 반환 |
 
@@ -188,9 +188,11 @@ hamalog-rn://auth?token=eyJhbGciOiJIUzI1NiJ9...
 
 ##### 복약 스케줄 등록 요청 데이터 (`multipart/form-data`) {#schedule-create-request}
 
-⚠️ **중요**: `multipart/form-data` 요청 시 `data` 파트에 반드시 `Content-Type: application/json`을 명시해야 합니다. 그렇지 않으면 `415 UNSUPPORTED_MEDIA_TYPE` 오류가 발생합니다.
+서버는 `data` 파트를 다음 두 가지 방식 모두 지원합니다:
+1. **`Content-Type: application/json`** - Blob으로 감싸서 전송 (권장)
+2. **`Content-Type: text/plain`** 또는 **단순 문자열** - RN 환경에서 Blob 제한 시 사용 가능
 
-**JavaScript/React Native 예시:**
+**React Native 예시 (Blob 지원 환경):**
 ```javascript
 const formData = new FormData();
 formData.append('data', new Blob([JSON.stringify({
@@ -208,6 +210,32 @@ formData.append('data', new Blob([JSON.stringify({
 // 이미지가 있는 경우
 if (imageFile) {
   formData.append('image', imageFile);
+}
+```
+
+**React Native 예시 (단순 문자열 - Blob 미지원 환경):**
+```javascript
+const formData = new FormData();
+// 단순 JSON 문자열로도 가능 (서버에서 text/plain 파싱 지원)
+formData.append('data', JSON.stringify({
+  memberId: 1,
+  name: "종합 비타민",
+  hospitalName: "자가 처방",
+  prescriptionDate: "2025-08-10",
+  memo: "매일 아침 1정",
+  startOfAd: "2025-08-11",
+  prescriptionDays: 90,
+  perDay: 1,
+  alarmType: "VIBE"
+}));
+
+// 이미지가 있는 경우
+if (imageFile) {
+  formData.append('image', {
+    uri: imageFile.uri,
+    type: 'image/jpeg',
+    name: 'image.jpg'
+  });
 }
 ```
 
@@ -556,6 +584,7 @@ curl -X POST http://localhost:8080/medication-schedule \
     - 복약 스케줄 등록 API (`POST /medication-schedule`)에 multipart 요청 시 `data` 파트 `Content-Type: application/json` 명시 필수 사항 강조
     - JavaScript/React Native 및 cURL을 이용한 multipart 요청 예시 코드 추가
     - CSRF 토큰 응답에 `storage` 필드 추가 (redis/fallback 구분)
+    - **React Native 환경 호환성 개선**: `data` 파트가 `text/plain` 또는 단순 문자열로 전송되어도 JSON으로 파싱하도록 `TextPlainJsonHttpMessageConverter` 추가 (Blob 미지원 환경 대응)
 ---
 
 ## 데이터베이스 스키마

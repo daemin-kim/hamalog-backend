@@ -37,6 +37,15 @@ public class RequestLoggingFilter extends OncePerRequestFilter {
         this.structuredLogger = structuredLogger;
     }
 
+    /**
+     * 헬스체크 요청은 로깅에서 제외
+     */
+    @Override
+    protected boolean shouldNotFilter(HttpServletRequest request) {
+        String path = request.getRequestURI();
+        return path != null && path.startsWith("/actuator");
+    }
+
     @Override
     protected void doFilterInternal(HttpServletRequest request, HttpServletResponse response, FilterChain filterChain)
             throws ServletException, IOException {

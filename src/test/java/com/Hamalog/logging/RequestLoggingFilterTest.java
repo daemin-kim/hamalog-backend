@@ -88,7 +88,7 @@ class RequestLoggingFilterTest {
         ApiEvent event = captor.getAllValues().get(captor.getAllValues().size() - 1);
         assertThat(event.getUserId()).isEqualTo("user123");
         assertThat(event.getStatusCode()).isEqualTo(200);
-        assertThat(event.getRequestType()).isEqualTo("외부 요청");
+        assertThat(event.getRequestType()).isEqualTo("EXTERNAL");
     }
 
     @Test
@@ -136,9 +136,9 @@ class RequestLoggingFilterTest {
 
         filter.doFilterInternal(request, response, filterChain);
 
-        ArgumentCaptor<ApiEvent> captor = ArgumentCaptor.forClass(ApiEvent.class);
-        verify(structuredLogger).api(captor.capture());
-        assertThat(captor.getValue().getRequestType()).isEqualTo("내부 요청");
+        ArgumentCaptor<ApiEvent> captor2 = ArgumentCaptor.forClass(ApiEvent.class);
+        verify(structuredLogger).api(captor2.capture());
+        assertThat(captor2.getValue().getRequestType()).isEqualTo("INTERNAL");
     }
 
     @Test

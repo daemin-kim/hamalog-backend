@@ -32,7 +32,7 @@ class ApiEventTest {
                 .statusCode(200)
                 .requestSize(1024L)
                 .responseSize(2048L)
-                .requestType("내부 요청")
+                .requestType("INTERNAL")
                 .parameters(parameters)
                 .build();
 
@@ -48,7 +48,7 @@ class ApiEventTest {
         assertThat(event.getStatusCode()).isEqualTo(200);
         assertThat(event.getRequestSize()).isEqualTo(1024L);
         assertThat(event.getResponseSize()).isEqualTo(2048L);
-        assertThat(event.getRequestType()).isEqualTo("내부 요청");
+        assertThat(event.getRequestType()).isEqualTo("INTERNAL");
         assertThat(event.getParameters()).containsExactlyInAnyOrderEntriesOf(parameters);
     }
 
@@ -98,11 +98,11 @@ class ApiEventTest {
         // given
         // when
         ApiEvent event = ApiEvent.builder()
-                .requestType("외부 요청")
+                .requestType("EXTERNAL")
                 .build();
 
         // then
-        assertThat(event.getRequestType()).isEqualTo("외부 요청");
+        assertThat(event.getRequestType()).isEqualTo("EXTERNAL");
     }
 
     @Test

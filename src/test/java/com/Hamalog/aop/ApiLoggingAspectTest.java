@@ -460,7 +460,7 @@ class ApiLoggingAspectTest {
 
         // then
         verify(structuredLogger).api(argThat(apiEvent ->
-            "내부 요청".equals(apiEvent.getRequestType())
+            "INTERNAL".equals(apiEvent.getRequestType())
         ));
     }
 

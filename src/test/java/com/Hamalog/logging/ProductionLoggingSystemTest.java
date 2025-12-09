@@ -64,7 +64,7 @@ public class ProductionLoggingSystemTest {
                 .userAgent("Test-Agent/1.0")
                 .durationMs(250L)
                 .statusCode(201)
-                .requestType("외부 요청")
+                .requestType("EXTERNAL")
                 .parameters(createTestParameters())
                 .build();
         
@@ -357,7 +357,7 @@ public class ProductionLoggingSystemTest {
                 .userAgent("Test-Agent/1.0")
                 .durationMs(duration)
                 .statusCode(statusCode)
-                .requestType("외부 요청")
+                .requestType("EXTERNAL")
                 .parameters(createTestParameters())
                 .build();
     }

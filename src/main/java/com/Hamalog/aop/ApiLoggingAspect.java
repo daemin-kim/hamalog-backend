@@ -232,15 +232,15 @@ public class ApiLoggingAspect {
      * Determine request type based on the request path
      */
     private String determineRequestType(String path) {
-        if (path == null) return "외부 요청";
-        
+        if (path == null) return "EXTERNAL";
+
         // Internal requests: actuator endpoints for health checks and monitoring
         if (path.startsWith("/actuator/")) {
-            return "내부 요청";
+            return "INTERNAL";
         }
         
         // All other requests are considered external
-        return "외부 요청";
+        return "EXTERNAL";
     }
     
     /**

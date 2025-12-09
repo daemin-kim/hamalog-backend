@@ -17,7 +17,7 @@ public class ApiEvent {
     private int statusCode;
     private Long requestSize;
     private Long responseSize;
-    private String requestType;  // "내부 요청" or "외부 요청"
+    private String requestType;  // "INTERNAL" or "EXTERNAL"
     private Map<String, Object> parameters;
 
     public static ApiEventBuilder builder() {

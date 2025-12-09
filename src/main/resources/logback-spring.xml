@@ -1,25 +1,25 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <configuration scan="true" scanPeriod="60 seconds">
-    <springProperty scope="context" name="LOG_DIR" source="LOG_DIR" defaultValue="./logs"/>
+    <!-- Logback 내부 상태 로그 비활성화 -->
+    <statusListener class="ch.qos.logback.core.status.NopStatusListener"/>
 
-    <!-- 한국 시간대 설정 -->
-    <timestamp key="KST" datePattern="yyyy-MM-dd HH:mm:ss" timeZone="Asia/Seoul"/>
+    <springProperty scope="context" name="LOG_DIR" source="LOG_DIR" defaultValue="./logs"/>
 
     <!-- 헬스체크 로그 필터링 -->
     <turboFilter class="com.Hamalog.logging.HealthCheckFilter"/>
 
-    <!-- 간소화된 로그 패턴 - 한국 시간대 적용 -->
+    <!-- 간소화된 로그 패턴 - 한국 시간대 적용 (KST) -->
     <property name="APP_PATTERN"
-              value="%d{yyyy-MM-dd HH:mm:ss.SSS}{Asia/Seoul} [%-5level] [%X{requestId:-}] %logger{20} - %msg%n"/>
+              value="%d{yyyy-MM-dd HH:mm:ss.SSS, Asia/Seoul} [%-5level] [%X{requestId:-}] %logger{20} - %msg%n"/>
 
     <property name="SEC_PATTERN"
-              value="%d{yyyy-MM-dd HH:mm:ss.SSS}{Asia/Seoul} [%-5level] [SECURITY] user=%X{security_user_id:-} ip=%X{security_ip_address:-} action=%X{security_action:-} - %msg%n"/>
+              value="%d{yyyy-MM-dd HH:mm:ss.SSS, Asia/Seoul} [%-5level] [SECURITY] user=%X{security_user_id:-} ip=%X{security_ip_address:-} action=%X{security_action:-} - %msg%n"/>
 
     <property name="AUDIT_PATTERN"
-              value="%d{yyyy-MM-dd HH:mm:ss.SSS}{Asia/Seoul} [%-5level] [AUDIT] op=%X{audit_operation:-} entity=%X{audit_entity_type:-} user=%X{audit_user_id:-} - %msg%n"/>
+              value="%d{yyyy-MM-dd HH:mm:ss.SSS, Asia/Seoul} [%-5level] [AUDIT] op=%X{audit_operation:-} entity=%X{audit_entity_type:-} user=%X{audit_user_id:-} - %msg%n"/>
 
     <property name="PERF_PATTERN"
-              value="%d{yyyy-MM-dd HH:mm:ss.SSS}{Asia/Seoul} [%-5level] [PERF] op=%X{perf_operation:-} time=%X{perf_duration_ms:-}ms - %msg%n"/>
+              value="%d{yyyy-MM-dd HH:mm:ss.SSS, Asia/Seoul} [%-5level] [PERF] op=%X{perf_operation:-} time=%X{perf_duration_ms:-}ms - %msg%n"/>
 
     <!-- Console output for local development -->
     <appender name="APP_CONSOLE" class="ch.qos.logback.core.ConsoleAppender">

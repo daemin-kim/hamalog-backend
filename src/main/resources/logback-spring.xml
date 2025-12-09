@@ -5,6 +5,9 @@
     <!-- 한국 시간대 설정 -->
     <timestamp key="KST" datePattern="yyyy-MM-dd HH:mm:ss" timeZone="Asia/Seoul"/>
 
+    <!-- 헬스체크 로그 필터링 -->
+    <turboFilter class="com.Hamalog.logging.HealthCheckFilter"/>
+
     <!-- 간소화된 로그 패턴 - 한국 시간대 적용 -->
     <property name="APP_PATTERN"
               value="%d{yyyy-MM-dd HH:mm:ss.SSS}{Asia/Seoul} [%-5level] [%X{requestId:-}] %logger{20} - %msg%n"/>
@@ -20,16 +23,6 @@
 
     <!-- Console output for local development -->
     <appender name="APP_CONSOLE" class="ch.qos.logback.core.ConsoleAppender">
-        <!-- 헬스체크 요청 필터링 -->
-        <filter class="ch.qos.logback.core.filter.EvaluatorFilter">
-            <evaluator class="ch.qos.logback.classic.boolex.JaninoEventEvaluator">
-                <expression>
-                    message.contains("/actuator") || message.contains("health")
-                </expression>
-            </evaluator>
-            <onMatch>DENY</onMatch>
-            <onMismatch>NEUTRAL</onMismatch>
-        </filter>
         <encoder>
             <pattern>${APP_PATTERN}</pattern>
             <charset>UTF-8</charset>
@@ -39,16 +32,6 @@
     <!-- Application rolling file -->
     <appender name="APP_FILE" class="ch.qos.logback.core.rolling.RollingFileAppender">
         <file>${LOG_DIR}/application.log</file>
-        <!-- 헬스체크 요청 필터링 -->
-        <filter class="ch.qos.logback.core.filter.EvaluatorFilter">
-            <evaluator class="ch.qos.logback.classic.boolex.JaninoEventEvaluator">
-                <expression>
-                    message.contains("/actuator") || message.contains("health")
-                </expression>
-            </evaluator>
-            <onMatch>DENY</onMatch>
-            <onMismatch>NEUTRAL</onMismatch>
-        </filter>
         <encoder>
             <pattern>${APP_PATTERN}</pattern>
             <charset>UTF-8</charset>

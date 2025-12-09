@@ -76,7 +76,7 @@ public class JVMMetricsLogger {
             } else if ("DEGRADED".equals(performanceLevel)) {
                 log.warn("JVM_METRICS [DEGRADED]: Performance degradation detected - {}", formatMetrics(metrics));
             } else {
-                log.info("JVM_METRICS [HEALTHY]: System operating normally - {}", formatMetrics(metrics));
+                log.debug("JVM_METRICS [HEALTHY]: System operating normally - {}", formatMetrics(metrics));
             }
             
         } catch (Exception e) {

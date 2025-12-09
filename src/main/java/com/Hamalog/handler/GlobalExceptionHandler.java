@@ -28,9 +28,12 @@ import org.springframework.http.ResponseEntity;
 import org.springframework.security.access.AccessDeniedException;
 import org.springframework.security.core.AuthenticationException;
 import org.springframework.validation.FieldError;
+import org.springframework.web.HttpMediaTypeNotSupportedException;
 import org.springframework.web.bind.MethodArgumentNotValidException;
 import org.springframework.web.bind.annotation.ExceptionHandler;
 import org.springframework.web.bind.annotation.RestControllerAdvice;
+import org.springframework.web.multipart.support.MissingServletRequestPartException;
+import org.springframework.http.converter.HttpMessageNotReadableException;
 
 import java.util.HashMap;
 import java.util.Map;
@@ -301,6 +304,114 @@ public class GlobalExceptionHandler {
         // Clean up error context
         cleanupErrorMDC();
         return ResponseEntity.status(status).body(error);
+    }
+
+    @ExceptionHandler(HttpMediaTypeNotSupportedException.class)
+    public ResponseEntity<ErrorResponse> handleMediaTypeNotSupported(HttpMediaTypeNotSupportedException ex, HttpServletRequest request) {
+        ErrorSeverity severity = ErrorSeverity.LOW;
+
+        MDCUtil.addErrorContext(ex);
+        MDCUtil.put("error.severity", severity.name());
+        MDCUtil.put("error.category", "MEDIA_TYPE_ERROR");
+
+        String supportedTypes = ex.getSupportedMediaTypes().stream()
+            .map(Object::toString)
+            .reduce((a, b) -> a + ", " + b)
+            .orElse("unknown");
+
+        String errorMessage = String.format(
+            "Content-Type '%s' is not supported. Supported types: %s. " +
+            "For multipart requests, ensure 'data' part has Content-Type: application/json",
+            ex.getContentType(), supportedTypes
+        );
+
+        ErrorResponse error = ErrorResponse.of(
+                HttpStatus.UNSUPPORTED_MEDIA_TYPE,
+                "UNSUPPORTED_MEDIA_TYPE",
+                errorMessage,
+                request.getRequestURI(),
+                null
+        );
+
+        Map<String, Object> errorContext = createErrorContext(ex, request, severity);
+        structuredLogger.error("Unsupported media type", ex, errorContext);
+
+        log.warn("[MEDIA_TYPE_ERROR] Unsupported content type - path={} contentType={} supportedTypes={} correlationId={}",
+            request.getRequestURI(), ex.getContentType(), supportedTypes, MDCUtil.get(MDCUtil.CORRELATION_ID));
+
+        MDCUtil.clearErrorContext();
+        return ResponseEntity.status(HttpStatus.UNSUPPORTED_MEDIA_TYPE).body(error);
+    }
+
+    @ExceptionHandler(MissingServletRequestPartException.class)
+    public ResponseEntity<ErrorResponse> handleMissingPart(MissingServletRequestPartException ex, HttpServletRequest request) {
+        ErrorSeverity severity = ErrorSeverity.LOW;
+
+        MDCUtil.addErrorContext(ex);
+        MDCUtil.put("error.severity", severity.name());
+        MDCUtil.put("error.category", "REQUEST_PART_ERROR");
+
+        String errorMessage = String.format(
+            "Required request part '%s' is missing. " +
+            "Ensure multipart/form-data request includes required parts.",
+            ex.getRequestPartName()
+        );
+
+        ErrorResponse error = ErrorResponse.of(
+                HttpStatus.BAD_REQUEST,
+                "MISSING_REQUEST_PART",
+                errorMessage,
+                request.getRequestURI(),
+                null
+        );
+
+        Map<String, Object> errorContext = createErrorContext(ex, request, severity);
+        structuredLogger.error("Missing request part", ex, errorContext);
+
+        log.warn("[REQUEST_PART_ERROR] Missing required part - path={} partName={} correlationId={}",
+            request.getRequestURI(), ex.getRequestPartName(), MDCUtil.get(MDCUtil.CORRELATION_ID));
+
+        MDCUtil.clearErrorContext();
+        return ResponseEntity.status(HttpStatus.BAD_REQUEST).body(error);
+    }
+
+    @ExceptionHandler(HttpMessageNotReadableException.class)
+    public ResponseEntity<ErrorResponse> handleMessageNotReadable(HttpMessageNotReadableException ex, HttpServletRequest request) {
+        ErrorSeverity severity = ErrorSeverity.LOW;
+
+        MDCUtil.addErrorContext(ex);
+        MDCUtil.put("error.severity", severity.name());
+        MDCUtil.put("error.category", "MESSAGE_PARSE_ERROR");
+
+        String errorMessage = "Failed to parse request body. Ensure JSON is valid and " +
+            "Content-Type header is correctly set (application/json for JSON data).";
+
+        // 더 구체적인 에러 메시지 추출
+        Throwable cause = ex.getCause();
+        if (cause != null && cause.getMessage() != null) {
+            String causeMsg = cause.getMessage();
+            // 보안상 민감한 정보는 제거하고 기본 파싱 에러만 표시
+            if (causeMsg.contains("Cannot deserialize") || causeMsg.contains("Unexpected token")) {
+                errorMessage = "JSON parsing error: " + sanitizeErrorMessage(causeMsg);
+            }
+        }
+
+        ErrorResponse error = ErrorResponse.of(
+                HttpStatus.BAD_REQUEST,
+                "MESSAGE_NOT_READABLE",
+                errorMessage,
+                request.getRequestURI(),
+                null
+        );
+
+        Map<String, Object> errorContext = createErrorContext(ex, request, severity);
+        structuredLogger.error("HTTP message not readable", ex, errorContext);
+
+        log.warn("[MESSAGE_PARSE_ERROR] Failed to parse request - path={} correlationId={}",
+            request.getRequestURI(), MDCUtil.get(MDCUtil.CORRELATION_ID));
+
+        MDCUtil.clearErrorContext();
+        return ResponseEntity.status(HttpStatus.BAD_REQUEST).body(error);
     }
 
     @ExceptionHandler(Exception.class)

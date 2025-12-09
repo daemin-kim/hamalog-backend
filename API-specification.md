@@ -21,9 +21,10 @@
 
 ```json
 {
-  "error": "에러 코드",
+  "code": "에러 코드",
   "message": "에러 메시지",
-  "timestamp": "ISO-8601"
+  "path": "/요청 경로",
+  "violations": null
 }
 ```
 
@@ -35,6 +36,7 @@
 - **403**: 권한 없음 (다른 사용자의 데이터 접근 시도)
 - **404**: 리소스 없음 (요청한 리소스를 찾을 수 없음)
 - **409**: 중복 리소스 (회원가입 중복 등)
+- **415**: 지원하지 않는 미디어 타입 (잘못된 Content-Type)
 - **500**: 서버 에러 (서버 내부 문제)
 
 ## API 명세서
@@ -108,6 +110,7 @@
   "csrfToken": "d1d9a7e2-...",
   "headerName": "X-CSRF-TOKEN",
   "expiryMinutes": 60,
+  "storage": "redis",
   "timestamp": "2025-11-26T10:00:00Z"
 }
 ```
@@ -118,6 +121,7 @@
   "userId": "user@example.com",
   "csrfTokenPresent": true,
   "csrfTokenValid": true,
+  "storage": "redis",
   "timestamp": "2025-11-26T10:05:00Z"
 }
 ```
@@ -133,7 +137,7 @@ hamalog-rn://auth?token=eyJhbGciOiJIUzI1NiJ9...
 |------|----------|--------|--------------|---------------|------|
 | 복약 스케줄 목록 조회 | `/medication-schedule/list/{member-id}` | `GET` | 쿼리: `page`, `size` (최대 size=100) | 복약 스케줄 목록 응답 데이터 | 해당 회원의 스케줄을 페이지네이션된 형태로 반환 |
 | 특정 복약 스케줄 조회 | `/medication-schedule/{medication-schedule-id}` | `GET` | 없음 | 복약 스케줄 상세 응답 데이터 | `MedicationScheduleResponse` DTO 구조(아래 예시)로 반환 |
-| 복약 스케줄 등록 | `/medication-schedule` | `POST` (`multipart/form-data`) | data(JSON), image(선택) | 복약 스케줄 상세 응답 | `memberId`, `name`, `hospitalName`, `prescriptionDate`, `startOfAd`, `prescriptionDays`, `perDay`, `alarmType` 필수. `memo` 선택, `alarmType` 값은 `SOUND` 또는 `VIBE` |
+| 복약 스케줄 등록 | `/medication-schedule` | `POST` (`multipart/form-data`) | data(JSON), image(선택) | 복약 스케줄 상세 응답 | `memberId`, `name`, `hospitalName`, `prescriptionDate`, `startOfAd`, `prescriptionDays`, `perDay`, `alarmType` 필수. `memo` 선택, `alarmType` 값은 `SOUND` 또는 `VIBE`. **⚠️ `data` 파트에 `Content-Type: application/json` 명시 필수** |
 | 복약 스케줄 수정 | `/medication-schedule/{medication-schedule-id}` | `PUT` | 복약 스케줄 수정 요청 데이터 | 복약 스케줄 상세 응답 | 모든 필드는 DTO 구조에 맞는 값 전송 (`alarmType` = `SOUND`/`VIBE` ) |
 | 복약 스케줄 삭제 | `/medication-schedule/{medication-schedule-id}` | `DELETE` | 없음 | (본문 없음, 204) | 삭제 성공 시 204 반환 |
 
@@ -183,7 +187,40 @@ hamalog-rn://auth?token=eyJhbGciOiJIUzI1NiJ9...
 ```
 
 ##### 복약 스케줄 등록 요청 데이터 (`multipart/form-data`) {#schedule-create-request}
-- **Part `data` (application/json)**
+
+⚠️ **중요**: `multipart/form-data` 요청 시 `data` 파트에 반드시 `Content-Type: application/json`을 명시해야 합니다. 그렇지 않으면 `415 UNSUPPORTED_MEDIA_TYPE` 오류가 발생합니다.
+
+**JavaScript/React Native 예시:**
+```javascript
+const formData = new FormData();
+formData.append('data', new Blob([JSON.stringify({
+  memberId: 1,
+  name: "종합 비타민",
+  hospitalName: "자가 처방",
+  prescriptionDate: "2025-08-10",
+  memo: "매일 아침 1정",
+  startOfAd: "2025-08-11",
+  prescriptionDays: 90,
+  perDay: 1,
+  alarmType: "VIBE"
+})], { type: 'application/json' }));
+
+// 이미지가 있는 경우
+if (imageFile) {
+  formData.append('image', imageFile);
+}
+```
+
+**cURL 예시:**
+```bash
+curl -X POST http://localhost:8080/medication-schedule \
+  -H "Authorization: Bearer <JWT>" \
+  -H "X-CSRF-TOKEN: <CSRF_TOKEN>" \
+  -F "data=@request.json;type=application/json" \
+  -F "image=@image.jpg;type=image/jpeg"
+```
+
+- **Part `data` (application/json)** - 필수
 ```json
 {
   "memberId": 1,
@@ -197,7 +234,7 @@ hamalog-rn://auth?token=eyJhbGciOiJIUzI1NiJ9...
   "alarmType": "VIBE"
 }
 ```
-- **Part `image` (선택, image/*)**
+- **Part `image` (선택, image/*)** - 최대 5MB
 
 ##### 복약 스케줄 수정 요청 데이터 {#schedule-update-request}
 ```json
@@ -512,6 +549,13 @@ hamalog-rn://auth?token=eyJhbGciOiJIUzI1NiJ9...
     - 데이터베이스 스키마: `mood_diary` 테이블 추가 (12번째 테이블)
     - 보안: 리소스 소유권 자동 검증, JWT 인증 필수
     - 엔드포인트: 생성(POST), 단건 조회(GET), 목록 조회(GET), 날짜별 조회(GET), 삭제(DELETE)
+- **2025/12/09**: **에러 응답 개선 및 Multipart 요청 가이드 추가**
+    - 에러 응답 형식을 `code`, `message`, `path`, `violations` 구조로 정확화
+    - 415 UNSUPPORTED_MEDIA_TYPE 에러 코드 추가
+    - `GlobalExceptionHandler`에 `HttpMediaTypeNotSupportedException`, `MissingServletRequestPartException`, `HttpMessageNotReadableException` 핸들러 추가로 명확한 에러 메시지 반환
+    - 복약 스케줄 등록 API (`POST /medication-schedule`)에 multipart 요청 시 `data` 파트 `Content-Type: application/json` 명시 필수 사항 강조
+    - JavaScript/React Native 및 cURL을 이용한 multipart 요청 예시 코드 추가
+    - CSRF 토큰 응답에 `storage` 필드 추가 (redis/fallback 구분)
 ---
 
 ## 데이터베이스 스키마
@@ -729,3 +773,118 @@ INSERT INTO side_effect (type, name) VALUES
 -- 주요 조회 컬럼에 인덱스 생성 완료
 -- Foreign Key에 ON DELETE CASCADE 설정으로 참조 무결성 보장
 -- InnoDB 엔진 사용으로 트랜잭션 및 외래키 제약 지원
+```
+
+---
+
+## 에러 코드 목록
+
+API에서 반환될 수 있는 모든 에러 코드 목록입니다.
+
+### 회원 관련 에러
+
+| 에러 코드 | 메시지 | HTTP 상태 |
+|-----------|--------|-----------|
+| `MEMBER_NOT_FOUND` | 회원을 찾을 수 없습니다. | 404 |
+| `DUPLICATE_MEMBER` | 이미 존재하는 회원입니다. | 409 |
+
+### 복약 관련 에러
+
+| 에러 코드 | 메시지 | HTTP 상태 |
+|-----------|--------|-----------|
+| `SCHEDULE_NOT_FOUND` | 복약 스케줄을 찾을 수 없습니다. | 404 |
+| `RECORD_NOT_FOUND` | 복약 기록을 찾을 수 없습니다. | 404 |
+| `TIME_NOT_FOUND` | 복약 시간 정보를 찾을 수 없습니다. | 404 |
+| `INVALID_SCHEDULE` | 유효하지 않은 복약 스케줄입니다. | 400 |
+| `INVALID_PRESCRIPTION_DAYS` | 처방 일수는 1일 이상이어야 합니다. | 400 |
+| `INVALID_PER_DAY` | 1일 복용 횟수는 1회 이상이어야 합니다. | 400 |
+| `INVALID_DATE_RANGE` | 시작일은 처방일 이후여야 합니다. | 400 |
+
+### 부작용 관련 에러
+
+| 에러 코드 | 메시지 | HTTP 상태 |
+|-----------|--------|-----------|
+| `SIDE_EFFECT_NOT_FOUND` | 부작용 정보를 찾을 수 없습니다. | 404 |
+| `INVALID_DEGREE` | 부작용 정도는 1-5 사이여야 합니다. | 400 |
+| `EMPTY_SIDE_EFFECT_LIST` | 부작용 목록이 비어있습니다. | 400 |
+
+### 마음 일기 관련 에러
+
+| 에러 코드 | 메시지 | HTTP 상태 |
+|-----------|--------|-----------|
+| `MOOD_DIARY_NOT_FOUND` | 마음 일기를 찾을 수 없습니다. | 404 |
+| `DIARY_ALREADY_EXISTS` | 해당 날짜에 이미 일기가 작성되어 있습니다. | 409 |
+| `INVALID_DIARY_TYPE` | 유효하지 않은 일기 형식입니다. | 400 |
+| `INVALID_MOOD_TYPE` | 유효하지 않은 기분 타입입니다. | 400 |
+| `TEMPLATE_ANSWER_REQUIRED` | 템플릿 형식에서는 모든 질문에 답변이 필요합니다. | 400 |
+| `FREE_CONTENT_REQUIRED` | 자유 형식에서는 내용이 필요합니다. | 400 |
+
+### 인증 및 보안 관련 에러
+
+| 에러 코드 | 메시지 | HTTP 상태 |
+|-----------|--------|-----------|
+| `UNAUTHORIZED` | 인증이 필요합니다. | 401 |
+| `FORBIDDEN` | 접근 권한이 없습니다. | 403 |
+| `INVALID_TOKEN` | 유효하지 않은 토큰입니다. | 401 |
+| `TOKEN_EXPIRED` | 토큰이 만료되었습니다. | 401 |
+| `TOKEN_BLACKLISTED` | 무효화된 토큰입니다. | 401 |
+| `INVALID_REFRESH_TOKEN` | 유효하지 않은 Refresh Token입니다. | 401 |
+| `REFRESH_TOKEN_EXPIRED` | Refresh Token이 만료되었습니다. | 401 |
+| `REFRESH_TOKEN_REVOKED` | 폐기된 Refresh Token입니다. | 401 |
+
+### OAuth2 관련 에러
+
+| 에러 코드 | 메시지 | HTTP 상태 |
+|-----------|--------|-----------|
+| `OAUTH2_CONFIG_ERROR` | OAuth2 설정 오류가 발생했습니다. | 500 |
+| `OAUTH2_INIT_ERROR` | OAuth2 초기화 중 오류가 발생했습니다. | 500 |
+| `TOKEN_EXCHANGE_FAILED` | 토큰 교환에 실패했습니다. | 400 |
+| `USER_INFO_FAILED` | 사용자 정보 조회에 실패했습니다. | 400 |
+| `INVALID_AUTH_CODE` | 유효하지 않은 인증 코드입니다. | 400 |
+| `CSRF_VALIDATION_FAILED` | CSRF 검증에 실패했습니다. | 400 |
+| `AUTHORIZATION_FAILED` | OAuth2 인증에 실패했습니다. | 400 |
+
+### 유효성 검사 관련 에러
+
+| 에러 코드 | 메시지 | HTTP 상태 |
+|-----------|--------|-----------|
+| `BAD_REQUEST` | 잘못된 요청입니다. | 400 |
+| `INVALID_INPUT` | 입력값이 유효하지 않습니다. | 400 |
+| `INVALID_PARAMETER` | 파라미터가 유효하지 않습니다. | 400 |
+| `MISSING_REQUIRED_FIELD` | 필수 필드가 누락되었습니다. | 400 |
+| `MISSING_REQUEST_PART` | 필수 요청 파트가 누락되었습니다. | 400 |
+| `MESSAGE_NOT_READABLE` | 요청 본문 파싱에 실패했습니다. | 400 |
+| `UNSUPPORTED_MEDIA_TYPE` | 지원하지 않는 Content-Type입니다. | 415 |
+| `INVALID_PAGE_SIZE` | 페이지 크기는 1-100 사이여야 합니다. | 400 |
+| `INVALID_PAGE_NUMBER` | 페이지 번호는 0 이상이어야 합니다. | 400 |
+
+### 파일 관련 에러
+
+| 에러 코드 | 메시지 | HTTP 상태 |
+|-----------|--------|-----------|
+| `FILE_SAVE_FAIL` | 파일 저장에 실패했습니다. | 500 |
+| `FILE_SIZE_EXCEEDED` | 파일 크기가 제한을 초과했습니다. | 413 |
+| `INVALID_FILE_TYPE` | 지원하지 않는 파일 형식입니다. | 400 |
+| `FILE_NOT_FOUND` | 파일을 찾을 수 없습니다. | 404 |
+
+### 동시성 관련 에러
+
+| 에러 코드 | 메시지 | HTTP 상태 |
+|-----------|--------|-----------|
+| `OPTIMISTIC_LOCK_FAILED` | 다른 사용자가 데이터를 수정했습니다. 다시 시도해주세요. | 409 |
+| `RESOURCE_CONFLICT` | 리소스 충돌이 발생했습니다. | 409 |
+
+### 외부 API 관련 에러
+
+| 에러 코드 | 메시지 | HTTP 상태 |
+|-----------|--------|-----------|
+| `EXTERNAL_API_ERROR` | 외부 API 호출 중 오류가 발생했습니다. | 500 |
+| `EXTERNAL_API_TIMEOUT` | 외부 API 응답 시간이 초과되었습니다. | 504 |
+
+### 시스템 에러
+
+| 에러 코드 | 메시지 | HTTP 상태 |
+|-----------|--------|-----------|
+| `INTERNAL_ERROR` | 서버 내부 오류가 발생했습니다. | 500 |
+| `DATABASE_ERROR` | 데이터베이스 오류가 발생했습니다. | 500 |
+| `CACHE_ERROR` | 캐시 처리 중 오류가 발생했습니다. | 500 |

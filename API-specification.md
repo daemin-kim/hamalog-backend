@@ -28,6 +28,68 @@
 }
 ```
 
+#### 유효성 검사 실패 시 응답 형식
+
+Bean Validation 실패 시 `violations` 필드에 각 필드별 에러 상세 정보가 포함됩니다.
+
+```json
+{
+  "code": "BAD_REQUEST",
+  "message": "입력값이 유효하지 않습니다",
+  "path": "/auth/signup",
+  "violations": [
+    {
+      "field": "loginId",
+      "message": "올바른 이메일 형식이어야 합니다"
+    },
+    {
+      "field": "nickName",
+      "message": "닉네임은 한글 또는 영어 1~10자여야 합니다"
+    },
+    {
+      "field": "phoneNumber",
+      "message": "전화번호는 010으로 시작하는 11자리여야 합니다"
+    }
+  ]
+}
+```
+
+### 프론트엔드 테스트 가이드 🧪
+
+#### 필수 필드 테스트
+- 필수 필드를 누락하거나 빈 문자열(`""`)로 전송하여 `400 BAD_REQUEST` 응답 확인
+- `violations` 배열에서 해당 필드의 에러 메시지 확인
+
+#### 형식 검증 테스트
+| 필드 타입 | 테스트 케이스 |
+|-----------|---------------|
+| 이메일 | `"test"`, `"test@"`, `"@test.com"` → 실패 |
+| 전화번호 | `"01112345678"`, `"0101234567"`, `"010-1234-5678"` → 실패 |
+| 날짜 | `"2025/12/01"`, `"12-01-2025"`, `"invalid"` → 실패 |
+| 닉네임 | `"홍길동123"`, `"test_user"`, `"A"*11` → 실패 |
+
+#### 길이 제한 테스트
+| 필드 | 최소 | 최대 | 테스트 방법 |
+|------|------|------|-------------|
+| password | 6자 | 30자 (회원가입), 100자 (로그인) | 5자 문자열, 31자 문자열 전송 |
+| name | 1자 | 15자 | 빈 문자열, 16자 문자열 전송 |
+| nickName | 1자 | 10자 | 빈 문자열, 11자 문자열 전송 |
+| 약 이름 (name) | 1자 | 20자 | 21자 문자열 전송 |
+| memo | - | 500자 | 501자 문자열 전송 |
+| templateAnswer | - | 500자 | 501자 문자열 전송 |
+| freeContent | - | 1500자 | 1501자 문자열 전송 |
+
+#### Enum 값 테스트
+| 필드 | 유효한 값 | 테스트 방법 |
+|------|-----------|-------------|
+| alarmType | `SOUND`, `VIBE` | `"INVALID"`, `"sound"` (소문자) 전송 |
+| moodType | `HAPPY`, `EXCITED`, `PEACEFUL`, `ANXIOUS`, `LETHARGIC`, `ANGRY`, `SAD` | `"INVALID"`, `"happy"` 전송 |
+| diaryType | `TEMPLATE`, `FREE_FORM` | `"INVALID"`, `"template"` 전송 |
+
+#### 조건부 필수 필드 테스트 (마음 일기)
+- `diaryType=TEMPLATE` + `templateAnswer1~4` 중 하나라도 누락 → `400 BAD_REQUEST`
+- `diaryType=FREE_FORM` + `freeContent` 누락 → `400 BAD_REQUEST`
+
 - **200**: 성공
 - **201**: 생성 성공
 - **204**: 삭제 성공 (본문 없음)
@@ -69,6 +131,17 @@
 }
 ```
 
+**📋 회원가입 필드 유효성 검사:**
+
+| 필드명 | 타입 | 필수 | 제약 조건 | 에러 메시지 |
+|--------|------|------|-----------|-------------|
+| `loginId` | String | ✅ | - 이메일 형식 필수<br>- 빈 값 불가 | "올바른 이메일 형식이어야 합니다" |
+| `password` | String | ✅ | - 최소 6자 ~ 최대 30자<br>- 빈 값 불가 | "비밀번호는 6~30자여야 합니다" |
+| `name` | String | ✅ | - 최소 1자 ~ 최대 15자<br>- 빈 값 불가 | "이름은 1~15자여야 합니다" |
+| `nickName` | String | ✅ | - 한글/영어만 허용<br>- 최소 1자 ~ 최대 10자<br>- 정규식: `^[가-힣a-zA-Z]{1,10}$` | "닉네임은 한글 또는 영어 1~10자여야 합니다" |
+| `phoneNumber` | String | ✅ | - 010으로 시작하는 11자리 숫자<br>- 정규식: `^010\d{8}$` | "전화번호는 010으로 시작하는 11자리여야 합니다" |
+| `birth` | LocalDate | ✅ | - ISO-8601 형식 (yyyy-MM-dd)<br>- 과거 날짜만 허용 (미래 불가) | "생년월일은 과거 날짜여야 합니다" |
+
 ##### 로그인 요청 데이터 {#auth-login-request}
 ```json
 {
@@ -76,6 +149,13 @@
   "password": "password123"
 }
 ```
+
+**📋 로그인 필드 유효성 검사:**
+
+| 필드명 | 타입 | 필수 | 제약 조건 | 에러 메시지 |
+|--------|------|------|-----------|-------------|
+| `loginId` | String | ✅ | - 빈 값 불가<br>- 최대 100자 | "로그인 ID는 필수입니다", "로그인 ID는 100자를 초과할 수 없습니다" |
+| `password` | String | ✅ | - 빈 값 불가<br>- 최소 6자 ~ 최대 100자 | "비밀번호는 필수입니다", "비밀번호는 6자 이상 100자 이하여야 합니다" |
 
 ##### 로그인 응답 데이터 {#auth-login-response}
 ```json
@@ -94,6 +174,12 @@
   "refreshToken": "eyJhbGciOiJIUzI1NiJ9..."
 }
 ```
+
+**📋 토큰 갱신 필드 유효성 검사:**
+
+| 필드명 | 타입 | 필수 | 제약 조건 | 에러 메시지 |
+|--------|------|------|-----------|-------------|
+| `refreshToken` | String | ✅ | - 빈 값 불가<br>- 유효한 JWT 형식 | "Refresh token is required" |
 
 ##### 토큰 갱신 응답 데이터 {#auth-refresh-response}
 ```json
@@ -262,6 +348,21 @@ curl -X POST http://localhost:8080/medication-schedule \
   "alarmType": "VIBE"
 }
 ```
+
+**📋 복약 스케줄 등록 필드 유효성 검사:**
+
+| 필드명 | 타입 | 필수 | 제약 조건 | 에러 메시지 |
+|--------|------|------|-----------|-------------|
+| `memberId` | Long | ✅ | - null 불가 | "회원 ID는 필수입니다" |
+| `name` | String | ✅ | - 빈 값 불가<br>- 최대 20자 | "약 이름은 필수입니다", "약 이름은 20자 이하여야 합니다" |
+| `hospitalName` | String | ✅ | - 빈 값 불가<br>- 최대 20자 | "병원명은 필수입니다", "병원명은 20자 이하여야 합니다" |
+| `prescriptionDate` | String | ✅ | - 빈 값 불가<br>- 정규식: `\d{4}-\d{2}-\d{2}` (yyyy-MM-dd) | "처방일은 필수입니다", "처방일 형식은 yyyy-MM-dd여야 합니다" |
+| `memo` | String | ❌ | - 최대 500자 | "메모는 500자 이하여야 합니다" |
+| `startOfAd` | String | ✅ | - 빈 값 불가<br>- 정규식: `\d{4}-\d{2}-\d{2}` (yyyy-MM-dd) | "복약 시작일은 필수입니다", "복약 시작일 형식은 yyyy-MM-dd여야 합니다" |
+| `prescriptionDays` | Integer | ✅ | - null 불가<br>- 최소값: 1 | "처방 일수는 필수입니다", "처방 일수는 1일 이상이어야 합니다" |
+| `perDay` | Integer | ✅ | - null 불가<br>- 최소값: 1 | "1일 복용 횟수는 필수입니다", "1일 복용 횟수는 1회 이상이어야 합니다" |
+| `alarmType` | String | ✅ | - 빈 값 불가<br>- 허용값: `SOUND`, `VIBE` | "알람 타입은 필수입니다" |
+
 - **Part `image` (선택, image/*)** - 최대 5MB
 
 ##### 복약 스케줄 수정 요청 데이터 {#schedule-update-request}
@@ -277,6 +378,19 @@ curl -X POST http://localhost:8080/medication-schedule \
   "alarmType": "SOUND"
 }
 ```
+
+**📋 복약 스케줄 수정 필드 유효성 검사:**
+
+| 필드명 | 타입 | 필수 | 제약 조건 | 에러 메시지 |
+|--------|------|------|-----------|-------------|
+| `name` | String | ✅ | - 빈 값 불가<br>- 최대 20자 | "약 이름은 필수입니다", "약 이름은 20자 이하여야 합니다" |
+| `hospitalName` | String | ✅ | - 빈 값 불가<br>- 최대 20자 | "병원명은 필수입니다", "병원명은 20자 이하여야 합니다" |
+| `prescriptionDate` | LocalDate | ✅ | - null 불가<br>- ISO-8601 형식 (yyyy-MM-dd) | "처방일은 필수입니다" |
+| `memo` | String | ❌ | - 최대 500자 | "메모는 500자 이하여야 합니다" |
+| `startOfAd` | LocalDate | ✅ | - null 불가<br>- ISO-8601 형식 (yyyy-MM-dd) | "복약 시작일은 필수입니다" |
+| `prescriptionDays` | Integer | ✅ | - null 불가<br>- 최소값: 1 | "처방 일수는 필수입니다", "처방 일수는 1일 이상이어야 합니다" |
+| `perDay` | Integer | ✅ | - null 불가<br>- 최소값: 1 | "1일 복용 횟수는 필수입니다", "1일 복용 횟수는 1회 이상이어야 합니다" |
+| `alarmType` | AlarmType | ✅ | - null 불가<br>- 허용값: `SOUND`, `VIBE` | "알람 타입은 필수입니다" |
 
 ### 복약 기록 (Medication Record) API (`/medication-record`)
 
@@ -318,6 +432,26 @@ curl -X POST http://localhost:8080/medication-schedule \
 }
 ```
 
+**📋 복약 기록 생성 필드 유효성 검사:**
+
+> ⚠️ 아래 필드들은 Bean Validation 미적용. 서비스 계층에서 비즈니스 로직으로 검증됩니다.
+
+| 필드명 | 타입 | 필수 | 제약 조건 | 비고 |
+|--------|------|------|-----------|------|
+| `medicationScheduleId` | Long | ✅ | - 존재하는 스케줄 ID (서비스에서 검증) | 복약 스케줄과 연결 |
+| `medicationTimeId` | Long | ✅ | - 존재하는 복약 시간 ID (서비스에서 검증) | 복약 시간과 연결 |
+| `isTakeMedication` | Boolean | ✅ | - `true` 또는 `false` | 복용 여부 |
+| `realTakeTime` | LocalDateTime | ❌ | - ISO-8601 형식 (`yyyy-MM-ddTHH:mm:ss`)<br>- `isTakeMedication=true`일 때 권장 | 실제 복용 시간 |
+
+**📋 복약 기록 수정 필드 유효성 검사:**
+
+> ⚠️ 아래 필드들은 Bean Validation 미적용. 서비스 계층에서 비즈니스 로직으로 검증됩니다.
+
+| 필드명 | 타입 | 필수 | 제약 조건 | 비고 |
+|--------|------|------|-----------|------|
+| `isTakeMedication` | Boolean | ❌ | - `true` 또는 `false` | 복용 여부 수정 |
+| `realTakeTime` | LocalDateTime | ❌ | - ISO-8601 형식 (`yyyy-MM-ddTHH:mm:ss`) | 실제 복용 시간 수정 |
+
 ##### 복약 기록 상세 응답 데이터 {#record-detail-response}
 ```json
 {
@@ -353,6 +487,25 @@ curl -X POST http://localhost:8080/medication-schedule \
   ]
 }
 ```
+
+**📋 부작용 기록 생성 필드 유효성 검사:**
+
+> ⚠️ 아래 필드들은 Bean Validation 미적용. 서비스 계층에서 비즈니스 로직으로 검증됩니다.
+
+| 필드명 | 타입 | 필수 | 제약 조건 | 비고 |
+|--------|------|------|-----------|------|
+| `memberId` | Long | ✅ | - 존재하는 회원 ID (서비스에서 검증) | 부작용 기록 소유자 |
+| `createdAt` | LocalDateTime | ✅ | - ISO-8601 형식 (`yyyy-MM-ddTHH:mm:ss`) | 부작용 발생 시간 |
+| `sideEffects` | List | ✅ | - 빈 배열 불가 (서비스에서 검증)<br>- 1개 이상의 부작용 필수 | 부작용 항목 목록 |
+
+**📋 부작용 항목 (SideEffectItem) 필드 유효성 검사:**
+
+> ⚠️ 아래 필드들은 Bean Validation 미적용. 서비스 계층에서 비즈니스 로직으로 검증됩니다.
+
+| 필드명 | 타입 | 필수 | 제약 조건 | 비고 |
+|--------|------|------|-----------|------|
+| `sideEffectId` | Long | ✅ | - 존재하는 부작용 ID (서비스에서 검증) | 부작용 목록 테이블 참조 |
+| `degree` | Integer | ✅ | - 최소값: 1, 최대값: 5 (서비스에서 검증) | 부작용 정도 (1: 약함 ~ 5: 심함) |
 
 ##### 최근 부작용 목록 응답 데이터 {#side-effect-recent-response}
 ```json
@@ -392,6 +545,22 @@ curl -X POST http://localhost:8080/medication-schedule \
   "templateAnswer4": "오늘 같은 감정을 자주 느낄 수 있었으면 좋겠어요."
 }
 ```
+
+**📋 마음 일기 생성 필드 유효성 검사:**
+
+| 필드명 | 타입 | 필수 | 제약 조건 | 에러 메시지 |
+|--------|------|------|-----------|-------------|
+| `memberId` | Long | ✅ | - null 불가<br>- 존재하는 회원 ID | "회원 ID는 필수입니다" |
+| `diaryDate` | LocalDate | ✅ | - null 불가<br>- ISO-8601 형식 (yyyy-MM-dd)<br>- 동일 날짜 중복 불가 | "일기 날짜는 필수입니다" |
+| `moodType` | MoodType | ✅ | - null 불가<br>- 허용값: `HAPPY`, `EXCITED`, `PEACEFUL`, `ANXIOUS`, `LETHARGIC`, `ANGRY`, `SAD` | "오늘의 기분은 필수입니다" |
+| `diaryType` | DiaryType | ✅ | - null 불가<br>- 허용값: `TEMPLATE`, `FREE_FORM` | "일기 형식은 필수입니다" |
+| `templateAnswer1` | String | 📌 | - 최대 500자<br>- `TEMPLATE` 형식일 때 필수 (빈 값 불가) | "템플릿 답변 1은 500자 이하여야 합니다" |
+| `templateAnswer2` | String | 📌 | - 최대 500자<br>- `TEMPLATE` 형식일 때 필수 (빈 값 불가) | "템플릿 답변 2는 500자 이하여야 합니다" |
+| `templateAnswer3` | String | 📌 | - 최대 500자<br>- `TEMPLATE` 형식일 때 필수 (빈 값 불가) | "템플릿 답변 3은 500자 이하여야 합니다" |
+| `templateAnswer4` | String | 📌 | - 최대 500자<br>- `TEMPLATE` 형식일 때 필수 (빈 값 불가) | "템플릿 답변 4는 500자 이하여야 합니다" |
+| `freeContent` | String | 📌 | - 최대 1500자<br>- `FREE_FORM` 형식일 때 필수 (빈 값 불가) | "자유 형식 내용은 1500자 이하여야 합니다" |
+
+> 📌 = `diaryType`에 따라 조건부 필수
 
 **템플릿 질문:**
 1. 오늘 나에게 가장 인상 깊었던 사건은 무엇이었나요?
@@ -547,7 +716,7 @@ curl -X POST http://localhost:8080/medication-schedule \
     - **프로젝트 정보 업데이트**: Base URL을 localhost:8080으로 변경, AOP 기반 기능들 명시
     - **인증 API 정확성 검증**: AuthController와 OAuth2Controller의 실제 구현과 완전 일치 확인
     - **미구현 기능 제거**: Report API 섹션 제거 (실제 컨트롤러 미존재)
-    - **종합 검토 완료**: 5개 컨트롤러(Auth, OAuth2, MedicationSchedule, MedicationRecord, SideEffect) 모든 엔드포인트가 실제 구현과 정확히 일치함을 재확인
+    - **종합 검토 완료**: 6개 컨트롤러(Auth, CSRF, OAuth2, MedicationSchedule, MedicationRecord, SideEffect, MoodDiary) 모든 엔드포인트가 실제 구현과 정확히 일치함을 재확인
 - **2025/11/17**: **API 명세 최종 동기화**
     - **복약 스케줄 목록 응답 구조 업데이트**: `content` 필드 → `schedules`, 페이지네이션 필드 정규화
     - **회원가입 요청 데이터 정확화**: nickName 예시 업데이트 및 검증 규칙 명시
@@ -585,6 +754,15 @@ curl -X POST http://localhost:8080/medication-schedule \
     - JavaScript/React Native 및 cURL을 이용한 multipart 요청 예시 코드 추가
     - CSRF 토큰 응답에 `storage` 필드 추가 (redis/fallback 구분)
     - **React Native 환경 호환성 개선**: `data` 파트가 `text/plain` 또는 단순 문자열로 전송되어도 JSON으로 파싱하도록 `TextPlainJsonHttpMessageConverter` 추가 (Blob 미지원 환경 대응)
+- **2025/12/10**: **DTO 필드 유효성 검사 명세 추가 및 전반적 검토**
+    - 모든 요청 DTO에 필드별 유효성 검사 테이블 추가 (필수 여부, 제약 조건, 에러 메시지)
+    - 프론트엔드 테스트 가이드 추가 (필수 필드, 형식 검증, 길이 제한, Enum 값, 조건부 필수 테스트)
+    - 유효성 검사 실패 시 `violations` 배열 응답 형식 문서화
+    - 회원가입, 로그인, 토큰 갱신, 복약 스케줄 등록/수정 → Bean Validation 적용
+    - 복약 기록 생성/수정, 부작용 기록 생성 → 비즈니스 로직 검증 (Bean Validation 미적용 명시)
+    - 마음 일기 생성 요청 필드 상세 명시 (조건부 필수 표기 추가)
+    - **DDL 스키마 업데이트**: alarm_type 허용값을 `SOUND`, `VIBE`로 정확화, 스키마 버전 2025-12-10으로 갱신
+    - **컨트롤러 검증 업데이트**: 7개 컨트롤러(Auth, CSRF, OAuth2, MedicationSchedule, MedicationRecord, SideEffect, MoodDiary) 모든 엔드포인트 재확인
 ---
 
 ## 데이터베이스 스키마
@@ -613,7 +791,7 @@ Hamalog 시스템은 총 12개의 테이블로 구성되어 있으며, 회원 �
 ```sql
 -- =====================================================
 -- Hamalog Database Schema
--- Version: 2025-11-21
+-- Version: 2025-12-10
 -- Description: 복약 관리 시스템 데이터베이스 스키마
 -- =====================================================
 
@@ -643,7 +821,7 @@ CREATE TABLE medication_schedule (
     start_of_ad DATE NOT NULL COMMENT '복약 시작일',
     prescription_days INT NOT NULL COMMENT '처방 일수',
     per_day INT NOT NULL COMMENT '1일 복용 횟수',
-    alarm_type VARCHAR(20) NOT NULL COMMENT '알람 타입 (SOUND, VIBRATION, SOUND_AND_VIBRATION, NONE)',
+    alarm_type VARCHAR(20) NOT NULL COMMENT '알람 타입 (SOUND, VIBE)',
     version BIGINT DEFAULT 0 COMMENT '낙관적 락 버전',
     FOREIGN KEY (member_id) REFERENCES member(member_id) ON DELETE CASCADE,
     INDEX idx_member_id (member_id),

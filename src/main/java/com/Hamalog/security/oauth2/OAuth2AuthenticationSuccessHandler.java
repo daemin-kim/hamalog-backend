@@ -16,51 +16,81 @@ import org.springframework.security.web.authentication.AuthenticationSuccessHand
 import org.springframework.stereotype.Component;
 
 import java.io.IOException;
-import java.net.MalformedURLException;
-import java.net.URL;
-import java.net.URLEncoder;
-import java.nio.charset.StandardCharsets;
-import java.util.Arrays;
-import java.util.List;
+import java.net.URI;
+import java.util.HashSet;
+import java.util.Set;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 @Component
 public class OAuth2AuthenticationSuccessHandler implements AuthenticationSuccessHandler {
 
+    private static final Logger log = LoggerFactory.getLogger(OAuth2AuthenticationSuccessHandler.class);
+
     private final JwtTokenProvider jwtTokenProvider;
     private final String redirectBase;
     private final MemberRepository memberRepository;
+    private final Set<String> allowedRedirectHosts;
 
-    // Security Fix: Define allowed redirect domains to prevent open redirect attacks
-    private static final List<String> ALLOWED_REDIRECT_HOSTS = Arrays.asList(
-        "localhost",
-        "127.0.0.1",
-        "49.142.154.182", // Production server IP (frontend)
-        "112.72.248.195"  // Production server IP (backend)
-    );
+    // 기본 허용 호스트 (개발 환경)
+    private static final Set<String> DEFAULT_ALLOWED_HOSTS = Set.of("localhost", "127.0.0.1");
 
     public OAuth2AuthenticationSuccessHandler(
             JwtTokenProvider jwtTokenProvider,
             MemberRepository memberRepository,
-            @Value("${hamalog.oauth2.redirect-uri:http://localhost:3000/oauth/kakao}") String redirectBase
+            @Value("${hamalog.oauth2.redirect-uri:http://localhost:3000/oauth/kakao}") String redirectBase,
+            @Value("${hamalog.cors.allowed-origins:}") String allowedOrigins
     ) {
         this.jwtTokenProvider = jwtTokenProvider;
         this.memberRepository = memberRepository;
+
+        // 허용된 origins에서 호스트 추출
+        this.allowedRedirectHosts = extractHostsFromOrigins(allowedOrigins);
+        log.info("[OAUTH2] Allowed redirect hosts: {}", allowedRedirectHosts);
+
         // Validate redirect URI on startup
         if (!isValidRedirectUri(redirectBase)) {
-            throw new IllegalStateException("Invalid OAuth2 redirect URI configured: " + redirectBase);
+            throw new IllegalStateException("Invalid OAuth2 redirect URI configured: " + redirectBase +
+                ". Allowed hosts: " + allowedRedirectHosts);
         }
         this.redirectBase = redirectBase;
     }
     
     /**
+     * CORS 허용 origins에서 호스트 목록 추출
+     */
+    private Set<String> extractHostsFromOrigins(String allowedOrigins) {
+        Set<String> hosts = new HashSet<>(DEFAULT_ALLOWED_HOSTS);
+
+        if (allowedOrigins != null && !allowedOrigins.isBlank()) {
+            for (String origin : allowedOrigins.split(",")) {
+                try {
+                    String trimmed = origin.trim();
+                    if (!trimmed.isEmpty()) {
+                        URI uri = URI.create(trimmed);
+                        String host = uri.getHost();
+                        if (host != null) {
+                            hosts.add(host);
+                        }
+                    }
+                } catch (IllegalArgumentException e) {
+                    log.warn("[OAUTH2] Invalid origin in allowed-origins: {}", origin);
+                }
+            }
+        }
+
+        return hosts;
+    }
+
+    /**
      * Security Fix: Validate redirect URI to prevent open redirect attacks
      */
     private boolean isValidRedirectUri(String uri) {
         try {
-            URL url = new URL(uri);
-            String host = url.getHost();
-            return ALLOWED_REDIRECT_HOSTS.contains(host);
-        } catch (MalformedURLException e) {
+            URI parsed = URI.create(uri);
+            String host = parsed.getHost();
+            return host != null && allowedRedirectHosts.contains(host);
+        } catch (IllegalArgumentException e) {
             return false;
         }
     }

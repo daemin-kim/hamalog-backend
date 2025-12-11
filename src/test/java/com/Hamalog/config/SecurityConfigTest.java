@@ -59,6 +59,9 @@ class SecurityConfigTest {
     @Mock
     private AuthenticationManager authenticationManager;
 
+    @Mock
+    private org.springframework.core.env.Environment environment;
+
     private SecurityConfig securityConfig;
 
     @BeforeEach
@@ -71,7 +74,8 @@ class SecurityConfigTest {
                 rateLimitingFilter,
                 requestSizeMonitoringFilter,
                 csrfValidationFilter,
-                trustedProxyService
+                trustedProxyService,
+                environment
         );
     }
 
@@ -94,7 +98,8 @@ class SecurityConfigTest {
                 null, // rateLimitingFilter can be null
                 requestSizeMonitoringFilter,
                 csrfValidationFilter,
-                trustedProxyService
+                trustedProxyService,
+                environment
         );
 
         // then

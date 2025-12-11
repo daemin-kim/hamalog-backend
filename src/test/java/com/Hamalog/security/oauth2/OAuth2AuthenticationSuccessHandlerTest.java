@@ -48,6 +48,7 @@ class OAuth2AuthenticationSuccessHandlerTest {
 
     private OAuth2AuthenticationSuccessHandler handler;
     private final String validRedirectUri = "http://localhost:3000/oauth/kakao";
+    private final String allowedOrigins = "http://localhost:3000";
     private final String testToken = "test-jwt-token";
 
     @BeforeEach
@@ -67,7 +68,7 @@ class OAuth2AuthenticationSuccessHandlerTest {
     void constructor_ValidRedirectUri_Success() {
         // given & when & then
         assertDoesNotThrow(() -> 
-            new OAuth2AuthenticationSuccessHandler(jwtTokenProvider, memberRepository, "http://localhost:3000/oauth/kakao")
+            new OAuth2AuthenticationSuccessHandler(jwtTokenProvider, memberRepository, "http://localhost:3000/oauth/kakao", allowedOrigins)
         );
     }
 
@@ -76,7 +77,7 @@ class OAuth2AuthenticationSuccessHandlerTest {
     void constructor_LocalhostIp_Success() {
         // given & when & then
         assertDoesNotThrow(() -> 
-            new OAuth2AuthenticationSuccessHandler(jwtTokenProvider, memberRepository, "http://127.0.0.1:3000/oauth/kakao")
+            new OAuth2AuthenticationSuccessHandler(jwtTokenProvider, memberRepository, "http://127.0.0.1:3000/oauth/kakao", "http://127.0.0.1:3000")
         );
     }
 
@@ -85,7 +86,7 @@ class OAuth2AuthenticationSuccessHandlerTest {
     void constructor_ProductionServerIp_Success() {
         // given & when & then
         assertDoesNotThrow(() -> 
-            new OAuth2AuthenticationSuccessHandler(jwtTokenProvider, memberRepository, "http://112.72.248.195:3000/oauth/kakao")
+            new OAuth2AuthenticationSuccessHandler(jwtTokenProvider, memberRepository, "http://112.72.248.195:3000/oauth/kakao", "http://112.72.248.195:3000")
         );
     }
 
@@ -97,7 +98,7 @@ class OAuth2AuthenticationSuccessHandlerTest {
 
         // when & then
         IllegalStateException exception = assertThrows(IllegalStateException.class, () ->
-            new OAuth2AuthenticationSuccessHandler(jwtTokenProvider, memberRepository, invalidUri)
+            new OAuth2AuthenticationSuccessHandler(jwtTokenProvider, memberRepository, invalidUri, allowedOrigins)
         );
         
         assertTrue(exception.getMessage().contains("Invalid OAuth2 redirect URI configured"));
@@ -111,7 +112,7 @@ class OAuth2AuthenticationSuccessHandlerTest {
 
         // when & then
         IllegalStateException exception = assertThrows(IllegalStateException.class, () ->
-            new OAuth2AuthenticationSuccessHandler(jwtTokenProvider, memberRepository, malformedUri)
+            new OAuth2AuthenticationSuccessHandler(jwtTokenProvider, memberRepository, malformedUri, allowedOrigins)
         );
         
         assertTrue(exception.getMessage().contains("Invalid OAuth2 redirect URI configured"));
@@ -121,7 +122,7 @@ class OAuth2AuthenticationSuccessHandlerTest {
     @DisplayName("OAuth2User가 ID를 가지고 있을 때 인증 성공 처리")
     void onAuthenticationSuccess_OAuth2UserWithId_Success() throws IOException, ServletException {
         // given
-        handler = new OAuth2AuthenticationSuccessHandler(jwtTokenProvider, memberRepository, validRedirectUri);
+        handler = new OAuth2AuthenticationSuccessHandler(jwtTokenProvider, memberRepository, validRedirectUri, allowedOrigins);
         Map<String, Object> attributes = new HashMap<>();
         attributes.put("id", 12345L);
 
@@ -154,7 +155,7 @@ class OAuth2AuthenticationSuccessHandlerTest {
     @DisplayName("OAuth2User가 ID를 가지지 않을 때 인증 성공 처리")
     void onAuthenticationSuccess_OAuth2UserWithoutId_Success() throws IOException, ServletException {
         // given
-        handler = new OAuth2AuthenticationSuccessHandler(jwtTokenProvider, memberRepository, validRedirectUri);
+        handler = new OAuth2AuthenticationSuccessHandler(jwtTokenProvider, memberRepository, validRedirectUri, allowedOrigins);
 
         Map<String, Object> attributes = new HashMap<>();
         String authName = "testuser";
@@ -180,7 +181,7 @@ class OAuth2AuthenticationSuccessHandlerTest {
     @DisplayName("OAuth2User가 null ID를 가질 때 인증 성공 처리")
     void onAuthenticationSuccess_OAuth2UserWithNullId_Success() throws IOException, ServletException {
         // given
-        handler = new OAuth2AuthenticationSuccessHandler(jwtTokenProvider, memberRepository, validRedirectUri);
+        handler = new OAuth2AuthenticationSuccessHandler(jwtTokenProvider, memberRepository, validRedirectUri, allowedOrigins);
 
         Map<String, Object> attributes = new HashMap<>();
         attributes.put("id", null);
@@ -207,7 +208,7 @@ class OAuth2AuthenticationSuccessHandlerTest {
     @DisplayName("OAuth2User가 아닌 Principal일 때 인증 성공 처리")
     void onAuthenticationSuccess_NonOAuth2UserPrincipal_Success() throws IOException, ServletException {
         // given
-        handler = new OAuth2AuthenticationSuccessHandler(jwtTokenProvider, memberRepository, validRedirectUri);
+        handler = new OAuth2AuthenticationSuccessHandler(jwtTokenProvider, memberRepository, validRedirectUri, allowedOrigins);
 
         String authName = "regularuser";
         Object nonOAuth2Principal = new Object();
@@ -232,7 +233,7 @@ class OAuth2AuthenticationSuccessHandlerTest {
     @DisplayName("Integer 타입의 Kakao ID 처리")
     void onAuthenticationSuccess_IntegerKakaoId_Success() throws IOException, ServletException {
         // given
-        handler = new OAuth2AuthenticationSuccessHandler(jwtTokenProvider, memberRepository, validRedirectUri);
+        handler = new OAuth2AuthenticationSuccessHandler(jwtTokenProvider, memberRepository, validRedirectUri, allowedOrigins);
 
         Map<String, Object> attributes = new HashMap<>();
         attributes.put("id", 98765);
@@ -258,7 +259,7 @@ class OAuth2AuthenticationSuccessHandlerTest {
     @DisplayName("쿠키 속성이 올바르게 설정되는지 확인")
     void onAuthenticationSuccess_CookiePropertiesSetCorrectly() throws IOException, ServletException {
         // given
-        handler = new OAuth2AuthenticationSuccessHandler(jwtTokenProvider, memberRepository, validRedirectUri);
+        handler = new OAuth2AuthenticationSuccessHandler(jwtTokenProvider, memberRepository, validRedirectUri, allowedOrigins);
         String loginId = "kakao_12345@oauth2.internal";
         Member member = buildMember(loginId);
 
@@ -286,7 +287,7 @@ class OAuth2AuthenticationSuccessHandlerTest {
     @DisplayName("응답 상태와 헤더가 올바르게 설정되는지 확인")
     void onAuthenticationSuccess_ResponseStatusAndHeaderSetCorrectly() throws IOException, ServletException {
         // given
-        handler = new OAuth2AuthenticationSuccessHandler(jwtTokenProvider, memberRepository, validRedirectUri);
+        handler = new OAuth2AuthenticationSuccessHandler(jwtTokenProvider, memberRepository, validRedirectUri, allowedOrigins);
         String loginId = "kakao_12345@oauth2.internal";
         Member member = buildMember(loginId);
 

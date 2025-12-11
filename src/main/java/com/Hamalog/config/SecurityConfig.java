@@ -22,6 +22,7 @@ import org.springframework.security.config.Customizer;
 import org.springframework.security.config.annotation.authentication.configuration.AuthenticationConfiguration;
 import org.springframework.security.config.annotation.web.builders.HttpSecurity;
 import org.springframework.security.config.annotation.web.configuration.EnableWebSecurity;
+import org.springframework.security.config.annotation.method.configuration.EnableMethodSecurity;
 import org.springframework.security.config.http.SessionCreationPolicy;
 import org.springframework.security.crypto.bcrypt.BCryptPasswordEncoder;
 import org.springframework.security.crypto.password.PasswordEncoder;
@@ -33,6 +34,7 @@ import org.springframework.web.cors.UrlBasedCorsConfigurationSource;
 
 @Configuration
 @EnableWebSecurity
+@EnableMethodSecurity(prePostEnabled = true, securedEnabled = true)
 public class SecurityConfig {
 
     private static final Logger log = LoggerFactory.getLogger(SecurityConfig.class);
@@ -45,6 +47,7 @@ public class SecurityConfig {
     private final RequestSizeMonitoringFilter requestSizeMonitoringFilter;
     private final CsrfValidationFilter csrfValidationFilter;
     private final TrustedProxyService trustedProxyService;
+    private final org.springframework.core.env.Environment environment;
 
     public SecurityConfig(
             CustomUserDetailsService customUserDetailsService,
@@ -54,7 +57,8 @@ public class SecurityConfig {
             @Autowired(required = false) RateLimitingFilter rateLimitingFilter,
             RequestSizeMonitoringFilter requestSizeMonitoringFilter,
             CsrfValidationFilter csrfValidationFilter,
-            TrustedProxyService trustedProxyService
+            TrustedProxyService trustedProxyService,
+            org.springframework.core.env.Environment environment
     ) {
         this.customUserDetailsService = customUserDetailsService;
         this.kakaoOAuth2UserService = kakaoOAuth2UserService;
@@ -64,6 +68,7 @@ public class SecurityConfig {
         this.requestSizeMonitoringFilter = requestSizeMonitoringFilter;
         this.csrfValidationFilter = csrfValidationFilter;
         this.trustedProxyService = trustedProxyService;
+        this.environment = environment;
     }
 
     @Bean
@@ -102,19 +107,30 @@ public class SecurityConfig {
                         .addHeaderWriter(new org.springframework.security.web.header.writers.StaticHeadersWriter("Permissions-Policy", "geolocation=(), microphone=(), camera=()"))
                 )
                 .sessionManagement(sess -> sess.sessionCreationPolicy(SessionCreationPolicy.STATELESS))
-                .authorizeHttpRequests(auth -> auth
-                        .requestMatchers(
-                                "/auth/login", "/auth/signup",
-                                "/v3/api-docs/**", "/swagger-ui.html", "/swagger-ui/**",
-                                "/error",
-                                "/oauth2/**", "/login/oauth2/**", "/oauth2/authorization/**",
-                                "/api/auth/kakao/callback",
-                                "/actuator/health"
-                        ).permitAll()
-                        .requestMatchers("/auth/csrf-token", "/auth/csrf-status").authenticated()
+                .authorizeHttpRequests(auth -> {
+                    // 기본 공개 엔드포인트
+                    auth.requestMatchers(
+                            "/auth/login", "/auth/signup",
+                            "/error",
+                            "/oauth2/**", "/login/oauth2/**", "/oauth2/authorization/**",
+                            "/api/auth/kakao/callback",
+                            "/actuator/health"
+                    ).permitAll();
+
+                    // Swagger UI는 프로덕션이 아닌 환경에서만 허용
+                    boolean isProduction = java.util.Arrays.asList(environment.getActiveProfiles()).contains("prod");
+                    if (!isProduction) {
+                        auth.requestMatchers("/v3/api-docs/**", "/swagger-ui.html", "/swagger-ui/**").permitAll();
+                        log.info("[SECURITY] Swagger UI enabled for non-production environment");
+                    } else {
+                        auth.requestMatchers("/v3/api-docs/**", "/swagger-ui.html", "/swagger-ui/**").denyAll();
+                        log.info("[SECURITY] Swagger UI disabled for production environment");
+                    }
+
+                    auth.requestMatchers("/auth/csrf-token", "/auth/csrf-status").authenticated()
                         .requestMatchers(HttpMethod.GET, "/test").permitAll()
-                        .anyRequest().authenticated()
-                )
+                        .anyRequest().authenticated();
+                })
                 .oauth2Login(oauth2 -> oauth2
                         .userInfoEndpoint(u -> u.userService(kakaoOAuth2UserService))
                         .successHandler(oAuth2AuthenticationSuccessHandler)

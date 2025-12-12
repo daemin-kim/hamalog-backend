@@ -134,11 +134,11 @@ Docker/Nginx 환경에서 실제 클라이언트 IP를 올바르게 식별하기
 
 **Spring Boot 설정:**
 ```properties
-# X-Forwarded-For 헤더 처리 활성화
-server.forward-headers-strategy=framework
+# X-Forwarded-For 헤더 처리 활성화 (Tomcat의 RemoteIpValve 사용)
+server.forward-headers-strategy=native
 
 # 신뢰할 수 있는 프록시 CIDR (Docker 네트워크 포함)
-hamalog.security.trusted-proxies=127.0.0.1/32,::1/128,172.16.0.0/12
+hamalog.security.trusted-proxies=127.0.0.1/32,::1/128,172.16.0.0/12,10.0.0.0/8,192.168.0.0/16
 ```
 
 **환경변수로 설정:**

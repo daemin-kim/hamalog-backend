@@ -1,6 +1,7 @@
 package com.Hamalog.config;
 
 import com.Hamalog.security.CustomUserDetailsService;
+import com.Hamalog.security.filter.BotProtectionFilter;
 import com.Hamalog.security.filter.CsrfValidationFilter;
 import com.Hamalog.security.filter.RateLimitingFilter;
 import com.Hamalog.security.filter.RequestSizeMonitoringFilter;
@@ -51,6 +52,9 @@ class SecurityConfigTest {
     private CsrfValidationFilter csrfValidationFilter;
 
     @Mock
+    private BotProtectionFilter botProtectionFilter;
+
+    @Mock
     private TrustedProxyService trustedProxyService;
 
     @Mock
@@ -74,6 +78,7 @@ class SecurityConfigTest {
                 rateLimitingFilter,
                 requestSizeMonitoringFilter,
                 csrfValidationFilter,
+                botProtectionFilter,
                 trustedProxyService,
                 environment
         );
@@ -98,6 +103,7 @@ class SecurityConfigTest {
                 null, // rateLimitingFilter can be null
                 requestSizeMonitoringFilter,
                 csrfValidationFilter,
+                botProtectionFilter,
                 trustedProxyService,
                 environment
         );

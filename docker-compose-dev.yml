@@ -1,34 +1,14 @@
-services:
+# Docker Compose for Development Environment
+# 개발 환경에서는 Nginx 없이 직접 Spring Boot 앱에 접근
+#
+# 사용법: docker-compose -f docker-compose-dev.yml up -d
 
-  # Nginx Reverse Proxy (recommended for production)
-  # 봇 차단, Rate Limiting, SSL 터미네이션을 Nginx에서 처리
-  nginx:
-    image: nginx:alpine
-    ports:
-      - "80:80"
-      - "443:443"
-    volumes:
-      - ./nginx-docker.conf:/etc/nginx/conf.d/default.conf:ro
-      # SSL 사용 시 (nginx-hamalog.conf로 변경 필요)
-      # - ./nginx-hamalog.conf:/etc/nginx/conf.d/default.conf:ro
-      # - /etc/letsencrypt:/etc/letsencrypt:ro
-    depends_on:
-      - hamalog-app
-    restart: unless-stopped
-    healthcheck:
-      test: ["CMD", "nginx", "-t"]
-      interval: 30s
-      timeout: 10s
-      retries: 3
+services:
 
   hamalog-app:
     build: .
-    # 외부 노출 대신 내부 네트워크만 사용 (Nginx를 통해서만 접근)
-    expose:
-      - "8080"
-    # 개발/테스트 환경에서 직접 접근이 필요한 경우 아래 주석 해제
-    # ports:
-    #   - "8080:8080"
+    ports:
+      - "8080:8080"
     env_file:
       - .env.prod
     environment:
@@ -46,6 +26,8 @@ services:
       - KAKAO_CLIENT_ID=${KAKAO_CLIENT_ID}
       - KAKAO_CLIENT_SECRET=${KAKAO_CLIENT_SECRET}
       - KAKAO_REDIRECT_URI=${KAKAO_REDIRECT_URI}
+      # 개발 환경에서는 봇 차단 비활성화 (필요시)
+      # - BOT_PROTECTION_ENABLED=false
     depends_on:
       mysql-hamalog:
         condition: service_healthy
@@ -105,3 +87,4 @@ volumes:
   mysql-data:
   redis-data:
   hamalog-uploads:
+

@@ -1,6 +1,7 @@
 package com.Hamalog.config;
 
 import com.Hamalog.security.CustomUserDetailsService;
+import com.Hamalog.security.filter.BotProtectionFilter;
 import com.Hamalog.security.filter.CsrfValidationFilter;
 import com.Hamalog.security.filter.RateLimitingFilter;
 import com.Hamalog.security.filter.RequestSizeMonitoringFilter;
@@ -46,6 +47,7 @@ public class SecurityConfig {
     private final RateLimitingFilter rateLimitingFilter;
     private final RequestSizeMonitoringFilter requestSizeMonitoringFilter;
     private final CsrfValidationFilter csrfValidationFilter;
+    private final BotProtectionFilter botProtectionFilter;
     private final TrustedProxyService trustedProxyService;
     private final org.springframework.core.env.Environment environment;
 
@@ -57,6 +59,7 @@ public class SecurityConfig {
             @Autowired(required = false) RateLimitingFilter rateLimitingFilter,
             RequestSizeMonitoringFilter requestSizeMonitoringFilter,
             CsrfValidationFilter csrfValidationFilter,
+            BotProtectionFilter botProtectionFilter,
             TrustedProxyService trustedProxyService,
             org.springframework.core.env.Environment environment
     ) {
@@ -67,6 +70,7 @@ public class SecurityConfig {
         this.rateLimitingFilter = rateLimitingFilter;
         this.requestSizeMonitoringFilter = requestSizeMonitoringFilter;
         this.csrfValidationFilter = csrfValidationFilter;
+        this.botProtectionFilter = botProtectionFilter;
         this.trustedProxyService = trustedProxyService;
         this.environment = environment;
     }
@@ -143,6 +147,8 @@ public class SecurityConfig {
                             response.getWriter().write("{\"error\":\"Unauthorized\",\"message\":\"JWT 토큰이 필요합니다.\"}");
                         })
                 )
+                // BotProtectionFilter를 가장 먼저 실행하여 악성 봇 요청을 조기에 차단
+                .addFilterBefore(botProtectionFilter, UsernamePasswordAuthenticationFilter.class)
                 .addFilterBefore(requestSizeMonitoringFilter, UsernamePasswordAuthenticationFilter.class);
         
         if (rateLimitingFilter != null) {

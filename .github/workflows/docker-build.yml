@@ -138,28 +138,67 @@ jobs:
             -v C:/mysql-data:/var/lib/mysql `
             -p 3306:3306 `
             --network hamalog-network `
+            --health-cmd="mysqladmin ping -h localhost -uroot -p${{ env.MYSQL_ROOT_PASSWORD }} --silent" `
+            --health-interval=10s `
+            --health-timeout=5s `
+            --health-retries=12 `
+            --health-start-period=30s `
             mysql:8.0
-          Start-Sleep -Seconds 20
+
+          # 컨테이너 시작 확인
+          Start-Sleep -Seconds 5
+          $status = docker inspect --format='{{.State.Status}}' mysql-hamalog
+          if ($status -ne "running") {
+            Write-Error "MySQL container failed to start. Status: $status"
+            docker logs mysql-hamalog
+            exit 1
+          }
+          Write-Host "MySQL container is running, waiting for initialization..."
+          Start-Sleep -Seconds 30
 
       - name: MySQL 준비 대기
         shell: powershell
         run: |
-          $maxAttempts = 20
+          $maxAttempts = 30
+          $ready = $false
+          
           for ($i = 1; $i -le $maxAttempts; $i++) {
-            try {
-              docker exec `
-                -e MYSQL_PWD=$env:MYSQL_ROOT_PASSWORD `
-                mysql-hamalog mysqladmin ping -h localhost -uroot | Out-Null
-              Write-Host "MySQL이 준비되었습니다."
-              break
-            } catch {
-              if ($i -eq $maxAttempts) {
-                Write-Error "MySQL 준비 확인 실패"
-                throw
-              }
-              Write-Host "MySQL 준비 중... ($i/$maxAttempts)"
-              Start-Sleep -Seconds 5
+            # 먼저 컨테이너 상태 확인
+            $containerStatus = docker inspect --format='{{.State.Status}}' mysql-hamalog 2>$null
+            if ($containerStatus -ne "running") {
+              Write-Error "MySQL container is not running. Status: $containerStatus"
+              docker logs mysql-hamalog
+              exit 1
             }
+            
+            # 헬스체크 상태 확인
+            $healthStatus = docker inspect --format='{{.State.Health.Status}}' mysql-hamalog 2>$null
+            Write-Host "MySQL health status: $healthStatus ($i/$maxAttempts)"
+            
+            if ($healthStatus -eq "healthy") {
+              Write-Host "MySQL is healthy and ready!"
+              $ready = $true
+              break
+            }
+            
+            # mysqladmin ping으로 직접 확인도 시도
+            $pingResult = docker exec mysql-hamalog mysqladmin ping -h 127.0.0.1 -uroot -p"$env:MYSQL_ROOT_PASSWORD" --silent 2>$null
+            if ($LASTEXITCODE -eq 0) {
+              Write-Host "MySQL is ready (ping successful)!"
+              $ready = $true
+              break
+            }
+            
+            Start-Sleep -Seconds 5
+          }
+          
+          if (-not $ready) {
+            Write-Error "MySQL failed to become ready within timeout"
+            Write-Host "=== MySQL Container Logs ==="
+            docker logs mysql-hamalog
+            Write-Host "=== Container Inspect ==="
+            docker inspect mysql-hamalog
+            exit 1
           }
 
       - name: 애플리케이션 DB 사용자 동기화

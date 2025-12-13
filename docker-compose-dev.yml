@@ -39,8 +39,9 @@ services:
 
   redis:
     image: redis:7-alpine
+    # 개발 환경: localhost에만 바인딩하여 외부 접근 차단
     ports:
-      - "6379:6379"
+      - "127.0.0.1:6379:6379"
     command: >
       redis-server
       --requirepass ${SPRING_DATA_REDIS_PASSWORD}
@@ -59,8 +60,9 @@ services:
 
   mysql-hamalog:
     image: mysql:8.0
+    # 개발 환경: localhost에만 바인딩하여 외부 접근 차단
     ports:
-      - "3306:3306"
+      - "127.0.0.1:3306:3306"
     environment:
       - MYSQL_ROOT_PASSWORD=${MYSQL_ROOT_PASSWORD}
       - MYSQL_DATABASE=${DB_NAME}

@@ -155,6 +155,30 @@ export TRUSTED_PROXIES="127.0.0.1/32,::1/128,172.16.0.0/12,10.0.0.0/8"
 - SSL/TLS 터미네이션
 - Rate Limiting 강화
 - 정적 파일 캐싱
+- **보안 헤더** (X-Frame-Options, X-Content-Type-Options 등)
+- **Slowloris 공격 방어** (타임아웃 설정)
+
+### Nginx 보안 설정 (2025-12 업데이트)
+
+**추가된 보안 헤더:**
+```nginx
+add_header X-Frame-Options "DENY" always;
+add_header X-Content-Type-Options "nosniff" always;
+add_header X-XSS-Protection "1; mode=block" always;
+add_header Referrer-Policy "strict-origin-when-cross-origin" always;
+add_header Permissions-Policy "geolocation=(), microphone=(), camera=()" always;
+```
+
+**Slowloris 공격 방어 (타임아웃 설정):**
+```nginx
+client_body_timeout 10s;
+client_header_timeout 10s;
+send_timeout 10s;
+```
+
+**데이터베이스 포트 보안:**
+- Redis/MySQL 포트는 Docker 내부 네트워크에서만 접근 가능 (`expose` 사용)
+- 외부에서 직접 데이터베이스 접근 차단
 
 ### Docker Compose로 배포
 

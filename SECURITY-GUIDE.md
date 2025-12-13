@@ -182,6 +182,20 @@ send_timeout 10s;
 
 ### Docker Compose로 배포
 
+**프로덕션 배포 구조:**
+```
+외부 요청 → Nginx (80/8080) → hamalog-app (내부 8080)
+                                    ↓
+                              mysql-hamalog (내부 3306)
+                              redis-hamalog (내부 6379)
+```
+
+**보안 구성:**
+- Nginx가 외부 요청을 받아 hamalog-app으로 프록시
+- MySQL/Redis는 외부 포트 노출 없이 Docker 내부 네트워크에서만 접근 가능
+- 봇 차단, Rate Limiting이 Nginx 레벨에서 처리되어 애플리케이션 리소스 절약
+- X-Real-IP, X-Forwarded-For 헤더를 통해 실제 클라이언트 IP 전달
+
 ```bash
 # 프로덕션 환경 (Nginx 포함)
 docker-compose up -d
@@ -189,6 +203,10 @@ docker-compose up -d
 # 개발 환경 (Nginx 없이)
 docker-compose -f docker-compose-dev.yml up -d
 ```
+
+**GitHub Actions 배포:**
+- `docker-build.yml`: Windows 온프레미스 서버에 Nginx + hamalog + MySQL + Redis 배포
+- `deploy-main.yml`: Linux 서버에 Docker Compose로 전체 스택 배포
 
 ### 수동 Nginx 설정
 

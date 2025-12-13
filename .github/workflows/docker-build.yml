@@ -94,6 +94,9 @@ jobs:
           username: ${{ github.actor }}
           password: ${{ secrets.GITHUB_TOKEN }}
 
+      - name: 저장소 체크아웃 (Nginx 설정 파일용)
+        uses: actions/checkout@v4
+
       - name: 네트워크 및 의존 서비스 준비
         shell: powershell
         run: |
@@ -104,7 +107,6 @@ jobs:
           if (-not (docker ps -a --format "{{.Names}}" | Select-String "redis-hamalog")) {
             docker run -d `
               --name redis-hamalog `
-              -p 6379:6379 `
               --network hamalog-network `
               -v C:/redis-data:/data `
               redis:7-alpine redis-server --appendonly yes
@@ -238,7 +240,6 @@ jobs:
           docker run -d `
             --name hamalog-container `
             --network hamalog-network `
-            -p 8080:8080 `
             -e SPRING_DATASOURCE_URL=${{ env.SPRING_DATASOURCE_URL }} `
             -e SPRING_DATASOURCE_USERNAME=${{ env.DB_USERNAME }} `
             -e SPRING_DATASOURCE_PASSWORD=${{ env.DB_PASSWORD }} `
@@ -253,6 +254,45 @@ jobs:
 
           Start-Sleep -Seconds 10
           docker logs hamalog-container
+
+      - name: Nginx 리버스 프록시 컨테이너 실행
+        shell: powershell
+        run: |
+          # 기존 Nginx 컨테이너 정리
+          $nginxExists = docker ps -a --format "{{.Names}}" | Select-String -SimpleMatch "nginx-hamalog" -Quiet
+          if ($nginxExists) {
+            Write-Host "기존 nginx-hamalog 중지 및 삭제"
+            docker stop nginx-hamalog | Out-Null
+            docker rm nginx-hamalog | Out-Null
+          }
+
+          # nginx-docker.conf 파일을 Windows 경로로 복사
+          $nginxConfDir = "C:/nginx-conf"
+          if (-not (Test-Path $nginxConfDir)) {
+            New-Item -ItemType Directory -Path $nginxConfDir | Out-Null
+          }
+          Copy-Item -Path "nginx-docker.conf" -Destination "$nginxConfDir/default.conf" -Force
+
+          # Nginx 컨테이너 실행
+          docker run -d `
+            --name nginx-hamalog `
+            --network hamalog-network `
+            -p 80:80 `
+            -p 8080:80 `
+            -v ${nginxConfDir}:/etc/nginx/conf.d:ro `
+            --restart unless-stopped `
+            nginx:alpine
+
+          Start-Sleep -Seconds 5
+          
+          # Nginx 상태 확인
+          $status = docker inspect --format='{{.State.Status}}' nginx-hamalog
+          if ($status -ne "running") {
+            Write-Error "Nginx container failed to start. Status: $status"
+            docker logs nginx-hamalog
+            exit 1
+          }
+          Write-Host "Nginx container is running successfully"
 
       - name: DB 자격 증명 및 연결 확인
         shell: powershell

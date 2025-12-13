@@ -266,12 +266,99 @@ jobs:
             docker rm nginx-hamalog | Out-Null
           }
 
-          # nginx-docker.conf 파일을 Windows 경로로 복사
+          # nginx 설정 디렉토리 생성
           $nginxConfDir = "C:/nginx-conf"
           if (-not (Test-Path $nginxConfDir)) {
             New-Item -ItemType Directory -Path $nginxConfDir | Out-Null
           }
-          Copy-Item -Path "nginx-docker.conf" -Destination "$nginxConfDir/default.conf" -Force
+
+          # GitHub Actions용 nginx 설정 생성 (hamalog-container 사용)
+          $nginxConfig = @'
+          # Nginx configuration for GitHub Actions deployment
+          limit_req_zone $binary_remote_addr zone=api_limit:10m rate=10r/s;
+          limit_req_zone $binary_remote_addr zone=auth_limit:10m rate=5r/m;
+          limit_conn_zone $binary_remote_addr zone=conn_limit:10m;
+
+          map $http_user_agent $bad_bot {
+              default 0;
+              ~*l9scan 1;
+              ~*leakix 1;
+              ~*zgrab 1;
+              ~*nuclei 1;
+              ~*nikto 1;
+              ~*sqlmap 1;
+              ~*masscan 1;
+              ~*nmap 1;
+              ~*censys 1;
+              ~*shodan 1;
+          }
+
+          map $uri $blocked_path {
+              default 0;
+              ~*\.env 1;
+              ~*\.git 1;
+              ~*wp-admin 1;
+              ~*phpmyadmin 1;
+          }
+
+          upstream hamalog_backend {
+              server hamalog-container:8080;
+              keepalive 32;
+          }
+
+          server {
+              listen 80;
+              server_name _;
+
+              add_header X-Frame-Options "DENY" always;
+              add_header X-Content-Type-Options "nosniff" always;
+              add_header X-XSS-Protection "1; mode=block" always;
+              add_header Referrer-Policy "strict-origin-when-cross-origin" always;
+
+              limit_conn conn_limit 20;
+              client_body_timeout 10s;
+              client_header_timeout 10s;
+              send_timeout 10s;
+
+              if ($bad_bot) { return 403; }
+              if ($blocked_path) { return 403; }
+
+              location /actuator/health {
+                  proxy_pass http://hamalog_backend;
+                  proxy_set_header Host $host;
+                  proxy_set_header X-Real-IP $remote_addr;
+                  proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
+                  proxy_set_header X-Forwarded-Proto $scheme;
+                  access_log off;
+              }
+
+              location / {
+                  limit_req zone=api_limit burst=20 nodelay;
+                  proxy_pass http://hamalog_backend;
+                  proxy_http_version 1.1;
+                  proxy_set_header Connection "";
+                  proxy_set_header Host $host;
+                  proxy_set_header X-Real-IP $remote_addr;
+                  proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
+                  proxy_set_header X-Forwarded-Proto $scheme;
+                  client_max_body_size 10M;
+              }
+
+              error_page 403 @forbidden;
+              error_page 429 @ratelimit;
+
+              location @forbidden {
+                  default_type application/json;
+                  return 403 '{"error":"Forbidden","status":403}';
+              }
+
+              location @ratelimit {
+                  default_type application/json;
+                  return 429 '{"error":"Too Many Requests","status":429}';
+              }
+          }
+          '@
+          $nginxConfig | Out-File -FilePath "$nginxConfDir/default.conf" -Encoding utf8 -Force
 
           # Nginx 컨테이너 실행
           docker run -d `

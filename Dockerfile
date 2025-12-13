@@ -22,8 +22,16 @@ EXPOSE 8080
 HEALTHCHECK --interval=30s --timeout=10s --start-period=40s --retries=3 \
     CMD curl -fsS http://localhost:8080/actuator/health || exit 1
 
+# JVM options environment variable (can be overridden at runtime)
+ENV JAVA_OPTS="-XX:+UseContainerSupport \
+    -XX:MaxRAMPercentage=75.0 \
+    -XX:InitialRAMPercentage=50.0 \
+    -XX:+UseG1GC \
+    -XX:MaxGCPauseMillis=200 \
+    -Djava.security.egd=file:/dev/./urandom"
+
 ENTRYPOINT ["sh", "-c", "\
     echo 'Starting Hamalog Application...' && \
-    java -Djava.security.egd=file:/dev/./urandom \
+    java ${JAVA_OPTS} \
          -Dspring.profiles.active=${SPRING_PROFILES_ACTIVE} \
          -jar app.jar"]

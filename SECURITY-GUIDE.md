@@ -196,6 +196,55 @@ send_timeout 10s;
 - 봇 차단, Rate Limiting이 Nginx 레벨에서 처리되어 애플리케이션 리소스 절약
 - X-Real-IP, X-Forwarded-For 헤더를 통해 실제 클라이언트 IP 전달
 
+### 실제 클라이언트 IP 복원 (Docker 환경) ⚠️
+
+Docker 브릿지 네트워크에서는 모든 요청의 소스 IP가 도커 게이트웨이(예: `172.18.0.1`)로 보일 수 있습니다.
+이 경우 악성 공격자 IP를 식별하고 차단하기 어려우므로, 반드시 아래 설정을 적용해야 합니다.
+
+**1. Nginx 설정 (`nginx-docker.conf`):**
+```nginx
+# ===== Real IP 복원 설정 =====
+# Docker 브릿지 네트워크에서 실제 클라이언트 IP를 복원
+set_real_ip_from 172.16.0.0/12;   # Docker 기본 네트워크 대역
+set_real_ip_from 10.0.0.0/8;      # Docker Swarm / Kubernetes
+set_real_ip_from 192.168.0.0/16;  # Docker Compose 기본 네트워크
+set_real_ip_from 127.0.0.1;       # localhost
+real_ip_header X-Forwarded-For;
+real_ip_recursive on;
+
+# 커스텀 로그 포맷 (IP 디버깅용)
+log_format detailed '$remote_addr - $realip_remote_addr - [$time_local] '
+                    '"$request" $status $body_bytes_sent '
+                    '"$http_referer" "$http_user_agent" '
+                    '"XFF:$http_x_forwarded_for" "XRI:$http_x_real_ip"';
+```
+
+**2. Spring Boot 설정 (`application.properties`):**
+```properties
+# 이미 설정됨 - X-Forwarded-For 헤더 처리 활성화
+server.forward-headers-strategy=native
+```
+
+**3. 로그 확인:**
+Nginx 재시작 후 로그에서 실제 IP가 복원되었는지 확인:
+```bash
+# Docker Compose 환경
+docker-compose logs nginx | tail -20
+
+# 예상 로그 형식:
+# 123.45.67.89 - 172.18.0.1 - [14/Dec/2025:10:00:00 +0000] "GET / HTTP/1.1" ...
+# ↑실제IP     ↑도커게이트웨이
+```
+
+**4. 클라우드 로드밸런서 사용 시:**
+AWS ALB, Cloudflare 등 앞단에 로드밸런서가 있는 경우, 해당 서비스의 IP 대역도 추가:
+```nginx
+# Cloudflare 예시
+set_real_ip_from 103.21.244.0/22;
+set_real_ip_from 103.22.200.0/22;
+# ... (전체 Cloudflare IP 대역: https://www.cloudflare.com/ips/)
+```
+
 ```bash
 # 프로덕션 환경 (Nginx 포함)
 docker-compose up -d

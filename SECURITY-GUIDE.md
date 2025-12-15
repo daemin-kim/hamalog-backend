@@ -199,50 +199,99 @@ send_timeout 10s;
 ### 실제 클라이언트 IP 복원 (Docker 환경) ⚠️
 
 Docker 브릿지 네트워크에서는 모든 요청의 소스 IP가 도커 게이트웨이(예: `172.18.0.1`)로 보일 수 있습니다.
-이 경우 악성 공격자 IP를 식별하고 차단하기 어려우므로, 반드시 아래 설정을 적용해야 합니다.
+이 경우 악성 공격자 IP를 식별하고 차단하기 어려우므로, 반드시 아래 방법 중 하나를 적용해야 합니다.
 
-**1. Nginx 설정 (`nginx-docker.conf`):**
+#### 방법 A: `network_mode: host` 사용 (권장 ⭐)
+
+Docker 네트워크 격리(NAT)를 비활성화하여 Nginx가 직접 실제 IP를 볼 수 있게 합니다.
+
+**`docker-compose.yml` 설정:**
+```yaml
+services:
+  nginx:
+    image: nginx:alpine
+    network_mode: host  # Docker NAT 우회
+    # ports: 설정 불필요 (host 모드에서는 호스트의 80/443 포트 직접 사용)
+    volumes:
+      - ./nginx-docker.conf:/etc/nginx/conf.d/default.conf:ro
+
+  hamalog-app:
+    # Nginx(host 모드)가 접근할 수 있도록 localhost에 바인딩
+    ports:
+      - "127.0.0.1:8080:8080"
+```
+
+**`nginx-docker.conf` upstream 설정:**
 ```nginx
-# ===== Real IP 복원 설정 =====
-# Docker 브릿지 네트워크에서 실제 클라이언트 IP를 복원
-set_real_ip_from 172.16.0.0/12;   # Docker 기본 네트워크 대역
-set_real_ip_from 10.0.0.0/8;      # Docker Swarm / Kubernetes
-set_real_ip_from 192.168.0.0/16;  # Docker Compose 기본 네트워크
-set_real_ip_from 127.0.0.1;       # localhost
+upstream hamalog_backend {
+    # host 모드에서는 Docker 서비스명 대신 localhost 사용
+    server 127.0.0.1:8080;
+    keepalive 32;
+}
+```
+
+**장점:**
+- Nginx가 `$remote_addr`에서 직접 실제 공인 IP를 볼 수 있음
+- 추가 설정 없이 즉시 작동
+
+**주의:**
+- 호스트의 80, 443 포트가 다른 프로세스에서 사용 중이면 충돌 발생
+- WSL2 환경에서 효과적
+
+#### 방법 B: Cloudflare Tunnel 사용 (보안 권장)
+
+홈 서버 운영 시 포트 포워딩 대신 Cloudflare Tunnel 사용을 권장합니다.
+
+**장점:**
+- 서버 공인 IP 노출 없이 안전한 외부 접근
+- Cloudflare가 `X-Forwarded-For` 헤더에 실제 IP를 넣어줌
+- DDoS 보호 기본 제공
+
+**설정:**
+1. 도메인을 Cloudflare에 연결
+2. `cloudflared` 컨테이너 배포
+3. `nginx-docker.conf`에서 Cloudflare IP 대역 신뢰 설정:
+```nginx
+# Cloudflare IP 대역 (https://www.cloudflare.com/ips/)
+set_real_ip_from 103.21.244.0/22;
+set_real_ip_from 103.22.200.0/22;
+set_real_ip_from 103.31.4.0/22;
+# ... (전체 대역 추가)
+real_ip_header CF-Connecting-IP;
+```
+
+#### 방법 C: 기존 브릿지 네트워크 + X-Forwarded-For (외부 프록시 필요)
+
+앞단에 로드밸런서(AWS ALB, Cloudflare 등)가 있는 경우에만 작동합니다.
+
+**`nginx-docker.conf` 설정:**
+```nginx
+# Docker 내부 네트워크 신뢰
+set_real_ip_from 172.16.0.0/12;
+set_real_ip_from 10.0.0.0/8;
+set_real_ip_from 192.168.0.0/16;
 real_ip_header X-Forwarded-For;
 real_ip_recursive on;
-
-# 커스텀 로그 포맷 (IP 디버깅용)
-log_format detailed '$remote_addr - $realip_remote_addr - [$time_local] '
-                    '"$request" $status $body_bytes_sent '
-                    '"$http_referer" "$http_user_agent" '
-                    '"XFF:$http_x_forwarded_for" "XRI:$http_x_real_ip"';
 ```
 
-**2. Spring Boot 설정 (`application.properties`):**
-```properties
-# 이미 설정됨 - X-Forwarded-For 헤더 처리 활성화
-server.forward-headers-strategy=native
-```
+**⚠️ 주의:** Docker Standalone 환경에서는 앞단 프록시가 없으면 `X-Forwarded-For` 헤더가 비어있어 작동하지 않습니다.
 
-**3. 로그 확인:**
-Nginx 재시작 후 로그에서 실제 IP가 복원되었는지 확인:
+#### 로그 확인
+
+재배포 후 로그에서 실제 IP가 복원되었는지 확인:
 ```bash
 # Docker Compose 환경
 docker-compose logs nginx | tail -20
 
-# 예상 로그 형식:
-# 123.45.67.89 - 172.18.0.1 - [14/Dec/2025:10:00:00 +0000] "GET / HTTP/1.1" ...
-# ↑실제IP     ↑도커게이트웨이
+# 성공 시 예상 로그:
+# 123.45.67.89 - - [14/Dec/2025:10:00:00 +0000] "GET / HTTP/1.1" ...
+# ↑ 실제 외부 IP가 보여야 함 (172.18.0.1이 아님)
 ```
 
-**4. 클라우드 로드밸런서 사용 시:**
-AWS ALB, Cloudflare 등 앞단에 로드밸런서가 있는 경우, 해당 서비스의 IP 대역도 추가:
-```nginx
-# Cloudflare 예시
-set_real_ip_from 103.21.244.0/22;
-set_real_ip_from 103.22.200.0/22;
-# ... (전체 Cloudflare IP 대역: https://www.cloudflare.com/ips/)
+**Spring Boot 설정 (`application.properties`):**
+```properties
+# X-Forwarded-For 헤더 처리 활성화 (이미 설정됨)
+server.forward-headers-strategy=native
 ```
 
 ```bash

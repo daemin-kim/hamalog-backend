@@ -16,7 +16,7 @@ services:
       - SPRING_DATASOURCE_URL=jdbc:mysql://mysql-hamalog:3306/${DB_NAME}?useSSL=true&requireSSL=true&characterEncoding=UTF-8&serverTimezone=UTC
       - SPRING_DATASOURCE_USERNAME=${DB_USERNAME}
       - SPRING_DATASOURCE_PASSWORD=${DB_PASSWORD}
-      - SPRING_DATA_REDIS_HOST=redis
+      - SPRING_DATA_REDIS_HOST=hamalog-redis
       - SPRING_DATA_REDIS_PORT=6379
       - SPRING_DATA_REDIS_PASSWORD=${SPRING_DATA_REDIS_PASSWORD}
       - JWT_SECRET=${JWT_SECRET}
@@ -31,14 +31,15 @@ services:
     depends_on:
       mysql-hamalog:
         condition: service_healthy
-      redis:
+      hamalog-redis:
         condition: service_healthy
     volumes:
       - hamalog-uploads:/data/hamalog/images
     restart: unless-stopped
 
-  redis:
+  hamalog-redis:
     image: redis:7-alpine
+    container_name: hamalog-redis
     # 개발 환경: localhost에만 바인딩하여 외부 접근 차단
     ports:
       - "127.0.0.1:6379:6379"

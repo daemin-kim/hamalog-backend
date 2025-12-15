@@ -1,8 +1,13 @@
-name: Docker 빌드 및 배포
+name: Docker 빌드 및 배포 (레거시 - 사용 중단)
+
+# ⚠️ 이 워크플로우는 deploy-main.yml로 대체되었습니다.
+# Cloudflare Tunnel 적용 이후 deploy-main.yml을 사용하세요.
+# 필요시 수동으로만 실행 가능합니다.
 
 on:
-  push:
-    branches: [ main ]
+  # push:
+  #   branches: [ main ]  # 비활성화 - deploy-main.yml 사용
+  workflow_dispatch:  # 수동 실행만 허용
 
 env:
   REGISTRY: ghcr.io

@@ -66,9 +66,15 @@ jobs:
       DB_PASSWORD: ${{ secrets.DB_PASSWORD }}
       JWT_SECRET: ${{ secrets.JWT_SECRET }}
       JWT_EXPIRY: ${{ secrets.JWT_EXPIRY }}
+      JWT_REFRESH_TOKEN_EXPIRY: ${{ secrets.JWT_REFRESH_TOKEN_EXPIRY }}
       KAKAO_CLIENT_ID: ${{ secrets.KAKAO_CLIENT_ID }}
       KAKAO_CLIENT_SECRET: ${{ secrets.KAKAO_CLIENT_SECRET }}
+      KAKAO_REDIRECT_URI: ${{ secrets.KAKAO_REDIRECT_URI }}
       CLOUDFLARE_TUNNEL_TOKEN: ${{ secrets.CLOUDFLARE_TUNNEL_TOKEN }}
+      SPRING_DATA_REDIS_PASSWORD: ${{ secrets.SPRING_DATA_REDIS_PASSWORD }}
+      HAMALOG_ENCRYPTION_KEY: ${{ secrets.HAMALOG_ENCRYPTION_KEY }}
+      FRONTEND_URL: ${{ secrets.FRONTEND_URL }}
+      ALLOWED_ORIGINS: ${{ secrets.ALLOWED_ORIGINS }}
 
     steps:
       - name: 저장소 체크아웃
@@ -121,34 +127,48 @@ jobs:
                 - SPRING_DATASOURCE_URL=jdbc:mysql://mysql-hamalog:3306/${{ secrets.DB_NAME }}
                 - SPRING_DATASOURCE_USERNAME=${{ secrets.DB_USERNAME }}
                 - SPRING_DATASOURCE_PASSWORD=${{ secrets.DB_PASSWORD }}
-                - SPRING_DATA_REDIS_HOST=redis
+                - SPRING_DATA_REDIS_HOST=hamalog-redis
                 - SPRING_DATA_REDIS_PORT=6379
+                - SPRING_DATA_REDIS_PASSWORD=${{ secrets.SPRING_DATA_REDIS_PASSWORD }}
                 - JWT_SECRET=${{ secrets.JWT_SECRET }}
                 - JWT_EXPIRY=${{ secrets.JWT_EXPIRY }}
+                - JWT_REFRESH_TOKEN_EXPIRY=${{ secrets.JWT_REFRESH_TOKEN_EXPIRY }}
+                - HAMALOG_ENCRYPTION_KEY=${{ secrets.HAMALOG_ENCRYPTION_KEY }}
                 - KAKAO_CLIENT_ID=${{ secrets.KAKAO_CLIENT_ID }}
                 - KAKAO_CLIENT_SECRET=${{ secrets.KAKAO_CLIENT_SECRET }}
+                - KAKAO_REDIRECT_URI=${{ secrets.KAKAO_REDIRECT_URI }}
+                - FRONTEND_URL=${{ secrets.FRONTEND_URL }}
+                - ALLOWED_ORIGINS=${{ secrets.ALLOWED_ORIGINS }}
+              volumes:
+                - hamalog-uploads:/data/hamalog/images
               depends_on:
                 mysql-hamalog:
                   condition: service_healthy
-                redis:
+                hamalog-redis:
                   condition: service_healthy
               networks:
                 - hamalog-network
               restart: unless-stopped
+              healthcheck:
+                test: ["CMD", "curl", "-f", "http://localhost:8080/actuator/health"]
+                interval: 30s
+                timeout: 10s
+                start_period: 60s
+                retries: 5
 
-            redis:
+            hamalog-redis:
               image: redis:7-alpine
               container_name: hamalog-redis
               expose:
                 - "6379"
-              command: redis-server --appendonly yes
+              command: redis-server --requirepass ${{ secrets.SPRING_DATA_REDIS_PASSWORD }} --appendonly yes --maxmemory 256mb --maxmemory-policy allkeys-lru
               volumes:
                 - redis-data:/data
               networks:
                 - hamalog-network
               restart: unless-stopped
               healthcheck:
-                test: ["CMD", "redis-cli", "ping"]
+                test: ["CMD", "redis-cli", "--no-auth-warning", "-a", "${{ secrets.SPRING_DATA_REDIS_PASSWORD }}", "ping"]
                 interval: 30s
                 timeout: 10s
                 retries: 3
@@ -181,44 +201,36 @@ jobs:
           volumes:
             mysql-data:
             redis-data:
+            hamalog-uploads:
           "@ | Out-File -FilePath docker-compose.prod.yml -Encoding utf8
 
       - name: 기존 컨테이너 및 네트워크 정리
         shell: powershell
         run: |
-          $ErrorActionPreference = "Continue"
+          $ErrorActionPreference = "SilentlyContinue"
           Write-Host "=== 기존 컨테이너 강제 정리 시작 ==="
           
           # 1. 이름이 충돌하는 기존 컨테이너들 강제 삭제 (먼저 실행)
           $containers = @("cloudflare-tunnel", "nginx-hamalog", "hamalog-app", "hamalog-redis", "mysql-hamalog")
           foreach ($container in $containers) {
-            try {
-              $exists = docker ps -a --format "{{.Names}}" 2>&1 | Select-String -Pattern "^$container$"
-              if ($exists) {
-                Write-Host "기존 컨테이너 삭제: $container"
-                docker rm -f $container 2>&1 | Out-Null
-              }
-            } catch {
-              Write-Host "컨테이너 삭제 중 무시할 수 있는 오류: $container"
+            $exists = docker ps -a --format "{{.Names}}" 2>$null | Select-String -Pattern "^$container$" -Quiet
+            if ($exists) {
+              Write-Host "기존 컨테이너 삭제: $container"
+              docker rm -f $container 2>$null | Out-Null
             }
           }
           
           # 2. 기존 프로젝트의 컨테이너 정리 시도
-          try {
-            docker compose -p hamalog -f docker-compose.prod.yml down --remove-orphans 2>&1 | Out-Null
-          } catch {
-            Write-Host "docker compose down 중 무시할 수 있는 오류"
-          }
+          docker compose -p hamalog -f docker-compose.prod.yml down --remove-orphans 2>$null | Out-Null
           
           # 3. 기존 네트워크 정리 (에러 무시)
-          try {
-            docker network rm hamalog-network 2>&1 | Out-Null
-          } catch { }
-          try {
-            docker network rm hamalog_hamalog-network 2>&1 | Out-Null
-          } catch { }
+          docker network rm hamalog-network 2>$null | Out-Null
+          docker network rm hamalog_hamalog-network 2>$null | Out-Null
           
           Write-Host "=== 정리 완료 ==="
+          
+          # 명시적으로 성공 exit code 반환
+          exit 0
 
       - name: 최신 이미지 Pull
         shell: powershell
@@ -238,7 +250,8 @@ jobs:
           
           $attempts = 20
           for ($i = 1; $i -le $attempts; $i++) {
-            $result = docker exec nginx-hamalog wget -q --spider http://localhost/actuator/health 2>$null
+            # hamalog-app 컨테이너에서 직접 헬스체크
+            $result = docker exec hamalog-app curl -sf http://localhost:8080/actuator/health 2>$null
             if ($LASTEXITCODE -eq 0) {
               Write-Host "✅ 애플리케이션 헬스체크 성공!"
               docker ps --format "table {{.Names}}\t{{.Status}}\t{{.Ports}}"

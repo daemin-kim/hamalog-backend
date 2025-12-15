@@ -1,4 +1,4 @@
-name: 메인 브랜치 푸시 시 프로덕션 배포
+name: Deploy to Production on Main Push
 
 on:
   push:
@@ -11,40 +11,40 @@ env:
 
 jobs:
   build:
-    name: Docker 이미지 빌드 및 푸시
+    name: Build and Push Docker Image
     runs-on: ubuntu-latest
     permissions:
       contents: read
       packages: write
 
     steps:
-      - name: 저장소 체크아웃
+      - name: Checkout repository
         uses: actions/checkout@v4
 
-      - name: Java 21 설정
+      - name: Setup Java 21
         uses: actions/setup-java@v4
         with:
           java-version: '21'
           distribution: 'temurin'
           cache: gradle
 
-      - name: gradlew 실행 권한 부여
+      - name: Grant gradlew execution permission
         run: chmod +x ./gradlew
 
-      - name: 애플리케이션 빌드
+      - name: Build application
         run: ./gradlew clean build -x test
 
-      - name: 컨테이너 레지스트리 로그인
+      - name: Login to container registry
         uses: docker/login-action@v3
         with:
           registry: ${{ env.REGISTRY }}
           username: ${{ github.actor }}
           password: ${{ secrets.GITHUB_TOKEN }}
 
-      - name: Docker Buildx 설정
+      - name: Setup Docker Buildx
         uses: docker/setup-buildx-action@v3
 
-      - name: Docker 이미지 빌드 및 푸시
+      - name: Build and push Docker image
         uses: docker/build-push-action@v5
         with:
           context: .
@@ -54,7 +54,7 @@ jobs:
           cache-to: type=gha,mode=max
 
   deploy:
-    name: 온프레미스 서버 배포
+    name: Deploy to On-Premise Server
     runs-on: self-hosted
     needs: build
     environment:
@@ -77,17 +77,17 @@ jobs:
       ALLOWED_ORIGINS: ${{ secrets.ALLOWED_ORIGINS }}
 
     steps:
-      - name: 저장소 체크아웃
+      - name: Checkout repository
         uses: actions/checkout@v4
 
-      - name: 컨테이너 레지스트리 로그인
+      - name: Login to container registry
         uses: docker/login-action@v3
         with:
           registry: ${{ env.REGISTRY }}
           username: ${{ github.actor }}
           password: ${{ secrets.GITHUB_TOKEN }}
 
-      - name: docker-compose.prod.yml 생성
+      - name: Generate docker-compose.prod.yml
         shell: powershell
         run: |
           @"
@@ -204,82 +204,91 @@ jobs:
             hamalog-uploads:
           "@ | Out-File -FilePath docker-compose.prod.yml -Encoding utf8
 
-      - name: 기존 컨테이너 및 네트워크 정리
+      - name: Cleanup existing containers
         shell: powershell
         run: |
           $ErrorActionPreference = "SilentlyContinue"
-          Write-Host "=== 기존 컨테이너 강제 정리 시작 ==="
+          Write-Host "=== Cleaning up existing containers ==="
           
-          # 1. 이름이 충돌하는 기존 컨테이너들 강제 삭제 (먼저 실행)
-          $containers = @("cloudflare-tunnel", "nginx-hamalog", "hamalog-app", "hamalog-redis", "mysql-hamalog")
+          # 1. Force remove containers with conflicting names (including legacy names)
+          $containers = @(
+            "cloudflare-tunnel", 
+            "nginx-hamalog", 
+            "hamalog-app", 
+            "hamalog-redis", 
+            "mysql-hamalog",
+            # Legacy container names from old deployment
+            "hamalog-container",
+            "redis-hamalog"
+          )
           foreach ($container in $containers) {
             $exists = docker ps -a --format "{{.Names}}" 2>$null | Select-String -Pattern "^$container$" -Quiet
             if ($exists) {
-              Write-Host "기존 컨테이너 삭제: $container"
+              Write-Host "Removing container: $container"
               docker rm -f $container 2>$null | Out-Null
             }
           }
           
-          # 2. 기존 프로젝트의 컨테이너 정리 시도
+          # 2. Try to clean up old project containers
           docker compose -p hamalog -f docker-compose.prod.yml down --remove-orphans 2>$null | Out-Null
           
-          # 3. 기존 네트워크 정리 (에러 무시)
+          # 3. Clean up old networks (ignore errors)
           docker network rm hamalog-network 2>$null | Out-Null
           docker network rm hamalog_hamalog-network 2>$null | Out-Null
           
-          Write-Host "=== 정리 완료 ==="
+          Write-Host "=== Cleanup complete ==="
           
-          # 명시적으로 성공 exit code 반환
+          # Explicitly return success
           exit 0
 
-      - name: 최신 이미지 Pull
+      - name: Pull latest image
         shell: powershell
         run: |
           docker pull ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}:latest
 
-      - name: 서비스 시작
+      - name: Start services
         shell: powershell
         run: |
           docker compose -p hamalog -f docker-compose.prod.yml up -d
 
-      - name: 배포 확인
+      - name: Verify deployment
         shell: powershell
         run: |
-          Write-Host "컨테이너 상태 확인"
+          Write-Host "Checking container status"
           docker compose -p hamalog -f docker-compose.prod.yml ps
           
           $attempts = 20
           for ($i = 1; $i -le $attempts; $i++) {
-            # hamalog-app 컨테이너에서 직접 헬스체크
+            # Health check directly from hamalog-app container
             $result = docker exec hamalog-app curl -sf http://localhost:8080/actuator/health 2>$null
             if ($LASTEXITCODE -eq 0) {
-              Write-Host "✅ 애플리케이션 헬스체크 성공!"
+              Write-Host "OK: Application health check passed!"
               docker ps --format "table {{.Names}}\t{{.Status}}\t{{.Ports}}"
               exit 0
             }
-            Write-Host "재시도 $i/$attempts..."
+            Write-Host "Retry $i/$attempts..."
             Start-Sleep -Seconds 10
           }
           
-          Write-Host "❌ 애플리케이션 헬스체크 실패"
+          Write-Host "FAILED: Application health check failed"
           docker compose -p hamalog -f docker-compose.prod.yml logs --tail=100
           exit 1
 
-      - name: 정리 작업
+      - name: Cleanup
         if: always()
         shell: powershell
         run: |
           Remove-Item -Path docker-compose.prod.yml -Force -ErrorAction SilentlyContinue
           docker image prune -f 2>$null
 
-      - name: 배포 알림
+      - name: Deployment notification
         if: always()
         shell: powershell
         run: |
           if ("${{ job.status }}" -eq "success") {
-            Write-Host "🎉 배포가 성공적으로 완료되었습니다!"
-            Write-Host "🌐 애플리케이션 URL: https://api.hamalog.shop"
-            Write-Host "🔒 Cloudflare Tunnel을 통해 안전하게 서비스됩니다."
+            Write-Host "SUCCESS: Deployment completed successfully!"
+            Write-Host "URL: https://api.hamalog.shop"
+            Write-Host "Secured via Cloudflare Tunnel"
           } else {
-            Write-Host "❌ 배포에 실패했습니다!"
+            Write-Host "FAILED: Deployment failed!"
           }

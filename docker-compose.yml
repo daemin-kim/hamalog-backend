@@ -12,7 +12,8 @@ services:
       # GitHub Secrets에서 주입됨
       - TUNNEL_TOKEN=${CLOUDFLARE_TUNNEL_TOKEN}
     depends_on:
-      - nginx
+      nginx:
+        condition: service_started
     networks:
       - default
 

@@ -32,13 +32,18 @@ public class OAuth2AuthenticationSuccessHandler implements AuthenticationSuccess
     private final MemberRepository memberRepository;
     private final Set<String> allowedRedirectHosts;
 
-    // 기본 허용 호스트 (개발 환경)
-    private static final Set<String> DEFAULT_ALLOWED_HOSTS = Set.of("localhost", "127.0.0.1");
+    // Default allowed hosts (development + production)
+    private static final Set<String> DEFAULT_ALLOWED_HOSTS = Set.of(
+        "localhost",
+        "127.0.0.1",
+        "api.hamalog.shop",
+        "hamalog.shop"
+    );
 
     public OAuth2AuthenticationSuccessHandler(
             JwtTokenProvider jwtTokenProvider,
             MemberRepository memberRepository,
-            @Value("${hamalog.oauth2.redirect-uri:http://localhost:3000/oauth/kakao}") String redirectBase,
+            @Value("${hamalog.oauth2.redirect-uri:https://api.hamalog.shop/oauth/kakao}") String redirectBase,
             @Value("${hamalog.cors.allowed-origins:}") String allowedOrigins
     ) {
         this.jwtTokenProvider = jwtTokenProvider;
@@ -48,12 +53,20 @@ public class OAuth2AuthenticationSuccessHandler implements AuthenticationSuccess
         this.allowedRedirectHosts = extractHostsFromOrigins(allowedOrigins);
         log.info("[OAUTH2] Allowed redirect hosts: {}", allowedRedirectHosts);
 
+        // Handle empty or relative path redirect URI by using default
+        String effectiveRedirectBase = redirectBase;
+        if (redirectBase == null || redirectBase.isBlank() || redirectBase.startsWith("/")) {
+            effectiveRedirectBase = "https://api.hamalog.shop/oauth/kakao";
+            log.warn("[OAUTH2] Invalid redirect URI '{}', using default: {}", redirectBase, effectiveRedirectBase);
+        }
+
         // Validate redirect URI on startup
-        if (!isValidRedirectUri(redirectBase)) {
-            throw new IllegalStateException("Invalid OAuth2 redirect URI configured: " + redirectBase +
+        if (!isValidRedirectUri(effectiveRedirectBase)) {
+            throw new IllegalStateException("Invalid OAuth2 redirect URI configured: " + effectiveRedirectBase +
                 ". Allowed hosts: " + allowedRedirectHosts);
         }
-        this.redirectBase = redirectBase;
+        this.redirectBase = effectiveRedirectBase;
+        log.info("[OAUTH2] OAuth2 redirect URI configured: {}", this.redirectBase);
     }
     
     /**

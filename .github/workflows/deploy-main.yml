@@ -73,8 +73,6 @@ jobs:
       CLOUDFLARE_TUNNEL_TOKEN: ${{ secrets.CLOUDFLARE_TUNNEL_TOKEN }}
       SPRING_DATA_REDIS_PASSWORD: ${{ secrets.SPRING_DATA_REDIS_PASSWORD }}
       HAMALOG_ENCRYPTION_KEY: ${{ secrets.HAMALOG_ENCRYPTION_KEY }}
-      FRONTEND_URL: ${{ secrets.FRONTEND_URL }}
-      ALLOWED_ORIGINS: ${{ secrets.ALLOWED_ORIGINS }}
 
     steps:
       - name: Checkout repository
@@ -137,8 +135,8 @@ jobs:
                 - KAKAO_CLIENT_ID=${{ secrets.KAKAO_CLIENT_ID }}
                 - KAKAO_CLIENT_SECRET=${{ secrets.KAKAO_CLIENT_SECRET }}
                 - KAKAO_REDIRECT_URI=${{ secrets.KAKAO_REDIRECT_URI }}
-                - FRONTEND_URL=${{ secrets.FRONTEND_URL }}
-                - ALLOWED_ORIGINS=${{ secrets.ALLOWED_ORIGINS }}
+                - FRONTEND_URL=https://api.hamalog.shop
+                - ALLOWED_ORIGINS=https://api.hamalog.shop,http://localhost:3000
               volumes:
                 - hamalog-uploads:/data/hamalog/images
               depends_on:
@@ -210,7 +208,8 @@ jobs:
           $ErrorActionPreference = "SilentlyContinue"
           Write-Host "=== Cleaning up existing containers ==="
           
-          # 1. Force remove containers with conflicting names (including legacy names)
+          # 1. Stop and remove ALL containers from previous hamalog deployments
+          # This includes both current naming and legacy naming patterns
           $containers = @(
             "cloudflare-tunnel", 
             "nginx-hamalog", 
@@ -219,7 +218,10 @@ jobs:
             "mysql-hamalog",
             # Legacy container names from old deployment
             "hamalog-container",
-            "redis-hamalog"
+            "redis-hamalog",
+            "redis",
+            "nginx",
+            "tunnel"
           )
           foreach ($container in $containers) {
             $exists = docker ps -a --format "{{.Names}}" 2>$null | Select-String -Pattern "^$container$" -Quiet
@@ -229,10 +231,18 @@ jobs:
             }
           }
           
-          # 2. Try to clean up old project containers
+          # 2. Also remove any containers with hamalog prefix (catch-all)
+          docker ps -a --format "{{.Names}}" 2>$null | ForEach-Object {
+            if ($_ -match "hamalog" -or $_ -match "Hamalog") {
+              Write-Host "Removing hamalog-related container: $_"
+              docker rm -f $_ 2>$null | Out-Null
+            }
+          }
+          
+          # 3. Try to clean up old project containers via compose
           docker compose -p hamalog -f docker-compose.prod.yml down --remove-orphans 2>$null | Out-Null
           
-          # 3. Clean up old networks (ignore errors)
+          # 4. Clean up old networks (ignore errors)
           docker network rm hamalog-network 2>$null | Out-Null
           docker network rm hamalog_hamalog-network 2>$null | Out-Null
           

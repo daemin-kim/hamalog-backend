@@ -13,7 +13,56 @@
 - SPA 클라이언트는 `/auth/csrf-token` 으로 발급받은 CSRF 토큰을 `X-CSRF-TOKEN` 헤더에 포함해 안전하지 않은 메서드(POST, PUT, DELETE)에 함께 전송해야 합니다.
 - `/auth/csrf-token` 및 `/auth/csrf-status` 엔드포인트 역시 JWT 인증이 선행되어야 하며, 토큰 및 헤더 유효성을 모두 검사합니다.
 
-**Base URL**: `http://localhost:8080`
+### Base URL
+
+| 환경 | URL | 비고 |
+|------|-----|------|
+| **Production** | `https://api.hamalog.shop` | Cloudflare Tunnel을 통한 보안 연결 |
+| **Local Development** | `http://localhost:8080` | Docker Compose 로컬 환경 |
+
+### 인프라 구성 (Infrastructure)
+
+#### Cloudflare Tunnel 설정
+
+프로덕션 환경은 Cloudflare Tunnel을 통해 안전하게 서비스됩니다.
+
+| 구성 요소 | 설명 |
+|-----------|------|
+| **Tunnel 연결** | `cloudflared` 컨테이너가 Cloudflare 네트워크에 outbound 연결 |
+| **외부 포트** | 모든 포트 비공개 (80, 443, 8080 등 외부 노출 없음) |
+| **SSL/TLS** | Cloudflare에서 종단 - Nginx까지 HTTPS 보장 |
+| **DDoS 방어** | Cloudflare 엣지에서 자동 방어 |
+| **실제 IP 복원** | `CF-Connecting-IP` 헤더를 통해 클라이언트 IP 식별 |
+
+#### GitHub Secrets 설정 (Required)
+
+배포를 위해 다음 시크릿이 GitHub 저장소에 설정되어야 합니다:
+
+| 시크릿 이름 | 설명 | 예시 |
+|-------------|------|------|
+| `MYSQL_ROOT_PASSWORD` | MySQL root 비밀번호 | `<강력한_비밀번호>` |
+| `DB_NAME` | 데이터베이스 이름 | `hamalog` |
+| `DB_USERNAME` | DB 사용자 이름 | `hamalog_user` |
+| `DB_PASSWORD` | DB 사용자 비밀번호 | `<강력한_비밀번호>` |
+| `JWT_SECRET` | JWT 서명 키 (Base64, 32바이트 이상) | `openssl rand -base64 32` |
+| `JWT_EXPIRY` | Access Token 만료 시간 (ms) | `900000` (15분) |
+| `JWT_REFRESH_TOKEN_EXPIRY` | Refresh Token 만료 시간 (ms) | `604800000` (7일) |
+| `HAMALOG_ENCRYPTION_KEY` | 데이터 암호화 키 (Base64) | `openssl rand -base64 32` |
+| `KAKAO_CLIENT_ID` | 카카오 REST API 키 | 카카오 개발자 콘솔에서 발급 |
+| `KAKAO_CLIENT_SECRET` | 카카오 Client Secret | 카카오 개발자 콘솔에서 발급 |
+| `KAKAO_REDIRECT_URI` | OAuth2 콜백 URI | `https://api.hamalog.shop/oauth2/auth/kakao/callback` |
+| `SPRING_DATA_REDIS_PASSWORD` | Redis 비밀번호 | `<강력한_비밀번호>` |
+| `CLOUDFLARE_TUNNEL_TOKEN` | Cloudflare Tunnel 토큰 | Cloudflare Zero Trust에서 발급 |
+
+#### Docker 컨테이너 구성
+
+| 컨테이너 | 이미지 | 역할 | 네트워크 포트 |
+|----------|--------|------|---------------|
+| `cloudflare-tunnel` | `cloudflare/cloudflared:latest` | Cloudflare 터널 연결 | 내부 전용 |
+| `nginx-hamalog` | `nginx:alpine` | 리버스 프록시, 봇 차단, Rate Limiting | 내부 80 |
+| `hamalog-app` | `ghcr.io/daemin-kim/hamalog-backend:latest` | Spring Boot 애플리케이션 | 내부 8080 |
+| `hamalog-redis` | `redis:7-alpine` | 세션/캐시 저장소 | 내부 6379 |
+| `mysql-hamalog` | `mysql:8.0` | 데이터베이스 | 내부 3306 |
 
 ### 에러 응답 규칙
 
@@ -115,7 +164,14 @@ Bean Validation 실패 시 `violations` 필드에 각 필드별 에러 상세 �
 | CSRF 토큰 발급 | `/auth/csrf-token` | `GET` | Authorization 헤더 | CSRF 토큰 응답 데이터 | **JWT 인증 필수**. Redis 기반 토큰 저장소에 60분 TTL로 저장됩니다. |
 | CSRF 토큰 상태 확인 | `/auth/csrf-status` | `GET` | Authorization 헤더, 선택적으로 `X-CSRF-TOKEN` | CSRF 상태 응답 데이터 | **JWT 인증 필수**. Redis에 저장된 토큰 존재 여부/TTL 확인. |
 | 카카오 로그인 시작 | `/oauth2/auth/kakao` | `GET` | 없음 | 302 리다이렉션 | state 파라미터 생성·저장 후 카카오 인증 서버로 리다이렉션 |
-| 카카오 로그인 콜백 | `/oauth2/auth/kakao/callback` | `GET` | `?code={authorization_code}&state={state}` | RN 앱 스킴으로 302 리다이렉션 | state 검증(필수), Authorization code로 JWT/Refresh Token 발급 후 `hamalog-rn://auth?token=...` 리다이렉션 |
+| 카카오 로그인 콜백 | `/oauth2/auth/kakao/callback` | `GET` | `?code={authorization_code}&state={state}` | 302 리다이렉션 | state 검증(필수), JWT 발급 후 `https://api.hamalog.shop/oauth/kakao` 또는 설정된 리다이렉트 URI로 이동 |
+
+> **📌 카카오 OAuth2 설정 참고사항**
+> 
+> 프로덕션 환경에서 카카오 개발자 콘솔에 다음 설정이 필요합니다:
+> - **Redirect URI**: `https://api.hamalog.shop/oauth2/auth/kakao/callback`
+> - OAuth 로그인 성공 후 사용자는 `FRONTEND_URL/oauth/kakao`로 리다이렉션됩니다.
+> - 기본값: `https://api.hamalog.shop/oauth/kakao`
 
 #### 인증/CSRF API 데이터 구조
 

@@ -1,0 +1,251 @@
+name: 메인 브랜치 푸시 시 프로덕션 배포
+
+on:
+  push:
+    branches: [ main ]
+  workflow_dispatch:
+
+env:
+  REGISTRY: ghcr.io
+  IMAGE_NAME: ${{ github.repository }}
+
+jobs:
+  build:
+    name: Docker 이미지 빌드 및 푸시
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      packages: write
+
+    steps:
+      - name: 저장소 체크아웃
+        uses: actions/checkout@v4
+
+      - name: Java 21 설정
+        uses: actions/setup-java@v4
+        with:
+          java-version: '21'
+          distribution: 'temurin'
+          cache: gradle
+
+      - name: gradlew 실행 권한 부여
+        run: chmod +x ./gradlew
+
+      - name: 애플리케이션 빌드
+        run: ./gradlew clean build -x test
+
+      - name: 컨테이너 레지스트리 로그인
+        uses: docker/login-action@v3
+        with:
+          registry: ${{ env.REGISTRY }}
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Docker Buildx 설정
+        uses: docker/setup-buildx-action@v3
+
+      - name: Docker 이미지 빌드 및 푸시
+        uses: docker/build-push-action@v5
+        with:
+          context: .
+          push: true
+          tags: ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}:latest
+          cache-from: type=gha
+          cache-to: type=gha,mode=max
+
+  deploy:
+    name: 온프레미스 서버 배포
+    runs-on: self-hosted
+    needs: build
+    environment:
+      name: production
+    env:
+      # GitHub Secrets를 환경변수로 매핑
+      MYSQL_ROOT_PASSWORD: ${{ secrets.MYSQL_ROOT_PASSWORD }}
+      DB_NAME: ${{ secrets.DB_NAME }}
+      DB_USERNAME: ${{ secrets.DB_USERNAME }}
+      DB_PASSWORD: ${{ secrets.DB_PASSWORD }}
+      JWT_SECRET: ${{ secrets.JWT_SECRET }}
+      JWT_EXPIRY: ${{ secrets.JWT_EXPIRY }}
+      KAKAO_CLIENT_ID: ${{ secrets.KAKAO_CLIENT_ID }}
+      KAKAO_CLIENT_SECRET: ${{ secrets.KAKAO_CLIENT_SECRET }}
+      # [중요] 터널 토큰 추가
+      CLOUDFLARE_TUNNEL_TOKEN: ${{ secrets.CLOUDFLARE_TUNNEL_TOKEN }}
+
+    steps:
+      - name: 저장소 체크아웃
+        uses: actions/checkout@v4
+
+      - name: 컨테이너 레지스트리 로그인
+        uses: docker/login-action@v3
+        with:
+          registry: ${{ env.REGISTRY }}
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: docker-compose.prod.yml 생성
+        shell: bash
+        run: |
+          # [중요] EOF에 따옴표를 제거하여 변수가 실제 값으로 바뀌도록 함
+          cat <<EOF > docker-compose.prod.yml
+          services:
+            # 1. Cloudflare Tunnel (보안 터널)
+            tunnel:
+              image: cloudflare/cloudflared:latest
+              container_name: cloudflare-tunnel
+              restart: unless-stopped
+              command: tunnel run
+              environment:
+                - TUNNEL_TOKEN=${CLOUDFLARE_TUNNEL_TOKEN}
+              depends_on:
+                - nginx
+              networks:
+                - hamalog-network
+
+            # 2. Nginx (포트 닫기 - 보안)
+            nginx:
+              image: nginx:alpine
+              container_name: nginx-hamalog
+              expose:
+                - "80"
+              volumes:
+                - ./nginx-docker.conf:/etc/nginx/conf.d/default.conf:ro
+              depends_on:
+                - hamalog-app
+              networks:
+                - hamalog-network
+              restart: unless-stopped
+
+            hamalog-app:
+              image: ${REGISTRY}/${IMAGE_NAME}:latest
+              container_name: hamalog-app
+              expose:
+                - "8080"
+              environment:
+                - SPRING_PROFILES_ACTIVE=prod
+                - SPRING_DATASOURCE_URL=jdbc:mysql://mysql-hamalog:3306/${DB_NAME}
+                - SPRING_DATASOURCE_USERNAME=${DB_USERNAME}
+                - SPRING_DATASOURCE_PASSWORD=${DB_PASSWORD}
+                - SPRING_DATA_REDIS_HOST=redis
+                - SPRING_DATA_REDIS_PORT=6379
+                - JWT_SECRET=${JWT_SECRET}
+                - JWT_EXPIRY=${JWT_EXPIRY}
+                - KAKAO_CLIENT_ID=${KAKAO_CLIENT_ID}
+                - KAKAO_CLIENT_SECRET=${KAKAO_CLIENT_SECRET}
+              depends_on:
+                mysql-hamalog:
+                  condition: service_healthy
+                redis:
+                  condition: service_healthy
+              networks:
+                - hamalog-network
+              restart: unless-stopped
+
+            redis:
+              image: redis:7-alpine
+              container_name: hamalog-redis
+              expose:
+                - "6379"
+              command: redis-server --appendonly yes
+              volumes:
+                - redis-data:/data
+              networks:
+                - hamalog-network
+              restart: unless-stopped
+              healthcheck:
+                test: ["CMD", "redis-cli", "ping"]
+                interval: 30s
+                timeout: 10s
+                retries: 3
+
+            mysql-hamalog:
+              image: mysql:8.0
+              container_name: mysql-hamalog
+              expose:
+                - "3306"
+              environment:
+                - MYSQL_ROOT_PASSWORD=${MYSQL_ROOT_PASSWORD}
+                - MYSQL_DATABASE=${DB_NAME}
+                - MYSQL_USER=${DB_USERNAME}
+                - MYSQL_PASSWORD=${DB_PASSWORD}
+              volumes:
+                - mysql-data:/var/lib/mysql
+              networks:
+                - hamalog-network
+              restart: unless-stopped
+              healthcheck:
+                test: ["CMD", "mysqladmin", "ping", "-h", "localhost", "-u", "root", "-p${MYSQL_ROOT_PASSWORD}"]
+                interval: 30s
+                timeout: 10s
+                retries: 3
+
+          networks:
+            hamalog-network:
+              driver: bridge
+
+          volumes:
+            mysql-data:
+            redis-data:
+          EOF
+
+      - name: 네트워크 생성 확인
+        shell: bash
+        run: |
+          docker network inspect hamalog-network >/dev/null 2>&1 || docker network create hamalog-network
+
+      - name: 기존 컨테이너 정리
+        shell: bash
+        run: |
+          docker compose -p hamalog -f docker-compose.prod.yml down --remove-orphans || true
+
+      - name: 최신 이미지 Pull
+        shell: bash
+        run: |
+          docker pull ${REGISTRY}/${IMAGE_NAME}:latest
+
+      - name: 서비스 시작
+        shell: bash
+        run: |
+          docker compose -p hamalog -f docker-compose.prod.yml up -d
+
+      - name: 배포 확인
+        shell: bash
+        run: |
+          echo "컨테이너 상태 확인"
+          docker compose -p hamalog -f docker-compose.prod.yml ps
+          
+          attempts=20
+          for i in $(seq 1 $attempts); do
+            # Nginx 컨테이너 내부에서 헬스체크
+            if docker exec nginx-hamalog wget -q --spider http://localhost/actuator/health 2>/dev/null; then
+              echo "✅ 애플리케이션 헬스체크 성공!"
+              docker ps --format "table {{.Names}}\t{{.Status}}\t{{.Ports}}"
+              exit 0
+            fi
+            echo "재시도 ${i}/${attempts}..."
+            sleep 10
+          done
+          
+          echo "❌ 애플리케이션 헬스체크 실패"
+          docker compose -p hamalog -f docker-compose.prod.yml logs --tail=100
+          exit 1
+
+      - name: 정리 작업
+        if: always()
+        shell: bash
+        run: |
+          rm -f docker-compose.prod.yml
+          docker image prune -f || true
+
+      - name: 배포 알림
+        if: always()
+        shell: bash
+        run: |
+          if [ "${{ job.status }}" = "success" ]; then
+            echo "🎉 배포가 성공적으로 완료되었습니다!"
+            echo "🌐 애플리케이션 URL: https://api.hamalog.shop"
+            echo "🔒 Cloudflare Tunnel을 통해 안전하게 서비스됩니다."
+          else
+            echo "❌ 배포에 실패했습니다!"
+          fi
+

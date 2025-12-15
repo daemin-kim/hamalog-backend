@@ -82,7 +82,7 @@ jobs:
           password: ${{ secrets.GITHUB_TOKEN }}
 
       - name: docker-compose.prod.yml 생성
-        shell: pwsh
+        shell: powershell
         run: |
           @"
           services:
@@ -184,7 +184,7 @@ jobs:
           "@ | Out-File -FilePath docker-compose.prod.yml -Encoding utf8
 
       - name: 네트워크 생성 확인
-        shell: pwsh
+        shell: powershell
         run: |
           $networkExists = docker network ls --format "{{.Name}}" | Select-String -Pattern "^hamalog-network$"
           if (-not $networkExists) {
@@ -192,23 +192,23 @@ jobs:
           }
 
       - name: 기존 컨테이너 정리
-        shell: pwsh
+        shell: powershell
         run: |
           docker compose -p hamalog -f docker-compose.prod.yml down --remove-orphans 2>$null
           exit 0
 
       - name: 최신 이미지 Pull
-        shell: pwsh
+        shell: powershell
         run: |
           docker pull ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}:latest
 
       - name: 서비스 시작
-        shell: pwsh
+        shell: powershell
         run: |
           docker compose -p hamalog -f docker-compose.prod.yml up -d
 
       - name: 배포 확인
-        shell: pwsh
+        shell: powershell
         run: |
           Write-Host "컨테이너 상태 확인"
           docker compose -p hamalog -f docker-compose.prod.yml ps
@@ -231,14 +231,14 @@ jobs:
 
       - name: 정리 작업
         if: always()
-        shell: pwsh
+        shell: powershell
         run: |
           Remove-Item -Path docker-compose.prod.yml -Force -ErrorAction SilentlyContinue
           docker image prune -f 2>$null
 
       - name: 배포 알림
         if: always()
-        shell: pwsh
+        shell: powershell
         run: |
           if ("${{ job.status }}" -eq "success") {
             Write-Host "🎉 배포가 성공적으로 완료되었습니다!"

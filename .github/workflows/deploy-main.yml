@@ -183,35 +183,42 @@ jobs:
             redis-data:
           "@ | Out-File -FilePath docker-compose.prod.yml -Encoding utf8
 
-      - name: 네트워크 생성 확인
+      - name: 기존 컨테이너 및 네트워크 정리
         shell: powershell
         run: |
-          $networkExists = docker network ls --format "{{.Name}}" | Select-String -Pattern "^hamalog-network$"
-          if (-not $networkExists) {
-            docker network create hamalog-network
-          }
-
-      - name: 기존 컨테이너 정리
-        shell: powershell
-        run: |
-          # 기존 프로젝트의 컨테이너 정리 시도
-          docker compose -p hamalog -f docker-compose.prod.yml down --remove-orphans 2>$null
+          $ErrorActionPreference = "Continue"
+          Write-Host "=== 기존 컨테이너 강제 정리 시작 ==="
           
-          # 이름이 충돌하는 기존 컨테이너들 강제 삭제
+          # 1. 이름이 충돌하는 기존 컨테이너들 강제 삭제 (먼저 실행)
           $containers = @("cloudflare-tunnel", "nginx-hamalog", "hamalog-app", "hamalog-redis", "mysql-hamalog")
           foreach ($container in $containers) {
-            $exists = docker ps -a --format "{{.Names}}" | Select-String -Pattern "^$container$"
-            if ($exists) {
-              Write-Host "기존 컨테이너 삭제: $container"
-              docker rm -f $container 2>$null
+            try {
+              $exists = docker ps -a --format "{{.Names}}" 2>&1 | Select-String -Pattern "^$container$"
+              if ($exists) {
+                Write-Host "기존 컨테이너 삭제: $container"
+                docker rm -f $container 2>&1 | Out-Null
+              }
+            } catch {
+              Write-Host "컨테이너 삭제 중 무시할 수 있는 오류: $container"
             }
           }
           
-          # 기존 네트워크 정리 (사용 중이 아닌 경우)
-          docker network rm hamalog-network 2>$null
-          docker network rm hamalog_hamalog-network 2>$null
+          # 2. 기존 프로젝트의 컨테이너 정리 시도
+          try {
+            docker compose -p hamalog -f docker-compose.prod.yml down --remove-orphans 2>&1 | Out-Null
+          } catch {
+            Write-Host "docker compose down 중 무시할 수 있는 오류"
+          }
           
-          exit 0
+          # 3. 기존 네트워크 정리 (에러 무시)
+          try {
+            docker network rm hamalog-network 2>&1 | Out-Null
+          } catch { }
+          try {
+            docker network rm hamalog_hamalog-network 2>&1 | Out-Null
+          } catch { }
+          
+          Write-Host "=== 정리 완료 ==="
 
       - name: 최신 이미지 Pull
         shell: powershell

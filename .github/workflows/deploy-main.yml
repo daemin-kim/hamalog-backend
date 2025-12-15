@@ -85,6 +85,7 @@ jobs:
       JWT_EXPIRY: ${{ secrets.JWT_EXPIRY }}
       KAKAO_CLIENT_ID: ${{ secrets.KAKAO_CLIENT_ID }}
       KAKAO_CLIENT_SECRET: ${{ secrets.KAKAO_CLIENT_SECRET }}
+      CLOUDFLARE_TUNNEL_TOKEN: ${{ secrets.CLOUDFLARE_TUNNEL_TOKEN }}
 
     steps:
       - name: 저장소 체크아웃
@@ -94,7 +95,7 @@ jobs:
         run: |
           set -euo pipefail
           missing=0
-          for var in MYSQL_ROOT_PASSWORD DB_NAME DB_USERNAME DB_PASSWORD JWT_SECRET JWT_EXPIRY KAKAO_CLIENT_ID KAKAO_CLIENT_SECRET; do
+          for var in MYSQL_ROOT_PASSWORD DB_NAME DB_USERNAME DB_PASSWORD JWT_SECRET JWT_EXPIRY KAKAO_CLIENT_ID KAKAO_CLIENT_SECRET CLOUDFLARE_TUNNEL_TOKEN; do
             if [ -z "${!var:-}" ]; then
               echo "::error::필수 시크릿 ${var} 값이 설정되지 않았습니다."
               missing=1
@@ -108,21 +109,37 @@ jobs:
         run: |
           cat <<'EOF' > docker-compose.prod.yml
           services:
+            # ===== Cloudflare Tunnel (보안 터널 연결) =====
+            # 외부 트래픽은 Cloudflare를 통해서만 들어옴
+            # 집 IP 노출 없이 안전하게 서비스 제공 (DDoS 방어)
+            tunnel:
+              image: cloudflare/cloudflared:latest
+              container_name: cloudflare-tunnel
+              restart: unless-stopped
+              command: tunnel run
+              environment:
+                - TUNNEL_TOKEN=${CLOUDFLARE_TUNNEL_TOKEN}
+              depends_on:
+                - nginx
+              networks:
+                - default
+
             nginx:
               image: nginx:alpine
               container_name: nginx-hamalog
-              ports:
-                - "80:80"
-                - "8080:80"
+              # 보안: 외부 포트 노출 제거 - Cloudflare Tunnel을 통해서만 접근
+              expose:
+                - "80"
               volumes:
                 - ./nginx-docker.conf:/etc/nginx/conf.d/default.conf:ro
               depends_on:
                 - hamalog-app
               restart: unless-stopped
               healthcheck:
-                test: ["CMD", "nginx", "-t"]
+                test: ["CMD", "wget", "--quiet", "--tries=1", "--spider", "http://localhost/actuator/health"]
                 interval: 30s
                 timeout: 10s
+                start_period: 60s
                 retries: 3
 
             hamalog-app:
@@ -283,14 +300,14 @@ jobs:
           docker compose -p hamalog -f docker-compose.prod.yml ps
           attempts=15
           for i in $(seq 1 $attempts); do
-            # Nginx를 통해 헬스체크 (포트 80)
-            if curl -f -s -m 10 http://localhost:80/actuator/health >/dev/null 2>&1; then
-              echo "애플리케이션 헬스체크 성공 (via Nginx)"
+            # Docker 네트워크 내부에서 헬스체크 (Nginx 컨테이너를 통해)
+            if docker exec nginx-hamalog wget -q --spider http://localhost/actuator/health 2>/dev/null; then
+              echo "애플리케이션 헬스체크 성공 (via Nginx container)"
               exit 0
             fi
-            # 직접 접근도 확인 (fallback, 포트 8080)
-            if curl -f -s -m 10 http://localhost:8080/actuator/health >/dev/null 2>&1; then
-              echo "애플리케이션 헬스체크 성공 (via port 8080)"
+            # hamalog-app 컨테이너 직접 확인 (fallback)
+            if docker exec hamalog-hamalog-app-1 wget -q --spider http://localhost:8080/actuator/health 2>/dev/null; then
+              echo "애플리케이션 헬스체크 성공 (via App container)"
               exit 0
             fi
             echo "재시도 ${i}/${attempts}"
@@ -312,7 +329,8 @@ jobs:
         run: |
           if [ "${{ job.status }}" = "success" ]; then
             echo "🎉 배포가 성공적으로 완료되었습니다!"
-            echo "🌐 애플리케이션 URL: http://localhost:8080"
+            echo "🌐 애플리케이션 URL: https://api.hamalog.shop"
+            echo "🔒 Cloudflare Tunnel을 통해 안전하게 서비스됩니다."
           else
             echo "❌ 배포에 실패했습니다!"
           fi

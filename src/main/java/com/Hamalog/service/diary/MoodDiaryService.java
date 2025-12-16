@@ -148,32 +148,4 @@ public class MoodDiaryService {
             );
         }
     }
-
-    public boolean isOwnerOfDiary(Long moodDiaryId, String loginId) {
-        try {
-            MoodDiary moodDiary = moodDiaryRepository.findById(moodDiaryId)
-                    .orElse(null);
-            if (moodDiary == null) {
-                return false;
-            }
-            return moodDiary.getMember().getLoginId().equals(loginId);
-        } catch (Exception e) {
-            log.warn("마음 일기 소유권 검증 실패 - moodDiaryId: {}, loginId: {}", moodDiaryId, loginId, e);
-            return false;
-        }
-    }
-
-    public boolean isOwnerOfMember(Long memberId, String loginId) {
-        try {
-            Member member = memberRepository.findById(memberId)
-                    .orElse(null);
-            if (member == null) {
-                return false;
-            }
-            return member.getLoginId().equals(loginId);
-        } catch (Exception e) {
-            log.warn("회원 소유권 검증 실패 - memberId: {}, loginId: {}", memberId, loginId, e);
-            return false;
-        }
-    }
 }

@@ -4,7 +4,6 @@ import com.Hamalog.domain.events.DomainEventPublisher;
 import com.Hamalog.domain.events.medication.MedicationScheduleCreated;
 import com.Hamalog.domain.events.medication.MedicationScheduleDeleted;
 import com.Hamalog.domain.events.medication.MedicationScheduleUpdated;
-import com.Hamalog.domain.medication.AlarmType;
 import com.Hamalog.domain.medication.MedicationSchedule;
 import com.Hamalog.domain.member.Member;
 import com.Hamalog.dto.medication.request.MedicationScheduleCreateRequest;
@@ -28,6 +27,12 @@ import org.springframework.transaction.annotation.Transactional;
 @RequiredArgsConstructor
 @Slf4j
 public class MedicationScheduleService {
+
+    // 비즈니스 검증 상수
+    private static final int MAX_PRESCRIPTION_DAYS = 365;
+    private static final int MAX_PER_DAY = 10;
+    private static final int MIN_PAGE_SIZE = 1;
+    private static final int MAX_PAGE_SIZE = 100;
 
     private final MemberRepository memberRepository;
     private final MedicationScheduleRepository medicationScheduleRepository;
@@ -79,11 +84,8 @@ public class MedicationScheduleService {
         Member member = memberRepository.findById(medicationScheduleCreateRequest.memberId())
                 .orElseThrow(MemberNotFoundException::new);
 
-        LocalDate prescriptionDate = LocalDate.parse(medicationScheduleCreateRequest.prescriptionDate());
-        LocalDate startOfAd = LocalDate.parse(medicationScheduleCreateRequest.startOfAd());
-
         // 비즈니스 로직 검증
-        validateDateRange(prescriptionDate, startOfAd);
+        validateDateRange(medicationScheduleCreateRequest.prescriptionDate(), medicationScheduleCreateRequest.startOfAd());
         validatePrescriptionDays(medicationScheduleCreateRequest.prescriptionDays());
         validatePerDay(medicationScheduleCreateRequest.perDay());
 
@@ -91,12 +93,12 @@ public class MedicationScheduleService {
                 member,
                 medicationScheduleCreateRequest.name(),
                 medicationScheduleCreateRequest.hospitalName(),
-                prescriptionDate,
+                medicationScheduleCreateRequest.prescriptionDate(),
                 medicationScheduleCreateRequest.memo(),
-                startOfAd,
+                medicationScheduleCreateRequest.startOfAd(),
                 medicationScheduleCreateRequest.prescriptionDays(),
                 medicationScheduleCreateRequest.perDay(),
-                AlarmType.valueOf(medicationScheduleCreateRequest.alarmType())
+                medicationScheduleCreateRequest.alarmType()
         );
 
         MedicationSchedule savedSchedule = medicationScheduleRepository.save(medicationSchedule);
@@ -212,16 +214,6 @@ public class MedicationScheduleService {
         domainEventPublisher.publish(event);
         log.debug("Published MedicationScheduleDeleted event for schedule ID: {}", scheduleId);
     }
-    
-    @Transactional(readOnly = true)
-    public boolean isOwner(Long memberId, String loginId) {
-        if (memberId == null || loginId == null) {
-            return false;
-        }
-        return memberRepository.findById(memberId)
-                .map(member -> member.getLoginId().equals(loginId))
-                .orElse(false);
-    }
 
     // ========== Private Validation Methods ==========
 
@@ -282,9 +274,8 @@ public class MedicationScheduleService {
             throw new InvalidInputException(ErrorCode.INVALID_PRESCRIPTION_DAYS);
         }
 
-        // 추가 검증: 처방 일수 상한선 (예: 최대 365일)
-        if (prescriptionDays > 365) {
-            log.warn("Prescription days {} exceeds maximum allowed (365)", prescriptionDays);
+        if (prescriptionDays > MAX_PRESCRIPTION_DAYS) {
+            log.warn("Prescription days {} exceeds maximum allowed ({})", prescriptionDays, MAX_PRESCRIPTION_DAYS);
             throw new InvalidInputException(ErrorCode.INVALID_PRESCRIPTION_DAYS);
         }
     }
@@ -298,9 +289,8 @@ public class MedicationScheduleService {
             throw new InvalidInputException(ErrorCode.INVALID_PER_DAY);
         }
 
-        // 추가 검증: 1일 복용 횟수 상한선 (예: 최대 10회)
-        if (perDay > 10) {
-            log.warn("Per day {} exceeds maximum allowed (10)", perDay);
+        if (perDay > MAX_PER_DAY) {
+            log.warn("Per day {} exceeds maximum allowed ({})", perDay, MAX_PER_DAY);
             throw new InvalidInputException(ErrorCode.INVALID_PER_DAY);
         }
     }
@@ -313,7 +303,7 @@ public class MedicationScheduleService {
             throw new InvalidInputException(ErrorCode.INVALID_PAGE_NUMBER);
         }
 
-        if (pageable.getPageSize() < 1 || pageable.getPageSize() > 100) {
+        if (pageable.getPageSize() < MIN_PAGE_SIZE || pageable.getPageSize() > MAX_PAGE_SIZE) {
             throw new InvalidInputException(ErrorCode.INVALID_PAGE_SIZE);
         }
     }

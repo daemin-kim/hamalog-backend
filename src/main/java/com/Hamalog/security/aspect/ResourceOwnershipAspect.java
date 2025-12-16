@@ -3,6 +3,7 @@ package com.Hamalog.security.aspect;
 import com.Hamalog.exception.CustomException;
 import com.Hamalog.exception.ErrorCode;
 import com.Hamalog.security.annotation.RequireResourceOwnership;
+import com.Hamalog.security.authorization.ResourceOwnershipValidator;
 import com.Hamalog.service.diary.MoodDiaryService;
 import com.Hamalog.service.medication.MedicationRecordService;
 import com.Hamalog.service.medication.MedicationScheduleService;
@@ -40,6 +41,7 @@ public class ResourceOwnershipAspect {
     private final MedicationScheduleService medicationScheduleService;
     private final SideEffectService sideEffectService;
     private final MoodDiaryService moodDiaryService;
+    private final ResourceOwnershipValidator resourceOwnershipValidator;
 
     @Around("@annotation(requireResourceOwnership)")
     public Object checkResourceOwnership(ProceedingJoinPoint joinPoint, RequireResourceOwnership requireResourceOwnership) throws Throwable {
@@ -314,7 +316,7 @@ public class ResourceOwnershipAspect {
                 // Get medication record first, then check schedule ownership
                 try {
                     var record = medicationRecordService.getMedicationRecord(resourceId);
-                    return medicationScheduleService.isOwner(record.getMedicationSchedule().getMember().getMemberId(), loginId);
+                    return resourceOwnershipValidator.isOwnerByMemberId(record.getMedicationSchedule().getMember().getMemberId(), loginId);
                 } catch (Exception e) {
                     log.warn("Failed to validate record ownership through schedule for recordId={}: {}", resourceId, e.getMessage());
                     return false;
@@ -335,13 +337,13 @@ public class ResourceOwnershipAspect {
                 // Need to get the schedule first to check ownership through member
                 try {
                     var schedule = medicationScheduleService.getMedicationSchedule(resourceId);
-                    return medicationScheduleService.isOwner(schedule.getMember().getMemberId(), loginId);
+                    return resourceOwnershipValidator.isOwnerByMemberId(schedule.getMember().getMemberId(), loginId);
                 } catch (Exception e) {
                     log.warn("Failed to validate schedule ownership for scheduleId={}: {}", resourceId, e.getMessage());
                     return false;
                 }
             case THROUGH_MEMBER:
-                return medicationScheduleService.isOwner(resourceId, loginId);
+                return resourceOwnershipValidator.isOwnerByMemberId(resourceId, loginId);
             default:
                 log.warn("Unsupported ownership strategy '{}' for medication schedule", strategy);
                 return false;
@@ -353,7 +355,7 @@ public class ResourceOwnershipAspect {
      */
     private boolean checkMedicationScheduleByMemberOwnership(Long resourceId, String loginId, RequireResourceOwnership.OwnershipStrategy strategy) {
         // Direct member-based validation for schedule lists
-        return medicationScheduleService.isOwner(resourceId, loginId);
+        return resourceOwnershipValidator.isOwnerByMemberId(resourceId, loginId);
     }
     
     /**
@@ -369,7 +371,7 @@ public class ResourceOwnershipAspect {
     private boolean checkMoodDiaryOwnership(Long resourceId, String loginId, RequireResourceOwnership.OwnershipStrategy strategy) {
         switch (strategy) {
             case DIRECT:
-                return moodDiaryService.isOwnerOfDiary(resourceId, loginId);
+                return resourceOwnershipValidator.isOwnerOfMoodDiary(resourceId, loginId);
             default:
                 log.warn("Unsupported ownership strategy '{}' for mood diary", strategy);
                 return false;
@@ -380,6 +382,6 @@ public class ResourceOwnershipAspect {
      * 멤버를 통한 마음 일기 소유권을 검증합니다.
      */
     private boolean checkMoodDiaryByMemberOwnership(Long resourceId, String loginId, RequireResourceOwnership.OwnershipStrategy strategy) {
-        return moodDiaryService.isOwnerOfMember(resourceId, loginId);
+        return resourceOwnershipValidator.isOwnerByMemberId(resourceId, loginId);
     }
 }

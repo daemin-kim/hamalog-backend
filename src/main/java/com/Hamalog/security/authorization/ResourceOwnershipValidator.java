@@ -1,6 +1,9 @@
 package com.Hamalog.security.authorization;
 
+import com.Hamalog.repository.diary.MoodDiaryRepository;
+import com.Hamalog.repository.member.MemberRepository;
 import java.util.Objects;
+import lombok.RequiredArgsConstructor;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.security.core.Authentication;
@@ -13,9 +16,53 @@ import org.springframework.util.StringUtils;
  * Method-level 보안을 위한 @PreAuthorize에서 사용
  */
 @Component("resourceOwnershipValidator")
+@RequiredArgsConstructor
 public class ResourceOwnershipValidator {
 
     private static final Logger log = LoggerFactory.getLogger(ResourceOwnershipValidator.class);
+
+    private final MemberRepository memberRepository;
+    private final MoodDiaryRepository moodDiaryRepository;
+
+    /**
+     * memberId와 loginId를 비교하여 소유권 검증 (공통 메서드)
+     * 여러 Service에서 중복되던 isOwner 로직을 통합
+     */
+    public boolean isOwnerByMemberId(Long memberId, String loginId) {
+        if (memberId == null || loginId == null) {
+            log.debug("소유권 검증 실패: memberId 또는 loginId가 null");
+            return false;
+        }
+
+        try {
+            return memberRepository.findById(memberId)
+                    .map(member -> member.getLoginId().equals(loginId))
+                    .orElse(false);
+        } catch (Exception e) {
+            log.warn("소유권 검증 중 오류 발생 - memberId: {}, loginId: {}", memberId, loginId, e);
+            return false;
+        }
+    }
+
+    /**
+     * 마음 일기 ID로 소유권 검증
+     * MoodDiaryService.isOwnerOfDiary() 대체
+     */
+    public boolean isOwnerOfMoodDiary(Long moodDiaryId, String loginId) {
+        if (moodDiaryId == null || loginId == null) {
+            log.debug("마음 일기 소유권 검증 실패: moodDiaryId 또는 loginId가 null");
+            return false;
+        }
+
+        try {
+            return moodDiaryRepository.findById(moodDiaryId)
+                    .map(diary -> diary.getMember().getLoginId().equals(loginId))
+                    .orElse(false);
+        } catch (Exception e) {
+            log.warn("마음 일기 소유권 검증 중 오류 발생 - moodDiaryId: {}, loginId: {}", moodDiaryId, loginId, e);
+            return false;
+        }
+    }
 
     /**
      * 현재 인증된 사용자가 리소스의 소유자인지 확인

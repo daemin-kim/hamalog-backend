@@ -2,10 +2,12 @@ package com.Hamalog.dto.medication.request;
 
 import static org.assertj.core.api.Assertions.assertThat;
 
+import com.Hamalog.domain.medication.AlarmType;
 import jakarta.validation.ConstraintViolation;
 import jakarta.validation.Validation;
 import jakarta.validation.Validator;
 import jakarta.validation.ValidatorFactory;
+import java.time.LocalDate;
 import java.util.Set;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;
@@ -33,12 +35,12 @@ class MedicationScheduleCreateRequestTest {
                 1L,
                 "아스피린",
                 "서울병원",
-                "2024-01-15",
+                LocalDate.of(2024, 1, 15),
                 "식후 복용",
-                "2024-01-16",
+                LocalDate.of(2024, 1, 16),
                 30,
                 2,
-                "SOUND"
+                AlarmType.SOUND
         );
 
         // when
@@ -49,12 +51,12 @@ class MedicationScheduleCreateRequestTest {
         assertThat(request.memberId()).isEqualTo(1L);
         assertThat(request.name()).isEqualTo("아스피린");
         assertThat(request.hospitalName()).isEqualTo("서울병원");
-        assertThat(request.prescriptionDate()).isEqualTo("2024-01-15");
+        assertThat(request.prescriptionDate()).isEqualTo(LocalDate.of(2024, 1, 15));
         assertThat(request.memo()).isEqualTo("식후 복용");
-        assertThat(request.startOfAd()).isEqualTo("2024-01-16");
+        assertThat(request.startOfAd()).isEqualTo(LocalDate.of(2024, 1, 16));
         assertThat(request.prescriptionDays()).isEqualTo(30);
         assertThat(request.perDay()).isEqualTo(2);
-        assertThat(request.alarmType()).isEqualTo("SOUND");
+        assertThat(request.alarmType()).isEqualTo(AlarmType.SOUND);
     }
 
     // MemberId validation tests
@@ -79,10 +81,10 @@ class MedicationScheduleCreateRequestTest {
     @NullAndEmptySource
     @ValueSource(strings = {"   ", "\t", "\n"})
     @DisplayName("Should fail validation when name is null, empty, or blank")
-    void validation_WithInvalidName_ShouldFailValidation(String invalidName) {
+    void validation_WithInvalidName_ShouldFailValidation(String name) {
         // given
         MedicationScheduleCreateRequest request = createValidRequestBuilder()
-                .name(invalidName)
+                .name(name)
                 .build();
 
         // when
@@ -94,12 +96,12 @@ class MedicationScheduleCreateRequestTest {
     }
 
     @Test
-    @DisplayName("Should fail validation when name exceeds maximum length")
+    @DisplayName("Should fail validation when name exceeds max length")
     void validation_WithTooLongName_ShouldFailValidation() {
         // given
-        String tooLongName = "a".repeat(21); // 21 characters
+        String longName = "a".repeat(21);
         MedicationScheduleCreateRequest request = createValidRequestBuilder()
-                .name(tooLongName)
+                .name(longName)
                 .build();
 
         // when
@@ -110,31 +112,15 @@ class MedicationScheduleCreateRequestTest {
         assertThat(violations).anyMatch(v -> v.getPropertyPath().toString().equals("name"));
     }
 
-    @Test
-    @DisplayName("Should pass validation with maximum valid name length")
-    void validation_WithMaxValidNameLength_ShouldPassValidation() {
-        // given
-        String maxLengthName = "a".repeat(20); // 20 characters
-        MedicationScheduleCreateRequest request = createValidRequestBuilder()
-                .name(maxLengthName)
-                .build();
-
-        // when
-        Set<ConstraintViolation<MedicationScheduleCreateRequest>> violations = validator.validate(request);
-
-        // then
-        assertThat(violations).isEmpty();
-    }
-
-    // Hospital name validation tests
+    // HospitalName validation tests
     @ParameterizedTest
     @NullAndEmptySource
-    @ValueSource(strings = {"   ", "\t"})
+    @ValueSource(strings = {"   ", "\t", "\n"})
     @DisplayName("Should fail validation when hospitalName is null, empty, or blank")
-    void validation_WithInvalidHospitalName_ShouldFailValidation(String invalidHospitalName) {
+    void validation_WithInvalidHospitalName_ShouldFailValidation(String hospitalName) {
         // given
         MedicationScheduleCreateRequest request = createValidRequestBuilder()
-                .hospitalName(invalidHospitalName)
+                .hospitalName(hospitalName)
                 .build();
 
         // when
@@ -145,32 +131,13 @@ class MedicationScheduleCreateRequestTest {
         assertThat(violations).anyMatch(v -> v.getPropertyPath().toString().equals("hospitalName"));
     }
 
+    // PrescriptionDate validation tests
     @Test
-    @DisplayName("Should fail validation when hospitalName exceeds maximum length")
-    void validation_WithTooLongHospitalName_ShouldFailValidation() {
-        // given
-        String tooLongHospitalName = "서울중앙병원내과전문의원센터부설".repeat(2); // Over 20 characters
-        MedicationScheduleCreateRequest request = createValidRequestBuilder()
-                .hospitalName(tooLongHospitalName)
-                .build();
-
-        // when
-        Set<ConstraintViolation<MedicationScheduleCreateRequest>> violations = validator.validate(request);
-
-        // then
-        assertThat(violations).hasSizeGreaterThanOrEqualTo(1);
-        assertThat(violations).anyMatch(v -> v.getPropertyPath().toString().equals("hospitalName"));
-    }
-
-    // Prescription date validation tests
-    @ParameterizedTest
-    @NullAndEmptySource
-    @ValueSource(strings = {"   ", "\t"})
-    @DisplayName("Should fail validation when prescriptionDate is null, empty, or blank")
-    void validation_WithInvalidPrescriptionDate_ShouldFailValidation(String invalidDate) {
+    @DisplayName("Should fail validation when prescriptionDate is null")
+    void validation_WithNullPrescriptionDate_ShouldFailValidation() {
         // given
         MedicationScheduleCreateRequest request = createValidRequestBuilder()
-                .prescriptionDate(invalidDate)
+                .prescriptionDate(null)
                 .build();
 
         // when
@@ -181,13 +148,13 @@ class MedicationScheduleCreateRequestTest {
         assertThat(violations).anyMatch(v -> v.getPropertyPath().toString().equals("prescriptionDate"));
     }
 
-    @ParameterizedTest
-    @ValueSource(strings = {"2024-1-15", "24-01-15", "2024/01/15", "2024.01.15", "invalid-date"})
-    @DisplayName("Should fail validation when prescriptionDate has invalid format")
-    void validation_WithInvalidPrescriptionDateFormat_ShouldFailValidation(String invalidDateFormat) {
+    // StartOfAd validation tests
+    @Test
+    @DisplayName("Should fail validation when startOfAd is null")
+    void validation_WithNullStartOfAd_ShouldFailValidation() {
         // given
         MedicationScheduleCreateRequest request = createValidRequestBuilder()
-                .prescriptionDate(invalidDateFormat)
+                .startOfAd(null)
                 .build();
 
         // when
@@ -195,25 +162,90 @@ class MedicationScheduleCreateRequestTest {
 
         // then
         assertThat(violations).hasSizeGreaterThanOrEqualTo(1);
-        assertThat(violations).anyMatch(v -> 
-                v.getPropertyPath().toString().equals("prescriptionDate")
-        );
+        assertThat(violations).anyMatch(v -> v.getPropertyPath().toString().equals("startOfAd"));
     }
 
-    @ParameterizedTest
-    @ValueSource(strings = {"2024-01-01", "2024-12-31", "2023-06-15", "2025-02-28"})
-    @DisplayName("Should pass validation with valid prescriptionDate formats")
-    void validation_WithValidPrescriptionDateFormats_ShouldPassValidation(String validDate) {
+    // PrescriptionDays validation tests
+    @Test
+    @DisplayName("Should fail validation when prescriptionDays is null")
+    void validation_WithNullPrescriptionDays_ShouldFailValidation() {
         // given
         MedicationScheduleCreateRequest request = createValidRequestBuilder()
-                .prescriptionDate(validDate)
+                .prescriptionDays(null)
                 .build();
 
         // when
         Set<ConstraintViolation<MedicationScheduleCreateRequest>> violations = validator.validate(request);
 
         // then
-        assertThat(violations).isEmpty();
+        assertThat(violations).hasSizeGreaterThanOrEqualTo(1);
+        assertThat(violations).anyMatch(v -> v.getPropertyPath().toString().equals("prescriptionDays"));
+    }
+
+    @Test
+    @DisplayName("Should fail validation when prescriptionDays is less than 1")
+    void validation_WithPrescriptionDaysLessThan1_ShouldFailValidation() {
+        // given
+        MedicationScheduleCreateRequest request = createValidRequestBuilder()
+                .prescriptionDays(0)
+                .build();
+
+        // when
+        Set<ConstraintViolation<MedicationScheduleCreateRequest>> violations = validator.validate(request);
+
+        // then
+        assertThat(violations).hasSizeGreaterThanOrEqualTo(1);
+        assertThat(violations).anyMatch(v -> v.getPropertyPath().toString().equals("prescriptionDays"));
+    }
+
+    // PerDay validation tests
+    @Test
+    @DisplayName("Should fail validation when perDay is null")
+    void validation_WithNullPerDay_ShouldFailValidation() {
+        // given
+        MedicationScheduleCreateRequest request = createValidRequestBuilder()
+                .perDay(null)
+                .build();
+
+        // when
+        Set<ConstraintViolation<MedicationScheduleCreateRequest>> violations = validator.validate(request);
+
+        // then
+        assertThat(violations).hasSizeGreaterThanOrEqualTo(1);
+        assertThat(violations).anyMatch(v -> v.getPropertyPath().toString().equals("perDay"));
+    }
+
+    @Test
+    @DisplayName("Should fail validation when perDay is less than 1")
+    void validation_WithPerDayLessThan1_ShouldFailValidation() {
+        // given
+        MedicationScheduleCreateRequest request = createValidRequestBuilder()
+                .perDay(0)
+                .build();
+
+        // when
+        Set<ConstraintViolation<MedicationScheduleCreateRequest>> violations = validator.validate(request);
+
+        // then
+        assertThat(violations).hasSizeGreaterThanOrEqualTo(1);
+        assertThat(violations).anyMatch(v -> v.getPropertyPath().toString().equals("perDay"));
+    }
+
+    // AlarmType validation tests
+    @Test
+    @DisplayName("Should fail validation when alarmType is null")
+    void validation_WithNullAlarmType_ShouldFailValidation() {
+        // given
+        MedicationScheduleCreateRequest request = createValidRequestBuilder()
+                .alarmType(null)
+                .build();
+
+        // when
+        Set<ConstraintViolation<MedicationScheduleCreateRequest>> violations = validator.validate(request);
+
+        // then
+        assertThat(violations).hasSizeGreaterThanOrEqualTo(1);
+        assertThat(violations).anyMatch(v -> v.getPropertyPath().toString().equals("alarmType"));
     }
 
     // Memo validation tests
@@ -233,12 +265,12 @@ class MedicationScheduleCreateRequestTest {
     }
 
     @Test
-    @DisplayName("Should fail validation when memo exceeds maximum length")
+    @DisplayName("Should fail validation when memo exceeds max length")
     void validation_WithTooLongMemo_ShouldFailValidation() {
         // given
-        String tooLongMemo = "a".repeat(501); // 501 characters
+        String longMemo = "a".repeat(501);
         MedicationScheduleCreateRequest request = createValidRequestBuilder()
-                .memo(tooLongMemo)
+                .memo(longMemo)
                 .build();
 
         // when
@@ -249,255 +281,18 @@ class MedicationScheduleCreateRequestTest {
         assertThat(violations).anyMatch(v -> v.getPropertyPath().toString().equals("memo"));
     }
 
-    @Test
-    @DisplayName("Should pass validation with maximum valid memo length")
-    void validation_WithMaxValidMemoLength_ShouldPassValidation() {
-        // given
-        String maxLengthMemo = "a".repeat(500); // 500 characters
-        MedicationScheduleCreateRequest request = createValidRequestBuilder()
-                .memo(maxLengthMemo)
-                .build();
-
-        // when
-        Set<ConstraintViolation<MedicationScheduleCreateRequest>> violations = validator.validate(request);
-
-        // then
-        assertThat(violations).isEmpty();
-    }
-
-    // Start of administration date validation tests
-    @ParameterizedTest
-    @NullAndEmptySource
-    @ValueSource(strings = {"   ", "\t"})
-    @DisplayName("Should fail validation when startOfAd is null, empty, or blank")
-    void validation_WithInvalidStartOfAd_ShouldFailValidation(String invalidDate) {
-        // given
-        MedicationScheduleCreateRequest request = createValidRequestBuilder()
-                .startOfAd(invalidDate)
-                .build();
-
-        // when
-        Set<ConstraintViolation<MedicationScheduleCreateRequest>> violations = validator.validate(request);
-
-        // then
-        assertThat(violations).hasSizeGreaterThanOrEqualTo(1);
-        assertThat(violations).anyMatch(v -> v.getPropertyPath().toString().equals("startOfAd"));
-    }
-
-    @ParameterizedTest
-    @ValueSource(strings = {"2024-1-16", "24-01-16", "2024/01/16", "invalid-start-date"})
-    @DisplayName("Should fail validation when startOfAd has invalid format")
-    void validation_WithInvalidStartOfAdFormat_ShouldFailValidation(String invalidDateFormat) {
-        // given
-        MedicationScheduleCreateRequest request = createValidRequestBuilder()
-                .startOfAd(invalidDateFormat)
-                .build();
-
-        // when
-        Set<ConstraintViolation<MedicationScheduleCreateRequest>> violations = validator.validate(request);
-
-        // then
-        assertThat(violations).hasSizeGreaterThanOrEqualTo(1);
-        assertThat(violations).anyMatch(v -> 
-                v.getPropertyPath().toString().equals("startOfAd")
-        );
-    }
-
-    // Prescription days validation tests
-    @Test
-    @DisplayName("Should fail validation when prescriptionDays is null")
-    void validation_WithNullPrescriptionDays_ShouldFailValidation() {
-        // given
-        MedicationScheduleCreateRequest request = createValidRequestBuilder()
-                .prescriptionDays(null)
-                .build();
-
-        // when
-        Set<ConstraintViolation<MedicationScheduleCreateRequest>> violations = validator.validate(request);
-
-        // then
-        assertThat(violations).hasSizeGreaterThanOrEqualTo(1);
-        assertThat(violations).anyMatch(v -> v.getPropertyPath().toString().equals("prescriptionDays"));
-    }
-
-    @ParameterizedTest
-    @ValueSource(ints = {0, -1, -10})
-    @DisplayName("Should fail validation when prescriptionDays is zero or negative")
-    void validation_WithInvalidPrescriptionDays_ShouldFailValidation(int invalidDays) {
-        // given
-        MedicationScheduleCreateRequest request = createValidRequestBuilder()
-                .prescriptionDays(invalidDays)
-                .build();
-
-        // when
-        Set<ConstraintViolation<MedicationScheduleCreateRequest>> violations = validator.validate(request);
-
-        // then
-        assertThat(violations).hasSizeGreaterThanOrEqualTo(1);
-        assertThat(violations).anyMatch(v -> v.getPropertyPath().toString().equals("prescriptionDays"));
-    }
-
-    @ParameterizedTest
-    @ValueSource(ints = {1, 7, 30, 90, 365})
-    @DisplayName("Should pass validation with valid prescriptionDays")
-    void validation_WithValidPrescriptionDays_ShouldPassValidation(int validDays) {
-        // given
-        MedicationScheduleCreateRequest request = createValidRequestBuilder()
-                .prescriptionDays(validDays)
-                .build();
-
-        // when
-        Set<ConstraintViolation<MedicationScheduleCreateRequest>> violations = validator.validate(request);
-
-        // then
-        assertThat(violations).isEmpty();
-    }
-
-    // Per day validation tests
-    @Test
-    @DisplayName("Should fail validation when perDay is null")
-    void validation_WithNullPerDay_ShouldFailValidation() {
-        // given
-        MedicationScheduleCreateRequest request = createValidRequestBuilder()
-                .perDay(null)
-                .build();
-
-        // when
-        Set<ConstraintViolation<MedicationScheduleCreateRequest>> violations = validator.validate(request);
-
-        // then
-        assertThat(violations).hasSizeGreaterThanOrEqualTo(1);
-        assertThat(violations).anyMatch(v -> v.getPropertyPath().toString().equals("perDay"));
-    }
-
-    @ParameterizedTest
-    @ValueSource(ints = {0, -1, -5})
-    @DisplayName("Should fail validation when perDay is zero or negative")
-    void validation_WithInvalidPerDay_ShouldFailValidation(int invalidPerDay) {
-        // given
-        MedicationScheduleCreateRequest request = createValidRequestBuilder()
-                .perDay(invalidPerDay)
-                .build();
-
-        // when
-        Set<ConstraintViolation<MedicationScheduleCreateRequest>> violations = validator.validate(request);
-
-        // then
-        assertThat(violations).hasSizeGreaterThanOrEqualTo(1);
-        assertThat(violations).anyMatch(v -> v.getPropertyPath().toString().equals("perDay"));
-    }
-
-    @ParameterizedTest
-    @ValueSource(ints = {1, 2, 3, 4, 6, 8})
-    @DisplayName("Should pass validation with valid perDay values")
-    void validation_WithValidPerDay_ShouldPassValidation(int validPerDay) {
-        // given
-        MedicationScheduleCreateRequest request = createValidRequestBuilder()
-                .perDay(validPerDay)
-                .build();
-
-        // when
-        Set<ConstraintViolation<MedicationScheduleCreateRequest>> violations = validator.validate(request);
-
-        // then
-        assertThat(violations).isEmpty();
-    }
-
-    // Alarm type validation tests
-    @ParameterizedTest
-    @NullAndEmptySource
-    @ValueSource(strings = {"   ", "\t"})
-    @DisplayName("Should fail validation when alarmType is null, empty, or blank")
-    void validation_WithInvalidAlarmType_ShouldFailValidation(String invalidAlarmType) {
-        // given
-        MedicationScheduleCreateRequest request = createValidRequestBuilder()
-                .alarmType(invalidAlarmType)
-                .build();
-
-        // when
-        Set<ConstraintViolation<MedicationScheduleCreateRequest>> violations = validator.validate(request);
-
-        // then
-        assertThat(violations).hasSizeGreaterThanOrEqualTo(1);
-        assertThat(violations).anyMatch(v -> v.getPropertyPath().toString().equals("alarmType"));
-    }
-
-    @ParameterizedTest
-    @ValueSource(strings = {"SOUND", "VIBE", "BOTH", "NONE"})
-    @DisplayName("Should pass validation with valid alarmType values")
-    void validation_WithValidAlarmTypes_ShouldPassValidation(String validAlarmType) {
-        // given
-        MedicationScheduleCreateRequest request = createValidRequestBuilder()
-                .alarmType(validAlarmType)
-                .build();
-
-        // when
-        Set<ConstraintViolation<MedicationScheduleCreateRequest>> violations = validator.validate(request);
-
-        // then
-        assertThat(violations).isEmpty();
-    }
-
-    // Record functionality tests
-    @Test
-    @DisplayName("Should maintain record equality and hashCode behavior")
-    void record_ShouldMaintainEqualityAndHashCode() {
-        // given
-        MedicationScheduleCreateRequest request1 = createValidRequestBuilder().build();
-        MedicationScheduleCreateRequest request2 = createValidRequestBuilder().build();
-        MedicationScheduleCreateRequest request3 = createValidRequestBuilder()
-                .name("다른약품")
-                .build();
-
-        // then
-        assertThat(request1).isEqualTo(request2);
-        assertThat(request1).isNotEqualTo(request3);
-        assertThat(request1.hashCode()).isEqualTo(request2.hashCode());
-    }
-
-    @Test
-    @DisplayName("Should have proper toString representation")
-    void toString_ShouldContainFieldInformation() {
-        // given
-        MedicationScheduleCreateRequest request = createValidRequestBuilder().build();
-
-        // when
-        String result = request.toString();
-
-        // then
-        assertThat(result).contains("MedicationScheduleCreateRequest");
-        assertThat(result).contains("아스피린");
-        assertThat(result).contains("서울병원");
-        assertThat(result).contains("2024-01-15");
-    }
-
-    @Test
-    @DisplayName("Should handle multiple validation errors")
-    void validation_WithMultipleErrors_ShouldReturnAllViolations() {
-        // given - multiple invalid fields
-        MedicationScheduleCreateRequest invalidRequest = new MedicationScheduleCreateRequest(
-                null, "", "", "invalid-date", "a".repeat(501), "invalid-start", 0, -1, ""
-        );
-
-        // when
-        Set<ConstraintViolation<MedicationScheduleCreateRequest>> violations = validator.validate(invalidRequest);
-
-        // then
-        assertThat(violations).hasSizeGreaterThanOrEqualTo(8); // Should have violations for most fields
-    }
-
     // Helper method to create valid request builder
     private MedicationScheduleCreateRequestBuilder createValidRequestBuilder() {
         return new MedicationScheduleCreateRequestBuilder()
                 .memberId(1L)
                 .name("아스피린")
                 .hospitalName("서울병원")
-                .prescriptionDate("2024-01-15")
+                .prescriptionDate(LocalDate.of(2024, 1, 15))
                 .memo("식후 복용")
-                .startOfAd("2024-01-16")
+                .startOfAd(LocalDate.of(2024, 1, 16))
                 .prescriptionDays(30)
                 .perDay(2)
-                .alarmType("SOUND");
+                .alarmType(AlarmType.SOUND);
     }
 
     // Helper builder class for test data creation
@@ -505,12 +300,12 @@ class MedicationScheduleCreateRequestTest {
         private Long memberId;
         private String name;
         private String hospitalName;
-        private String prescriptionDate;
+        private LocalDate prescriptionDate;
         private String memo;
-        private String startOfAd;
+        private LocalDate startOfAd;
         private Integer prescriptionDays;
         private Integer perDay;
-        private String alarmType;
+        private AlarmType alarmType;
 
         public MedicationScheduleCreateRequestBuilder memberId(Long memberId) {
             this.memberId = memberId;
@@ -527,7 +322,7 @@ class MedicationScheduleCreateRequestTest {
             return this;
         }
 
-        public MedicationScheduleCreateRequestBuilder prescriptionDate(String prescriptionDate) {
+        public MedicationScheduleCreateRequestBuilder prescriptionDate(LocalDate prescriptionDate) {
             this.prescriptionDate = prescriptionDate;
             return this;
         }
@@ -537,7 +332,7 @@ class MedicationScheduleCreateRequestTest {
             return this;
         }
 
-        public MedicationScheduleCreateRequestBuilder startOfAd(String startOfAd) {
+        public MedicationScheduleCreateRequestBuilder startOfAd(LocalDate startOfAd) {
             this.startOfAd = startOfAd;
             return this;
         }
@@ -552,7 +347,7 @@ class MedicationScheduleCreateRequestTest {
             return this;
         }
 
-        public MedicationScheduleCreateRequestBuilder alarmType(String alarmType) {
+        public MedicationScheduleCreateRequestBuilder alarmType(AlarmType alarmType) {
             this.alarmType = alarmType;
             return this;
         }

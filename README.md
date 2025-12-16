@@ -26,7 +26,7 @@ Hamalog는 복약 일정, 복약 기록, 부작용, 마음 일기를 한 번에 
 세부 엔드포인트와 데이터 구조는 `API-specification.md` 를 참고하세요. 문서는 최신 구현(인증, 복약, 부작용, 마음 일기)을 기준으로 유지됩니다.
 
 ## 기술 스택 & 인프라
-- Java 17, Spring Boot 3, JPA/Hibernate
+- Java 21, Spring Boot 3, JPA/Hibernate
 - MySQL (테스트에서는 H2), Redis (CSRF/캐시 용도)
 - Gradle, JUnit5, Mockito
 - Docker/Docker Compose(선택)

@@ -2,7 +2,7 @@ package com.Hamalog.controller.oauth2;
 
 import com.Hamalog.dto.auth.response.LoginResponse;
 import com.Hamalog.exception.CustomException;
-import com.Hamalog.service.auth.AuthService;
+import com.Hamalog.service.auth.KakaoOAuth2AuthService;
 import com.Hamalog.service.oauth2.StatePersistenceService;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.media.Content;
@@ -33,7 +33,7 @@ public class OAuth2Controller {
     private static final Logger log = LoggerFactory.getLogger(OAuth2Controller.class);
     
     private final ClientRegistrationRepository clientRegistrationRepository;
-    private final AuthService authService;
+    private final KakaoOAuth2AuthService kakaoOAuth2AuthService;
     private final StatePersistenceService statePersistenceService;
 
     @Value("${hamalog.oauth2.rn-app-redirect-scheme:hamalog-rn}")
@@ -150,7 +150,7 @@ public class OAuth2Controller {
             }
 
             // Process OAuth2 callback and get JWT token
-            LoginResponse loginResponse = authService.processOAuth2Callback(code);
+            LoginResponse loginResponse = kakaoOAuth2AuthService.processOAuth2Callback(code);
             String jwtToken = loginResponse.token();
 
             // Redirect to RN app with JWT token

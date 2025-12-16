@@ -14,7 +14,9 @@ import com.Hamalog.dto.auth.response.LoginResponse;
 import com.Hamalog.handler.GlobalExceptionHandler;
 import com.Hamalog.security.filter.TrustedProxyService;
 import com.Hamalog.security.jwt.JwtTokenProvider;
-import com.Hamalog.service.auth.AuthService;
+import com.Hamalog.service.auth.AuthenticationService;
+import com.Hamalog.service.auth.MemberDeletionService;
+import com.Hamalog.service.auth.MemberRegistrationService;
 import com.Hamalog.service.i18n.MessageService;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.datatype.jsr310.JavaTimeModule;
@@ -43,7 +45,13 @@ class AuthControllerTest {
     private MockMvc mockMvc;
 
     @Mock
-    private AuthService authService;
+    private MemberRegistrationService memberRegistrationService;
+
+    @Mock
+    private AuthenticationService authenticationService;
+
+    @Mock
+    private MemberDeletionService memberDeletionService;
 
     @Mock
     private MessageService messageService;
@@ -100,7 +108,7 @@ class AuthControllerTest {
     @DisplayName("회원가입 성공")
     void signup_Success() throws Exception {
         // Given
-        doNothing().when(authService).registerMember(any(SignupRequest.class));
+        doNothing().when(memberRegistrationService).registerMember(any(SignupRequest.class));
 
         // When & Then
         mockMvc.perform(post("/auth/signup")
@@ -109,7 +117,7 @@ class AuthControllerTest {
                 .andExpect(status().isOk())
                 .andExpect(content().string("회원가입 성공"));
 
-        verify(authService).registerMember(any(SignupRequest.class));
+        verify(memberRegistrationService).registerMember(any(SignupRequest.class));
     }
 
     @Test
@@ -131,15 +139,15 @@ class AuthControllerTest {
                         .content(objectMapper.writeValueAsString(invalidRequest)))
                 .andExpect(status().isBadRequest());
 
-        verify(authService, never()).registerMember(any(SignupRequest.class));
+        verify(memberRegistrationService, never()).registerMember(any(SignupRequest.class));
     }
 
     @Test
     @DisplayName("로그인 성공")
     void login_Success() throws Exception {
         // Given
-        LoginResponse loginResponse = new LoginResponse("jwt.token.here");
-        given(authService.authenticateAndGenerateToken(anyString(), anyString()))
+        LoginResponse loginResponse = new LoginResponse("jwt.token.here", "refresh-token", 900L);
+        given(authenticationService.authenticateAndGenerateToken(anyString(), anyString()))
                 .willReturn(loginResponse);
 
         // When & Then
@@ -149,7 +157,7 @@ class AuthControllerTest {
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.access_token").value("jwt.token.here"));
 
-        verify(authService).authenticateAndGenerateToken("test@example.com", "password123");
+        verify(authenticationService).authenticateAndGenerateToken("test@example.com", "password123");
     }
 
     @Test
@@ -164,7 +172,7 @@ class AuthControllerTest {
                         .content(objectMapper.writeValueAsString(invalidRequest)))
                 .andExpect(status().isBadRequest());
 
-        verify(authService, never()).authenticateAndGenerateToken(anyString(), anyString());
+        verify(authenticationService, never()).authenticateAndGenerateToken(anyString(), anyString());
     }
 
     @Test
@@ -173,7 +181,7 @@ class AuthControllerTest {
         // Given
         String token = "jwt.token.here";
         given(jwtTokenProvider.validateToken(token)).willReturn(true);
-        doNothing().when(authService).logoutUser(anyString());
+        doNothing().when(authenticationService).logoutUser(anyString());
 
         // When & Then
         mockMvc.perform(post("/auth/logout")
@@ -182,7 +190,7 @@ class AuthControllerTest {
                 .andExpect(content().string("로그아웃 성공 - 토큰이 무효화되었습니다"));
 
         verify(jwtTokenProvider).validateToken(token);
-        verify(authService).logoutUser(token);
+        verify(authenticationService).logoutUser(token);
     }
 
     @Test
@@ -192,7 +200,7 @@ class AuthControllerTest {
         mockMvc.perform(post("/auth/logout"))
                 .andExpect(status().is4xxClientError());
 
-        verify(authService, never()).logoutUser(anyString());
+        verify(authenticationService, never()).logoutUser(anyString());
     }
 
     @Test
@@ -208,7 +216,7 @@ class AuthControllerTest {
         
         SecurityContextHolder.setContext(securityContext);
         
-        doNothing().when(authService).deleteMember(anyString(), anyString());
+        doNothing().when(memberDeletionService).deleteMember(anyString(), anyString());
 
         // When & Then
         mockMvc.perform(delete("/auth/account")
@@ -216,7 +224,7 @@ class AuthControllerTest {
                 .andExpect(status().isOk())
                 .andExpect(content().string("회원 탈퇴가 완료되었습니다"));
 
-        verify(authService).deleteMember("test@example.com", "jwt.token.here");
+        verify(memberDeletionService).deleteMember("test@example.com", "jwt.token.here");
     }
 
     @Test
@@ -234,7 +242,7 @@ class AuthControllerTest {
                 .andExpect(status().isUnauthorized())
                 .andExpect(content().string("인증이 필요합니다"));
 
-        verify(authService, never()).deleteMember(anyString(), anyString());
+        verify(memberDeletionService, never()).deleteMember(anyString(), anyString());
     }
 
     @Test
@@ -255,6 +263,6 @@ class AuthControllerTest {
                 .andExpect(status().isUnauthorized())
                 .andExpect(content().string("인증이 필요합니다"));
 
-        verify(authService, never()).deleteMember(anyString(), anyString());
+        verify(memberDeletionService, never()).deleteMember(anyString(), anyString());
     }
 }

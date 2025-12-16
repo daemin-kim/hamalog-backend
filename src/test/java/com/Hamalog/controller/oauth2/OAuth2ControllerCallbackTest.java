@@ -7,7 +7,7 @@ import static org.springframework.test.web.servlet.request.MockMvcRequestBuilder
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
 import com.Hamalog.dto.auth.response.LoginResponse;
-import com.Hamalog.service.auth.AuthService;
+import com.Hamalog.service.auth.KakaoOAuth2AuthService;
 import com.Hamalog.service.oauth2.StatePersistenceService;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
@@ -32,7 +32,7 @@ class OAuth2ControllerCallbackTest {
     private MockMvc mockMvc;
 
     @MockitoBean
-    private AuthService authService;
+    private KakaoOAuth2AuthService kakaoOAuth2AuthService;
 
     @MockitoBean
     private StatePersistenceService statePersistenceService;
@@ -45,10 +45,10 @@ class OAuth2ControllerCallbackTest {
     @Test
     @DisplayName("카카오 OAuth2 콜백 - 성공: JWT 토큰으로 RN 앱으로 리다이렉트")
     void handleKakaoCallback_Success() throws Exception {
-        // Given: AuthService가 정상적으로 JWT 토큰 반환
-        LoginResponse loginResponse = new LoginResponse(TEST_TOKEN);
+        // Given: KakaoOAuth2AuthService가 정상적으로 JWT 토큰 반환
+        LoginResponse loginResponse = new LoginResponse(TEST_TOKEN, "refresh-token", 900L);
         when(statePersistenceService.validateAndConsumeState(TEST_STATE)).thenReturn(true);
-        when(authService.processOAuth2Callback(anyString())).thenReturn(loginResponse);
+        when(kakaoOAuth2AuthService.processOAuth2Callback(anyString())).thenReturn(loginResponse);
 
         // When: 콜백 엔드포인트 호출
         MvcResult result = mockMvc.perform(get("/oauth2/auth/kakao/callback")
@@ -68,8 +68,9 @@ class OAuth2ControllerCallbackTest {
     @Test
     @DisplayName("카카오 OAuth2 콜백 - 실패: 토큰 교환 실패 시 에러와 함께 RN 앱으로 리다이렉트")
     void handleKakaoCallback_TokenExchangeFailed() throws Exception {
-        // Given: AuthService가 예외 발생
-        when(authService.processOAuth2Callback(anyString()))
+        // Given: KakaoOAuth2AuthService가 예외 발생
+        when(statePersistenceService.validateAndConsumeState(TEST_STATE)).thenReturn(true);
+        when(kakaoOAuth2AuthService.processOAuth2Callback(anyString()))
                 .thenThrow(new RuntimeException("Token exchange failed"));
 
         // When: 콜백 엔드포인트 호출

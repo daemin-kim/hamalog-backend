@@ -44,7 +44,19 @@ public class BusinessAuditAspect {
     @Pointcut("execution(public * com.Hamalog.service..delete*(..))")
     public void deleteOperations() {}
 
-    @Pointcut("execution(public * com.Hamalog.service.auth.AuthService.*(..))")
+    @Pointcut("execution(public * com.Hamalog.service.auth.MemberRegistrationService.*(..))")
+    public void memberRegistrationOperations() {}
+
+    @Pointcut("execution(public * com.Hamalog.service.auth.AuthenticationService.*(..))")
+    public void authenticationOperations() {}
+
+    @Pointcut("execution(public * com.Hamalog.service.auth.MemberDeletionService.*(..))")
+    public void memberDeletionOperations() {}
+
+    @Pointcut("execution(public * com.Hamalog.service.auth.KakaoOAuth2AuthService.*(..))")
+    public void kakaoOAuth2Operations() {}
+
+    @Pointcut("memberRegistrationOperations() || authenticationOperations() || memberDeletionOperations() || kakaoOAuth2Operations()")
     public void authOperations() {}
 
     @Around("createOperations() || updateOperations() || deleteOperations() || authOperations()")

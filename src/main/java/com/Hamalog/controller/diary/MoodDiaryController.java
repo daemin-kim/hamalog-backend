@@ -147,10 +147,7 @@ public class MoodDiaryController {
             @RequestParam @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate diaryDate,
             @AuthenticationPrincipal CustomUserDetails userDetails
     ) {
-        Long authenticatedMemberId = getAuthenticatedMemberId(userDetails);
-        if (!authenticatedMemberId.equals(memberId)) {
-            throw new CustomException(ErrorCode.FORBIDDEN);
-        }
+        // 권한 검증은 @RequireResourceOwnership AOP에서 처리
         MoodDiaryResponse response = moodDiaryService.getMoodDiaryByDate(memberId, diaryDate);
         return ResponseEntity.ok(response);
     }

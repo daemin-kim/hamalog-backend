@@ -293,52 +293,7 @@ class MoodDiaryServiceTest {
                 .isInstanceOf(MoodDiaryNotFoundException.class);
     }
 
-    @Nested
-    @DisplayName("소유권 검증")
-    class OwnershipTests {
-
-        @Test
-        @DisplayName("일기 소유자일 때 true 반환")
-        void isOwnerOfDiary_True() {
-            MoodDiary diary = buildTemplateDiary(15L, LocalDate.now());
-            when(moodDiaryRepository.findById(15L)).thenReturn(Optional.of(diary));
-
-            boolean result = moodDiaryService.isOwnerOfDiary(15L, member.getLoginId());
-
-            assertThat(result).isTrue();
-        }
-
-        @Test
-        @DisplayName("일기 소유자가 아니면 false 반환")
-        void isOwnerOfDiary_False() {
-            MoodDiary diary = buildTemplateDiary(16L, LocalDate.now());
-            when(moodDiaryRepository.findById(16L)).thenReturn(Optional.of(diary));
-
-            boolean result = moodDiaryService.isOwnerOfDiary(16L, "other@example.com");
-
-            assertThat(result).isFalse();
-        }
-
-        @Test
-        @DisplayName("회원 소유자일 때 true 반환")
-        void isOwnerOfMember_True() {
-            when(memberRepository.findById(1L)).thenReturn(Optional.of(member));
-
-            boolean result = moodDiaryService.isOwnerOfMember(1L, member.getLoginId());
-
-            assertThat(result).isTrue();
-        }
-
-        @Test
-        @DisplayName("회원 정보를 찾지 못하면 false")
-        void isOwnerOfMember_NotFound() {
-            when(memberRepository.findById(1L)).thenReturn(Optional.empty());
-
-            boolean result = moodDiaryService.isOwnerOfMember(1L, member.getLoginId());
-
-            assertThat(result).isFalse();
-        }
-    }
+    // 소유권 검증 테스트는 ResourceOwnershipValidatorTest로 이동됨
 
     private MoodDiary buildTemplateDiary(Long id, LocalDate diaryDate) {
         return MoodDiary.builder()

@@ -81,12 +81,12 @@ class MedicationScheduleServiceTest {
                 1L, // memberId
                 "Test Medicine",
                 "Test Hospital",
-                "2024-01-01", // prescriptionDate
+                LocalDate.of(2024, 1, 1), // prescriptionDate
                 "Test memo",
-                "2024-01-01", // startOfAd
+                LocalDate.of(2024, 1, 1), // startOfAd
                 30, // prescriptionDays
                 3, // perDay
-                "SOUND" // alarmType
+                AlarmType.SOUND // alarmType
         );
 
         updateRequest = new MedicationScheduleUpdateRequest(
@@ -305,54 +305,5 @@ class MedicationScheduleServiceTest {
         verify(medicationScheduleRepository).findById(scheduleId);
         verify(medicationScheduleRepository, never()).delete(any());
         verify(domainEventPublisher, never()).publish(any());
-    }
-
-    @Test
-    @DisplayName("Should return true when user is owner of member")
-    void isOwner_WithValidOwner_ShouldReturnTrue() {
-        // given
-        Long memberId = 1L;
-        String loginId = "testUser";
-        when(memberRepository.findById(memberId)).thenReturn(Optional.of(mockMember));
-
-        // when
-        boolean result = medicationScheduleService.isOwner(memberId, loginId);
-
-        // then
-        assertThat(result).isTrue();
-        verify(memberRepository).findById(memberId);
-        verify(mockMember).getLoginId();
-    }
-
-    @Test
-    @DisplayName("Should return false when user is not owner")
-    void isOwner_WithInvalidOwner_ShouldReturnFalse() {
-        // given
-        Long memberId = 1L;
-        String loginId = "otherUser";
-        when(memberRepository.findById(memberId)).thenReturn(Optional.of(mockMember));
-
-        // when
-        boolean result = medicationScheduleService.isOwner(memberId, loginId);
-
-        // then
-        assertThat(result).isFalse();
-        verify(memberRepository).findById(memberId);
-    }
-
-    @Test
-    @DisplayName("Should return false when member not found")
-    void isOwner_WithNonExistentMember_ShouldReturnFalse() {
-        // given
-        Long memberId = 999L;
-        String loginId = "testUser";
-        when(memberRepository.findById(memberId)).thenReturn(Optional.empty());
-
-        // when
-        boolean result = medicationScheduleService.isOwner(memberId, loginId);
-
-        // then
-        assertThat(result).isFalse();
-        verify(memberRepository).findById(memberId);
     }
 }

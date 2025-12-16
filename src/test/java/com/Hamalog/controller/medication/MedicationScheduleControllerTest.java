@@ -389,12 +389,12 @@ class MedicationScheduleControllerTest {
                 1L, // memberId
                 "Test Medication", // name
                 "Test Hospital", // hospitalName
-                "2024-01-01", // prescriptionDate
+                java.time.LocalDate.of(2024, 1, 1), // prescriptionDate
                 "Test memo", // memo
-                "2024-01-02", // startOfAd
+                java.time.LocalDate.of(2024, 1, 2), // startOfAd
                 7, // prescriptionDays
                 2, // perDay
-                "SOUND" // alarmType
+                com.Hamalog.domain.medication.AlarmType.SOUND // alarmType
         );
     }
 

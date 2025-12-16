@@ -7,6 +7,7 @@ import java.util.Optional;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
 import org.springframework.data.jpa.repository.JpaRepository;
+import org.springframework.data.jpa.repository.Modifying;
 import org.springframework.data.jpa.repository.Query;
 import org.springframework.data.repository.query.Param;
 import org.springframework.stereotype.Repository;
@@ -22,4 +23,8 @@ public interface MoodDiaryRepository extends JpaRepository<MoodDiary, Long> {
 
     @Query("SELECT m FROM MoodDiary m WHERE m.moodDiaryId = :moodDiaryId AND m.member.memberId = :memberId")
     Optional<MoodDiary> findByIdAndMemberId(@Param("moodDiaryId") Long moodDiaryId, @Param("memberId") Long memberId);
+
+    @Modifying
+    @Query("DELETE FROM MoodDiary m WHERE m.member.memberId = :memberId")
+    void deleteByMember_MemberId(@Param("memberId") Long memberId);
 }

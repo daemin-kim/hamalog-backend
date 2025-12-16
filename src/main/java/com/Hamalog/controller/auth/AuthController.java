@@ -8,7 +8,9 @@ import com.Hamalog.dto.auth.response.TokenRefreshResponse;
 import com.Hamalog.exception.CustomException;
 import com.Hamalog.exception.ErrorCode;
 import com.Hamalog.security.jwt.JwtTokenProvider;
-import com.Hamalog.service.auth.AuthService;
+import com.Hamalog.service.auth.AuthenticationService;
+import com.Hamalog.service.auth.MemberDeletionService;
+import com.Hamalog.service.auth.MemberRegistrationService;
 import com.Hamalog.service.i18n.MessageService;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.media.Content;
@@ -29,19 +31,21 @@ import org.springframework.web.bind.annotation.*;
 @RequiredArgsConstructor
 public class AuthController {
 
-    private final AuthService authService;
+    private final MemberRegistrationService memberRegistrationService;
+    private final AuthenticationService authenticationService;
+    private final MemberDeletionService memberDeletionService;
     private final MessageService messageService;
     private final JwtTokenProvider jwtTokenProvider;
 
     @PostMapping("/signup")
     public ResponseEntity<String> signup(@Valid @RequestBody SignupRequest request) {
-        authService.registerMember(request);
+        memberRegistrationService.registerMember(request);
         return ResponseEntity.ok(messageService.getMessage("auth.signup.success"));
     }
 
     @PostMapping("/login")
     public ResponseEntity<LoginResponse> login(@Valid @RequestBody LoginRequest request) {
-        LoginResponse loginResponse = authService.authenticateAndGenerateToken(request.loginId(), request.password());
+        LoginResponse loginResponse = authenticationService.authenticateAndGenerateToken(request.loginId(), request.password());
         return ResponseEntity.ok(loginResponse);
     }
 
@@ -56,7 +60,7 @@ public class AuthController {
     })
     public ResponseEntity<TokenRefreshResponse> refreshToken(
             @Valid @RequestBody TokenRefreshRequest request) {
-        TokenRefreshResponse response = authService.refreshAccessToken(request.refreshToken());
+        TokenRefreshResponse response = authenticationService.refreshAccessToken(request.refreshToken());
         return ResponseEntity.ok(response);
     }
 
@@ -81,7 +85,7 @@ public class AuthController {
             throw new CustomException(ErrorCode.INVALID_TOKEN);
         }
 
-        authService.logoutUser(token);
+        authenticationService.logoutUser(token);
         return ResponseEntity.ok(messageService.getMessage("auth.logout.success"));
     }
 
@@ -109,8 +113,8 @@ public class AuthController {
             token = authorizationHeader.substring(7);
         }
 
-        authService.deleteMember(loginId, token);
-        
+        memberDeletionService.deleteMember(loginId, token);
+
         return ResponseEntity.ok(messageService.getMessage("auth.account.deletion.success"));
     }
 }

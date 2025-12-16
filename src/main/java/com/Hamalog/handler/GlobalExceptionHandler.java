@@ -47,11 +47,6 @@ public class GlobalExceptionHandler {
     @Autowired
     private StructuredLogger structuredLogger;
     
-    // Error severity levels for alerting and monitoring
-    private enum ErrorSeverity {
-        LOW, MEDIUM, HIGH, CRITICAL
-    }
-    
     // Critical error patterns that require immediate attention
     private static final String[] CRITICAL_ERROR_PATTERNS = {
         "OutOfMemoryError", "StackOverflowError", "DatabaseConnectionException", 

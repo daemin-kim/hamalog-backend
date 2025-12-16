@@ -11,6 +11,8 @@ import com.Hamalog.domain.member.Member;
 import com.Hamalog.exception.CustomException;
 import com.Hamalog.exception.ErrorCode;
 import com.Hamalog.security.annotation.RequireResourceOwnership;
+import com.Hamalog.security.authorization.ResourceOwnershipValidator;
+import com.Hamalog.service.diary.MoodDiaryService;
 import com.Hamalog.service.medication.MedicationRecordService;
 import com.Hamalog.service.medication.MedicationScheduleService;
 import com.Hamalog.service.sideEffect.SideEffectService;
@@ -43,6 +45,12 @@ class ResourceOwnershipAspectTest {
 
     @Mock
     private SideEffectService sideEffectService;
+
+    @Mock
+    private MoodDiaryService moodDiaryService;
+
+    @Mock
+    private ResourceOwnershipValidator resourceOwnershipValidator;
 
     @Mock(lenient = true)
     private ProceedingJoinPoint joinPoint;
@@ -184,7 +192,7 @@ class ResourceOwnershipAspectTest {
         when(mockSchedule.getMember()).thenReturn(mockMember);
         when(mockMember.getMemberId()).thenReturn(456L);
         when(medicationScheduleService.getMedicationSchedule(123L)).thenReturn(mockSchedule);
-        when(medicationScheduleService.isOwner(456L, "testUser")).thenReturn(true);
+        when(resourceOwnershipValidator.isOwnerByMemberId(456L, "testUser")).thenReturn(true);
         when(joinPoint.proceed()).thenReturn("success");
 
         // when
@@ -192,7 +200,7 @@ class ResourceOwnershipAspectTest {
 
         // then
         verify(medicationScheduleService).getMedicationSchedule(123L);
-        verify(medicationScheduleService).isOwner(456L, "testUser");
+        verify(resourceOwnershipValidator).isOwnerByMemberId(456L, "testUser");
     }
 
     @Test
@@ -205,14 +213,14 @@ class ResourceOwnershipAspectTest {
             RequireResourceOwnership.ResourceType.MEDICATION_SCHEDULE_BY_MEMBER, 
             "id"
         );
-        when(medicationScheduleService.isOwner(123L, "testUser")).thenReturn(true);
+        when(resourceOwnershipValidator.isOwnerByMemberId(123L, "testUser")).thenReturn(true);
         when(joinPoint.proceed()).thenReturn("success");
 
         // when
         resourceOwnershipAspect.checkResourceOwnership(joinPoint, annotation);
 
         // then
-        verify(medicationScheduleService).isOwner(123L, "testUser");
+        verify(resourceOwnershipValidator).isOwnerByMemberId(123L, "testUser");
     }
 
     @Test
@@ -255,7 +263,7 @@ class ResourceOwnershipAspectTest {
         when(mockSchedule.getMember()).thenReturn(mockMember);
         when(mockMember.getMemberId()).thenReturn(456L);
         when(medicationRecordService.getMedicationRecord(123L)).thenReturn(mockRecord);
-        when(medicationScheduleService.isOwner(456L, "testUser")).thenReturn(true);
+        when(resourceOwnershipValidator.isOwnerByMemberId(456L, "testUser")).thenReturn(true);
         when(joinPoint.proceed()).thenReturn("success");
 
         // when
@@ -263,7 +271,7 @@ class ResourceOwnershipAspectTest {
 
         // then
         verify(medicationRecordService).getMedicationRecord(123L);
-        verify(medicationScheduleService).isOwner(456L, "testUser");
+        verify(resourceOwnershipValidator).isOwnerByMemberId(456L, "testUser");
     }
 
     @Test
@@ -278,14 +286,14 @@ class ResourceOwnershipAspectTest {
         when(annotation.source()).thenReturn(RequireResourceOwnership.ParameterSource.PATH_VARIABLE);
         when(annotation.strategy()).thenReturn(RequireResourceOwnership.OwnershipStrategy.THROUGH_MEMBER);
         
-        when(medicationScheduleService.isOwner(123L, "testUser")).thenReturn(true);
+        when(resourceOwnershipValidator.isOwnerByMemberId(123L, "testUser")).thenReturn(true);
         when(joinPoint.proceed()).thenReturn("success");
 
         // when
         resourceOwnershipAspect.checkResourceOwnership(joinPoint, annotation);
 
         // then
-        verify(medicationScheduleService).isOwner(123L, "testUser");
+        verify(resourceOwnershipValidator).isOwnerByMemberId(123L, "testUser");
     }
 
     @Test

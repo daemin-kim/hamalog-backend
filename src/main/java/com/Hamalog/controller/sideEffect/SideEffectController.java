@@ -26,7 +26,6 @@ public class SideEffectController {
 
     private final SideEffectService sideEffectService;
 
-
     @Operation(summary = "최근 부작용 목록 조회",
             description = "사용자 ID로 최근 5개의 부작용 이름을 조회합니다.")
     @ApiResponses({

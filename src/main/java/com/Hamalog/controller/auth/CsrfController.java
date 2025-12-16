@@ -31,7 +31,6 @@ public class CsrfController {
     private final JwtTokenProvider jwtTokenProvider;
     private final TrustedProxyService trustedProxyService;
 
-
     /**
      * CSRF 토큰 발급
      * 인증된 사용자에게 CSRF 토큰을 제공

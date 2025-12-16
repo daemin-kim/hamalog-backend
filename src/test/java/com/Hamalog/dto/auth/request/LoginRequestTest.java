@@ -218,4 +218,3 @@ class LoginRequestTest {
         assertThat(loginRequest.password()).isEqualTo("한글비밀번호123");
     }
 }
-

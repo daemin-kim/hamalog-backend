@@ -31,7 +31,6 @@ public class MedicationRecordController {
 
     private final MedicationRecordService medicationRecordService;
 
-
     @Operation(
             summary = "특정 복약 스케줄의 복약 기록 목록 조회",
             description = "주어진 복약 스케줄 ID에 대한 모든 복약 기록을 리스트로 반환합니다. 최신순 또는 필터링은 서비스 로직에 따라 처리 가능."

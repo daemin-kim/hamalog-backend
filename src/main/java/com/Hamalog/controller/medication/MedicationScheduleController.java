@@ -38,7 +38,6 @@ public class MedicationScheduleController {
 
     private final MedicationScheduleService medicationScheduleService;
 
-
     @Operation(summary = "회원의 복약 스케줄 목록 조회",
             description = "회원 ID를 통해 해당 사용자의 모든 복약 스케줄을 조회합니다.")
     @ApiResponses({

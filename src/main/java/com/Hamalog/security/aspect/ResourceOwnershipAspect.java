@@ -7,6 +7,11 @@ import com.Hamalog.service.diary.MoodDiaryService;
 import com.Hamalog.service.medication.MedicationRecordService;
 import com.Hamalog.service.medication.MedicationScheduleService;
 import com.Hamalog.service.sideEffect.SideEffectService;
+import java.lang.reflect.Field;
+import java.lang.reflect.Method;
+import java.lang.reflect.Parameter;
+import java.util.Map;
+import java.util.Optional;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.aspectj.lang.ProceedingJoinPoint;
@@ -17,15 +22,9 @@ import org.slf4j.MDC;
 import org.springframework.security.core.Authentication;
 import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.stereotype.Component;
+import org.springframework.util.StringUtils;
 import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.RequestParam;
-import org.springframework.util.StringUtils;
-
-import java.lang.reflect.Field;
-import java.lang.reflect.Method;
-import java.lang.reflect.Parameter;
-import java.util.Map;
-import java.util.Optional;
 
 /**
  * 리소스 소유권 검증을 위한 AOP Aspect
@@ -384,4 +383,3 @@ public class ResourceOwnershipAspect {
         return moodDiaryService.isOwnerOfMember(resourceId, loginId);
     }
 }
-

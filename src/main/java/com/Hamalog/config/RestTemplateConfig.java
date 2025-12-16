@@ -2,7 +2,6 @@ package com.Hamalog.config;
 
 import java.io.IOException;
 import java.time.Duration;
-
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.apache.hc.client5.http.config.RequestConfig;

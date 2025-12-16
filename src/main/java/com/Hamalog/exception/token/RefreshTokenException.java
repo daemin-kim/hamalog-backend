@@ -11,4 +11,3 @@ public class RefreshTokenException extends TokenException {
         super(errorCode);
     }
 }
-

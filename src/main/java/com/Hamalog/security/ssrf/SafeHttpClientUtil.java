@@ -1,5 +1,8 @@
 package com.Hamalog.security.ssrf;
 
+import java.net.*;
+import java.util.*;
+import java.util.regex.Pattern;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Value;
@@ -8,10 +11,6 @@ import org.springframework.http.ResponseEntity;
 import org.springframework.stereotype.Component;
 import org.springframework.util.StringUtils;
 import org.springframework.web.client.RestTemplate;
-
-import java.net.*;
-import java.util.*;
-import java.util.regex.Pattern;
 
 /**
  * SSRF 공격을 방어하는 안전한 HTTP 클라이언트 유틸리티

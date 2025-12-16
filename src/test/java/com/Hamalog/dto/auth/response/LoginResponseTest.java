@@ -1,10 +1,10 @@
 package com.Hamalog.dto.auth.response;
 
+import static org.assertj.core.api.Assertions.assertThat;
+
 import com.fasterxml.jackson.databind.ObjectMapper;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
-
-import static org.assertj.core.api.Assertions.assertThat;
 
 @DisplayName("LoginResponse DTO Tests")
 class LoginResponseTest {

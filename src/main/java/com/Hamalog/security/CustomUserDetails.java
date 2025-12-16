@@ -1,12 +1,11 @@
 package com.Hamalog.security;
 
 import com.Hamalog.domain.member.Member;
+import java.util.Collection;
+import java.util.Collections;
 import lombok.Getter;
 import org.springframework.security.core.GrantedAuthority;
 import org.springframework.security.core.userdetails.UserDetails;
-
-import java.util.Collection;
-import java.util.Collections;
 
 @Getter
 public class CustomUserDetails implements UserDetails {

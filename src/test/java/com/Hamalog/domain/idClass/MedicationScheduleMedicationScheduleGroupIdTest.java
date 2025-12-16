@@ -1,13 +1,12 @@
 package com.Hamalog.domain.idClass;
 
-import org.junit.jupiter.api.BeforeEach;
-import org.junit.jupiter.api.DisplayName;
-import org.junit.jupiter.api.Test;
+import static org.assertj.core.api.Assertions.assertThat;
 
 import java.io.*;
 import java.lang.reflect.Field;
-
-import static org.assertj.core.api.Assertions.assertThat;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.DisplayName;
+import org.junit.jupiter.api.Test;
 
 @DisplayName("MedicationScheduleMedicationScheduleGroupId Tests")
 class MedicationScheduleMedicationScheduleGroupIdTest {

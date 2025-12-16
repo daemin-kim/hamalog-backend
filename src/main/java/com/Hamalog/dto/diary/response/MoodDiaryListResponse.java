@@ -1,8 +1,7 @@
 package com.Hamalog.dto.diary.response;
 
-import lombok.*;
-
 import java.util.List;
+import lombok.*;
 
 @Getter
 @Builder
@@ -17,4 +16,3 @@ public class MoodDiaryListResponse {
     private boolean hasNext;
     private boolean hasPrevious;
 }
-

@@ -3,8 +3,11 @@ package com.Hamalog.aop;
 import com.Hamalog.logging.StructuredLogger;
 import com.Hamalog.logging.events.AuditEvent;
 import com.Hamalog.logging.events.SecurityEvent;
-import com.fasterxml.jackson.databind.ObjectMapper;
 import com.Hamalog.security.filter.TrustedProxyService;
+import com.fasterxml.jackson.databind.ObjectMapper;
+import jakarta.servlet.http.HttpServletRequest;
+import java.time.LocalDateTime;
+import java.time.format.DateTimeFormatter;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.aspectj.lang.JoinPoint;
@@ -19,10 +22,6 @@ import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.stereotype.Component;
 import org.springframework.web.context.request.RequestContextHolder;
 import org.springframework.web.context.request.ServletRequestAttributes;
-
-import jakarta.servlet.http.HttpServletRequest;
-import java.time.LocalDateTime;
-import java.time.format.DateTimeFormatter;
 
 @Slf4j
 @Aspect
@@ -383,4 +382,3 @@ public class BusinessAuditAspect {
         MDC.remove("audit.attemptedUser");
     }
 }
-

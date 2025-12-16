@@ -1,13 +1,12 @@
 package com.Hamalog.domain.sideEffect;
 
-import com.Hamalog.domain.member.Member;
-import org.junit.jupiter.api.DisplayName;
-import org.junit.jupiter.api.Test;
+import static org.assertj.core.api.Assertions.assertThat;
 
+import com.Hamalog.domain.member.Member;
 import java.time.LocalDate;
 import java.time.LocalDateTime;
-
-import static org.assertj.core.api.Assertions.assertThat;
+import org.junit.jupiter.api.DisplayName;
+import org.junit.jupiter.api.Test;
 
 @DisplayName("SideEffectSideEffectRecord Entity Tests")
 class SideEffectSideEffectRecordTest {

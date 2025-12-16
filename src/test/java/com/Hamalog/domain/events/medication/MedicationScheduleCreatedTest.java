@@ -1,12 +1,11 @@
 package com.Hamalog.domain.events.medication;
 
+import static org.assertj.core.api.Assertions.assertThat;
+
 import com.Hamalog.domain.medication.AlarmType;
+import java.time.LocalDate;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
-
-import java.time.LocalDate;
-
-import static org.assertj.core.api.Assertions.assertThat;
 
 @DisplayName("MedicationScheduleCreated Event Tests")
 class MedicationScheduleCreatedTest {

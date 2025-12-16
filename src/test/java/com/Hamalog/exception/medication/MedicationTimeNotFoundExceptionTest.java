@@ -1,11 +1,11 @@
 package com.Hamalog.exception.medication;
 
+import static org.assertj.core.api.Assertions.assertThat;
+
 import com.Hamalog.exception.CustomException;
 import com.Hamalog.exception.ErrorCode;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
-
-import static org.assertj.core.api.Assertions.assertThat;
 
 @DisplayName("MedicationTimeNotFoundException Tests")
 class MedicationTimeNotFoundExceptionTest {

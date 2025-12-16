@@ -15,4 +15,3 @@ public class OAuth2TokenExchangeException extends OAuth2Exception {
         super(ErrorCode.OAUTH2_TOKEN_EXCHANGE_FAILED, details);
     }
 }
-

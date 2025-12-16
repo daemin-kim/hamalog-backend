@@ -1,5 +1,8 @@
 package com.Hamalog.config;
 
+import static org.assertj.core.api.Assertions.assertThat;
+import static org.mockito.Mockito.when;
+
 import com.Hamalog.security.CustomUserDetailsService;
 import com.Hamalog.security.filter.BotProtectionFilter;
 import com.Hamalog.security.filter.CsrfValidationFilter;
@@ -22,9 +25,6 @@ import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.web.cors.CorsConfiguration;
 import org.springframework.web.cors.CorsConfigurationSource;
 import org.springframework.web.cors.UrlBasedCorsConfigurationSource;
-
-import static org.assertj.core.api.Assertions.assertThat;
-import static org.mockito.Mockito.when;
 
 @ExtendWith(MockitoExtension.class)
 @DisplayName("SecurityConfig Tests")

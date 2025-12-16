@@ -16,4 +16,3 @@ public class SideEffectNotFoundException extends CustomException {
         super(ErrorCode.SIDE_EFFECT_NOT_FOUND);
     }
 }
-

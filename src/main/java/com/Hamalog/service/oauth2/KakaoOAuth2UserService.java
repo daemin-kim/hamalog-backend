@@ -2,6 +2,10 @@ package com.Hamalog.service.oauth2;
 
 import com.Hamalog.domain.member.Member;
 import com.Hamalog.repository.member.MemberRepository;
+import java.time.LocalDate;
+import java.time.LocalDateTime;
+import java.util.Map;
+import java.util.Optional;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.security.oauth2.client.userinfo.DefaultOAuth2UserService;
@@ -11,11 +15,6 @@ import org.springframework.security.oauth2.core.OAuth2Error;
 import org.springframework.security.oauth2.core.user.OAuth2User;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
-
-import java.time.LocalDate;
-import java.time.LocalDateTime;
-import java.util.Map;
-import java.util.Optional;
 
 @Service
 public class KakaoOAuth2UserService extends DefaultOAuth2UserService {

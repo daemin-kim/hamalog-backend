@@ -1,13 +1,12 @@
 package com.Hamalog.domain.sideEffect;
 
-import com.Hamalog.domain.member.Member;
-import org.junit.jupiter.api.DisplayName;
-import org.junit.jupiter.api.Test;
-
-import java.time.LocalDateTime;
-
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.mockito.Mockito.mock;
+
+import com.Hamalog.domain.member.Member;
+import java.time.LocalDateTime;
+import org.junit.jupiter.api.DisplayName;
+import org.junit.jupiter.api.Test;
 
 class SideEffectRecordTest {
 

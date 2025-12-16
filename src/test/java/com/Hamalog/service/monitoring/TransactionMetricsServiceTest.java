@@ -1,15 +1,13 @@
 package com.Hamalog.service.monitoring;
 
+import static org.assertj.core.api.Assertions.assertThat;
+
+import javax.sql.DataSource;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
-
-import javax.sql.DataSource;
-
-import static org.assertj.core.api.Assertions.assertThat;
-import static org.mockito.Mockito.when;
 
 @ExtendWith(MockitoExtension.class)
 class TransactionMetricsServiceTest {
@@ -95,4 +93,3 @@ class TransactionMetricsServiceTest {
         assertThat(transactionMetricsService.getSuccessRate()).isEqualTo(75.0);
     }
 }
-

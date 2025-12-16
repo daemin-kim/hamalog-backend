@@ -1,7 +1,8 @@
 package com.Hamalog.logging.events;
 
-import org.junit.jupiter.api.Test;
 import static org.junit.jupiter.api.Assertions.*;
+
+import org.junit.jupiter.api.Test;
 
 class PerformanceEventTest {
 

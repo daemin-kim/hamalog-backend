@@ -1,9 +1,10 @@
 package com.Hamalog.service.oauth2;
 
-import org.junit.jupiter.api.BeforeEach;
-import org.junit.jupiter.api.Test;
-import org.junit.jupiter.api.DisplayName;
 import static org.junit.jupiter.api.Assertions.*;
+
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.DisplayName;
+import org.junit.jupiter.api.Test;
 
 @DisplayName("State Persistence Service Tests")
 class StatePersistenceServiceTest {
@@ -60,4 +61,3 @@ class StatePersistenceServiceTest {
         assertFalse(service.validateAndConsumeState(""));
     }
 }
-

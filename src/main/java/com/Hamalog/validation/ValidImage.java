@@ -2,7 +2,6 @@ package com.Hamalog.validation;
 
 import jakarta.validation.Constraint;
 import jakarta.validation.Payload;
-
 import java.lang.annotation.*;
 
 @Target({ElementType.PARAMETER})
@@ -21,4 +20,3 @@ public @interface ValidImage {
 
     String[] allowedContentTypes() default {"image/jpeg", "image/png", "image/gif", "image/webp"};
 }
-

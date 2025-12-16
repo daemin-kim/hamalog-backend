@@ -1,10 +1,14 @@
 package com.Hamalog.aop;
 
-import com.Hamalog.exception.CustomException;
-import com.Hamalog.exception.ErrorCode;
+import static org.assertj.core.api.Assertions.*;
+import static org.mockito.Mockito.*;
+
 import com.Hamalog.logging.StructuredLogger;
 import com.Hamalog.logging.events.ApiEvent;
 import com.Hamalog.security.filter.TrustedProxyService;
+import java.lang.reflect.Method;
+import java.util.Map;
+import java.util.Optional;
 import org.aspectj.lang.ProceedingJoinPoint;
 import org.aspectj.lang.reflect.MethodSignature;
 import org.junit.jupiter.api.AfterEach;
@@ -14,7 +18,6 @@ import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.InjectMocks;
 import org.mockito.Mock;
-import org.mockito.MockedStatic;
 import org.mockito.junit.jupiter.MockitoExtension;
 import org.slf4j.MDC;
 import org.springframework.mock.web.MockHttpServletRequest;
@@ -23,14 +26,6 @@ import org.springframework.security.core.context.SecurityContext;
 import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.web.context.request.RequestContextHolder;
 import org.springframework.web.context.request.ServletRequestAttributes;
-import org.springframework.test.util.ReflectionTestUtils;
-
-import java.lang.reflect.Method;
-import java.util.Map;
-import java.util.Optional;
-
-import static org.assertj.core.api.Assertions.*;
-import static org.mockito.Mockito.*;
 
 @ExtendWith(MockitoExtension.class)
 @DisplayName("ApiLoggingAspect Tests")
@@ -471,4 +466,3 @@ class ApiLoggingAspectTest {
         }
     }
 }
-

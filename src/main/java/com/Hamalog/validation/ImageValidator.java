@@ -2,12 +2,11 @@ package com.Hamalog.validation;
 
 import jakarta.validation.ConstraintValidator;
 import jakarta.validation.ConstraintValidatorContext;
-import lombok.extern.slf4j.Slf4j;
-import org.springframework.web.multipart.MultipartFile;
-
 import java.io.IOException;
 import java.util.Arrays;
 import java.util.List;
+import lombok.extern.slf4j.Slf4j;
+import org.springframework.web.multipart.MultipartFile;
 
 @Slf4j
 public class ImageValidator implements ConstraintValidator<ValidImage, MultipartFile> {
@@ -135,4 +134,3 @@ public class ImageValidator implements ConstraintValidator<ValidImage, Multipart
         return false;
     }
 }
-

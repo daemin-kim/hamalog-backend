@@ -2,15 +2,14 @@ package com.Hamalog.logging.metrics;
 
 import com.Hamalog.logging.StructuredLogger;
 import com.Hamalog.logging.events.PerformanceEvent;
-import lombok.extern.slf4j.Slf4j;
-import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.scheduling.annotation.Scheduled;
-import org.springframework.stereotype.Component;
-
 import java.lang.management.*;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
+import lombok.extern.slf4j.Slf4j;
+import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.scheduling.annotation.Scheduled;
+import org.springframework.stereotype.Component;
 
 /**
  * Production-ready JVM metrics logger that tracks system health and performance

@@ -1,11 +1,18 @@
 package com.Hamalog.repository.medication;
 
+import static org.assertj.core.api.Assertions.assertThat;
+
 import com.Hamalog.config.TestEncryptionConfig;
 import com.Hamalog.domain.medication.AlarmType;
 import com.Hamalog.domain.medication.MedicationSchedule;
 import com.Hamalog.domain.medication.MedicationTime;
 import com.Hamalog.domain.member.Member;
 import com.Hamalog.repository.member.MemberRepository;
+import java.time.LocalDate;
+import java.time.LocalDateTime;
+import java.time.LocalTime;
+import java.util.List;
+import java.util.Optional;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
@@ -14,14 +21,6 @@ import org.springframework.boot.test.autoconfigure.orm.jpa.DataJpaTest;
 import org.springframework.boot.test.autoconfigure.orm.jpa.TestEntityManager;
 import org.springframework.context.annotation.Import;
 import org.springframework.test.context.ActiveProfiles;
-
-import java.time.LocalDate;
-import java.time.LocalDateTime;
-import java.time.LocalTime;
-import java.util.List;
-import java.util.Optional;
-
-import static org.assertj.core.api.Assertions.assertThat;
 
 @DataJpaTest
 @ActiveProfiles("test")

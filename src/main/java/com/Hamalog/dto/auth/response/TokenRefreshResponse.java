@@ -17,4 +17,3 @@ public record TokenRefreshResponse(
     @Schema(description = "액세스 토큰 만료 시간 (초)")
     long expiresIn
 ) {}
-

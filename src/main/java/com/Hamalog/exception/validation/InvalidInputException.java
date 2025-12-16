@@ -12,4 +12,3 @@ public class InvalidInputException extends CustomException {
         super(errorCode);
     }
 }
-

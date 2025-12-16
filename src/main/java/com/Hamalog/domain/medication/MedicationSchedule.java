@@ -2,10 +2,9 @@ package com.Hamalog.domain.medication;
 
 import com.Hamalog.domain.member.Member;
 import jakarta.persistence.*;
+import java.time.LocalDate;
 import lombok.Getter;
 import lombok.NoArgsConstructor;
-
-import java.time.LocalDate;
 
 @Entity
 @Getter

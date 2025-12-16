@@ -2,9 +2,8 @@ package com.Hamalog.domain.events.medication;
 
 import com.Hamalog.domain.events.DomainEvent;
 import com.Hamalog.domain.medication.AlarmType;
-import lombok.Getter;
-
 import java.time.LocalDate;
+import lombok.Getter;
 
 /**
  * Domain event published when a new medication schedule is created.

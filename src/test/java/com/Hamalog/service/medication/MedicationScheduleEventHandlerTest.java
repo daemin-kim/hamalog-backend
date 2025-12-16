@@ -1,11 +1,16 @@
 package com.Hamalog.service.medication;
 
+import static org.assertj.core.api.Assertions.assertThat;
+import static org.mockito.Mockito.*;
+
 import com.Hamalog.domain.events.medication.MedicationScheduleCreated;
 import com.Hamalog.domain.events.medication.MedicationScheduleDeleted;
 import com.Hamalog.domain.events.medication.MedicationScheduleUpdated;
+import com.Hamalog.domain.medication.AlarmType;
 import com.Hamalog.logging.StructuredLogger;
 import com.Hamalog.logging.events.AuditEvent;
 import com.Hamalog.logging.events.BusinessEvent;
+import java.time.LocalDate;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
@@ -15,12 +20,6 @@ import org.mockito.Captor;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
 import org.springframework.data.redis.core.RedisTemplate;
-
-import com.Hamalog.domain.medication.AlarmType;
-import java.time.LocalDate;
-
-import static org.assertj.core.api.Assertions.assertThat;
-import static org.mockito.Mockito.*;
 
 @ExtendWith(MockitoExtension.class)
 @DisplayName("MedicationScheduleEventHandler 테스트")

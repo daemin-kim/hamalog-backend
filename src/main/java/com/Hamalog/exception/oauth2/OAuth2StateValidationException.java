@@ -11,4 +11,3 @@ public class OAuth2StateValidationException extends OAuth2Exception {
         super(ErrorCode.OAUTH2_STATE_VALIDATION_FAILED);
     }
 }
-

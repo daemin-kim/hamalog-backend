@@ -1,16 +1,15 @@
 package com.Hamalog.logging;
 
+import static org.junit.jupiter.api.Assertions.assertDoesNotThrow;
+
 import com.Hamalog.logging.events.*;
+import java.util.HashMap;
+import java.util.Map;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.InjectMocks;
 import org.mockito.junit.jupiter.MockitoExtension;
 import org.slf4j.MDC;
-
-import java.util.HashMap;
-import java.util.Map;
-
-import static org.junit.jupiter.api.Assertions.assertDoesNotThrow;
 
 /**
  * Test class for StructuredLogger to verify structured logging functionality

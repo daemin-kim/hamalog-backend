@@ -11,4 +11,3 @@ public class TokenExpiredException extends TokenException {
         super(ErrorCode.TOKEN_EXPIRED);
     }
 }
-

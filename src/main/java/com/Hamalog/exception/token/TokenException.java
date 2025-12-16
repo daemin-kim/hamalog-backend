@@ -12,4 +12,3 @@ public class TokenException extends CustomException {
         super(errorCode);
     }
 }
-

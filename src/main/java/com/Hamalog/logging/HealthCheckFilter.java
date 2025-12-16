@@ -27,4 +27,3 @@ public class HealthCheckFilter extends TurboFilter {
         return FilterReply.NEUTRAL;
     }
 }
-

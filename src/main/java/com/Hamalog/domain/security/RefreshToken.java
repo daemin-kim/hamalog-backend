@@ -1,9 +1,8 @@
 package com.Hamalog.domain.security;
 
 import jakarta.persistence.*;
-import lombok.*;
-
 import java.time.LocalDateTime;
+import lombok.*;
 
 @Entity
 @Table(name = "refresh_tokens", indexes = {

@@ -1,9 +1,8 @@
 package com.Hamalog.domain.medication;
 
 import jakarta.persistence.*;
-import lombok.Getter;
-
 import java.time.LocalTime;
+import lombok.Getter;
 
 @Entity
 @Getter

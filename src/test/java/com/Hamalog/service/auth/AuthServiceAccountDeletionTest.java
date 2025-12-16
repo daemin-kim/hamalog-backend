@@ -1,20 +1,29 @@
 package com.Hamalog.service.auth;
 
-import com.Hamalog.domain.member.Member;
-import com.Hamalog.domain.medication.MedicationSchedule;
-import com.Hamalog.domain.medication.MedicationRecord;
-import com.Hamalog.domain.medication.MedicationTime;
-import com.Hamalog.domain.medication.AlarmType;
-import com.Hamalog.domain.sideEffect.SideEffectRecord;
+import static org.assertj.core.api.Assertions.assertThatThrownBy;
+import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.BDDMockito.given;
+import static org.mockito.Mockito.*;
+
 import com.Hamalog.domain.events.member.MemberDeletedEvent;
+import com.Hamalog.domain.medication.AlarmType;
+import com.Hamalog.domain.medication.MedicationSchedule;
+import com.Hamalog.domain.member.Member;
 import com.Hamalog.exception.CustomException;
 import com.Hamalog.exception.ErrorCode;
-import com.Hamalog.repository.member.MemberRepository;
 import com.Hamalog.repository.medication.MedicationRecordRepository;
 import com.Hamalog.repository.medication.MedicationScheduleRepository;
+import com.Hamalog.repository.member.MemberRepository;
 import com.Hamalog.repository.sideEffect.SideEffectRecordRepository;
 import com.Hamalog.security.jwt.JwtTokenProvider;
 import com.Hamalog.security.jwt.TokenBlacklistService;
+import com.fasterxml.jackson.databind.ObjectMapper;
+import java.lang.reflect.Field;
+import java.time.LocalDate;
+import java.time.LocalDateTime;
+import java.util.Arrays;
+import java.util.List;
+import java.util.Optional;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
@@ -26,19 +35,6 @@ import org.springframework.security.authentication.AuthenticationManager;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.security.oauth2.client.registration.ClientRegistrationRepository;
 import org.springframework.web.client.RestTemplate;
-import com.fasterxml.jackson.databind.ObjectMapper;
-
-import java.lang.reflect.Field;
-import java.time.LocalDate;
-import java.time.LocalDateTime;
-import java.util.Arrays;
-import java.util.List;
-import java.util.Optional;
-
-import static org.assertj.core.api.Assertions.assertThatThrownBy;
-import static org.mockito.BDDMockito.given;
-import static org.mockito.Mockito.*;
-import static org.mockito.ArgumentMatchers.any;
 
 @ExtendWith(MockitoExtension.class)
 @DisplayName("AuthService Account Deletion Tests")

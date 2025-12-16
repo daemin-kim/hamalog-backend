@@ -1,8 +1,7 @@
 package com.Hamalog.domain.idClass;
 
-import lombok.EqualsAndHashCode;
-
 import java.io.Serializable;
+import lombok.EqualsAndHashCode;
 
 @EqualsAndHashCode
 public class SideEffectSideEffectRecordId implements Serializable {

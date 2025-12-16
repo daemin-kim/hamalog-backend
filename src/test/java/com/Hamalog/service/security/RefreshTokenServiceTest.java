@@ -1,21 +1,20 @@
 package com.Hamalog.service.security;
 
-import com.Hamalog.domain.security.RefreshToken;
-import com.Hamalog.exception.CustomException;
-import com.Hamalog.repository.security.RefreshTokenRepository;
-import org.junit.jupiter.api.BeforeEach;
-import org.junit.jupiter.api.Test;
-import org.junit.jupiter.api.DisplayName;
-import org.mockito.Mock;
-import org.mockito.MockitoAnnotations;
-import org.springframework.test.util.ReflectionTestUtils;
-
-import java.time.LocalDateTime;
-import java.util.Optional;
-
 import static org.junit.jupiter.api.Assertions.*;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.Mockito.*;
+
+import com.Hamalog.domain.security.RefreshToken;
+import com.Hamalog.exception.CustomException;
+import com.Hamalog.repository.security.RefreshTokenRepository;
+import java.time.LocalDateTime;
+import java.util.Optional;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.DisplayName;
+import org.junit.jupiter.api.Test;
+import org.mockito.Mock;
+import org.mockito.MockitoAnnotations;
+import org.springframework.test.util.ReflectionTestUtils;
 
 @DisplayName("Refresh Token Service Tests")
 class RefreshTokenServiceTest {
@@ -130,4 +129,3 @@ class RefreshTokenServiceTest {
         verify(repository).revokeAllByMemberId(memberId);
     }
 }
-

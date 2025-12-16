@@ -2,7 +2,6 @@ package com.Hamalog.dto.medication.request;
 
 import com.Hamalog.domain.medication.AlarmType;
 import jakarta.validation.constraints.*;
-
 import java.time.LocalDate;
 
 public record MedicationScheduleUpdateRequest(

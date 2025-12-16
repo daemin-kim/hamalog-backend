@@ -4,9 +4,8 @@ import com.Hamalog.domain.diary.DiaryType;
 import com.Hamalog.domain.diary.MoodType;
 import io.swagger.v3.oas.annotations.media.Schema;
 import jakarta.validation.constraints.*;
-import lombok.*;
-
 import java.time.LocalDate;
+import lombok.*;
 
 @Getter
 @Builder
@@ -81,4 +80,3 @@ public class MoodDiaryCreateRequest {
         return freeContent != null && !freeContent.isBlank();
     }
 }
-

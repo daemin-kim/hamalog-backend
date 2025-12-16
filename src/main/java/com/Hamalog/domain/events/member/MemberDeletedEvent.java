@@ -3,7 +3,6 @@ package com.Hamalog.domain.events.member;
 import com.Hamalog.domain.events.DomainEvent;
 import lombok.Getter;
 
-import java.time.LocalDateTime;
 
 /**
  * 회원 삭제 완료 이벤트

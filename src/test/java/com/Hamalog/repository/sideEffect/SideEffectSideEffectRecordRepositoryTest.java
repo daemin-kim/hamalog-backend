@@ -1,11 +1,17 @@
 package com.Hamalog.repository.sideEffect;
 
+import static org.assertj.core.api.Assertions.assertThat;
+
 import com.Hamalog.config.TestEncryptionConfig;
 import com.Hamalog.domain.idClass.SideEffectSideEffectRecordId;
 import com.Hamalog.domain.member.Member;
 import com.Hamalog.domain.sideEffect.SideEffect;
 import com.Hamalog.domain.sideEffect.SideEffectRecord;
 import com.Hamalog.domain.sideEffect.SideEffectSideEffectRecord;
+import java.time.LocalDate;
+import java.time.LocalDateTime;
+import java.util.List;
+import java.util.Optional;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
@@ -14,13 +20,6 @@ import org.springframework.boot.test.autoconfigure.orm.jpa.DataJpaTest;
 import org.springframework.boot.test.autoconfigure.orm.jpa.TestEntityManager;
 import org.springframework.context.annotation.Import;
 import org.springframework.test.context.ActiveProfiles;
-
-import java.time.LocalDate;
-import java.time.LocalDateTime;
-import java.util.List;
-import java.util.Optional;
-
-import static org.assertj.core.api.Assertions.assertThat;
 
 @DataJpaTest
 @ActiveProfiles("test")

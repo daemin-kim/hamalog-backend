@@ -287,4 +287,3 @@ public class KakaoOAuth2AuthService {
         log.info("Created new OAuth2 member with loginId: {}", SensitiveDataMasker.maskEmail(loginId));
     }
 }
-

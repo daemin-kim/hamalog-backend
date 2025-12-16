@@ -1,8 +1,10 @@
 package com.Hamalog.controller.auth;
 
+import com.Hamalog.config.ApiVersion;
 import com.Hamalog.security.csrf.CsrfTokenProvider;
 import com.Hamalog.security.filter.TrustedProxyService;
 import com.Hamalog.security.jwt.JwtTokenProvider;
+import io.swagger.v3.oas.annotations.tags.Tag;
 import jakarta.servlet.http.HttpServletRequest;
 import java.util.HashMap;
 import java.util.Map;
@@ -18,8 +20,9 @@ import org.springframework.web.bind.annotation.RestController;
  * CSRF 토큰 관리 컨트롤러
  * SPA 클라이언트가 CSRF 토큰을 요청할 수 있는 엔드포인트 제공
  */
+@Tag(name = "CSRF API", description = "CSRF 토큰 관리 API")
 @RestController
-@RequestMapping("/auth")
+@RequestMapping(ApiVersion.AUTH)
 @RequiredArgsConstructor
 @Slf4j
 public class CsrfController {

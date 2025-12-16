@@ -51,7 +51,7 @@ class OAuth2ControllerCallbackTest {
         when(kakaoOAuth2AuthService.processOAuth2Callback(anyString())).thenReturn(loginResponse);
 
         // When: 콜백 엔드포인트 호출
-        MvcResult result = mockMvc.perform(get("/oauth2/auth/kakao/callback")
+        MvcResult result = mockMvc.perform(get("/api/v1/oauth2/auth/kakao/callback")
                 .param("code", TEST_CODE)
                 .param("state", TEST_STATE))
                 .andExpect(status().is3xxRedirection())
@@ -74,7 +74,7 @@ class OAuth2ControllerCallbackTest {
                 .thenThrow(new RuntimeException("Token exchange failed"));
 
         // When: 콜백 엔드포인트 호출
-        MvcResult result = mockMvc.perform(get("/oauth2/auth/kakao/callback")
+        MvcResult result = mockMvc.perform(get("/api/v1/oauth2/auth/kakao/callback")
                 .param("code", "invalid-code")
                 .param("state", TEST_STATE))
                 .andExpect(status().is3xxRedirection())
@@ -94,7 +94,7 @@ class OAuth2ControllerCallbackTest {
         // Given: State가 없으므로 validation 실패
 
         // When: State 파라미터 없이 콜백 엔드포인트 호출
-        MvcResult result = mockMvc.perform(get("/oauth2/auth/kakao/callback")
+        MvcResult result = mockMvc.perform(get("/api/v1/oauth2/auth/kakao/callback")
                 .param("code", TEST_CODE))
                 .andExpect(status().is3xxRedirection())
                 .andReturn();

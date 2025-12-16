@@ -129,4 +129,3 @@ public class AuthenticationService {
         return token != null && !token.isBlank();
     }
 }
-

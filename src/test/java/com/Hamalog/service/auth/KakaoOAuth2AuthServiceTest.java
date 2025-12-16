@@ -17,7 +17,6 @@ import com.Hamalog.repository.member.MemberRepository;
 import com.Hamalog.security.jwt.JwtTokenProvider;
 import com.Hamalog.service.security.RefreshTokenService;
 import com.fasterxml.jackson.core.JsonProcessingException;
-import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import java.time.LocalDateTime;
 import java.util.Optional;
@@ -437,4 +436,3 @@ class KakaoOAuth2AuthServiceTest {
         }
     }
 }
-

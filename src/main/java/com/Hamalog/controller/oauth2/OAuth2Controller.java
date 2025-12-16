@@ -1,5 +1,6 @@
 package com.Hamalog.controller.oauth2;
 
+import com.Hamalog.config.ApiVersion;
 import com.Hamalog.dto.auth.response.LoginResponse;
 import com.Hamalog.exception.CustomException;
 import com.Hamalog.service.auth.KakaoOAuth2AuthService;
@@ -27,6 +28,7 @@ import org.springframework.web.util.UriComponentsBuilder;
 
 @Tag(name = "OAuth2 Authentication API", description = "OAuth2 소셜 로그인 관련 API")
 @RestController
+@RequestMapping(ApiVersion.OAUTH2)
 @RequiredArgsConstructor
 public class OAuth2Controller {
 
@@ -61,7 +63,7 @@ public class OAuth2Controller {
                     )
             )
     })
-    @GetMapping("/oauth2/auth/kakao")
+    @GetMapping("/auth/kakao")
     public void kakaoAuth(HttpServletResponse response) throws IOException {
         try {
             // Get Kakao client registration
@@ -118,7 +120,7 @@ public class OAuth2Controller {
                     content = @Content
             )
     })
-    @GetMapping("/oauth2/auth/kakao/callback")
+    @GetMapping("/auth/kakao/callback")
     public void handleKakaoCallback(
             @RequestParam("code") String code,
             @RequestParam(value = "state", required = false) String state,

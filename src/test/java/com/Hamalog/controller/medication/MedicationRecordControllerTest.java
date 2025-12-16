@@ -122,7 +122,7 @@ class MedicationRecordControllerTest {
         when(medicationRecordService.getMedicationRecords(scheduleId)).thenReturn(records);
 
         // when & then
-        mockMvc.perform(get("/medication-record/list/{medication-schedule-id}", scheduleId))
+        mockMvc.perform(get("/api/v1/medication-record/list/{medication-schedule-id}", scheduleId))
                 .andExpect(status().isOk())
                 .andExpect(content().contentType(MediaType.APPLICATION_JSON))
                 .andExpect(jsonPath("$.length()").value(2))
@@ -140,7 +140,7 @@ class MedicationRecordControllerTest {
         when(medicationRecordService.getMedicationRecords(scheduleId)).thenReturn(Collections.emptyList());
 
         // when & then
-        mockMvc.perform(get("/medication-record/list/{medication-schedule-id}", scheduleId))
+        mockMvc.perform(get("/api/v1/medication-record/list/{medication-schedule-id}", scheduleId))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.length()").value(0));
 
@@ -157,7 +157,7 @@ class MedicationRecordControllerTest {
         when(medicationRecordService.getMedicationRecord(recordId)).thenReturn(record);
 
         // when & then
-        mockMvc.perform(get("/medication-record/{medication-record-id}", recordId))
+        mockMvc.perform(get("/api/v1/medication-record/{medication-record-id}", recordId))
                 .andExpect(status().isOk())
                 .andExpect(content().contentType(MediaType.APPLICATION_JSON))
                 .andExpect(jsonPath("$.medicationRecordId").value(recordId))
@@ -178,7 +178,7 @@ class MedicationRecordControllerTest {
                 .thenReturn(createdRecord);
 
         // when & then
-        mockMvc.perform(post("/medication-record")
+        mockMvc.perform(post("/api/v1/medication-record")
                 .contentType(MediaType.APPLICATION_JSON)
                 .content(objectMapper.writeValueAsString(request)))
                 .andExpect(status().isCreated())
@@ -200,7 +200,7 @@ class MedicationRecordControllerTest {
                 .thenReturn(createdRecord);
 
         // when & then
-        mockMvc.perform(post("/medication-record")
+        mockMvc.perform(post("/api/v1/medication-record")
                 .contentType(MediaType.APPLICATION_JSON)
                 .content(objectMapper.writeValueAsString(request)))
                 .andExpect(status().isCreated());
@@ -221,7 +221,7 @@ class MedicationRecordControllerTest {
                 .thenReturn(updatedRecord);
 
         // when & then
-        mockMvc.perform(put("/medication-record/{medication-record-id}", recordId)
+        mockMvc.perform(put("/api/v1/medication-record/{medication-record-id}", recordId)
                 .contentType(MediaType.APPLICATION_JSON)
                 .content(objectMapper.writeValueAsString(request)))
                 .andExpect(status().isOk())
@@ -244,7 +244,7 @@ class MedicationRecordControllerTest {
                 .thenReturn(updatedRecord);
 
         // when & then
-        mockMvc.perform(put("/medication-record/{medication-record-id}", recordId)
+        mockMvc.perform(put("/api/v1/medication-record/{medication-record-id}", recordId)
                 .contentType(MediaType.APPLICATION_JSON)
                 .content(objectMapper.writeValueAsString(request)))
                 .andExpect(status().isOk());
@@ -260,7 +260,7 @@ class MedicationRecordControllerTest {
         doNothing().when(medicationRecordService).deleteMedicationRecord(recordId);
 
         // when & then
-        mockMvc.perform(delete("/medication-record/{medication-record-id}", recordId))
+        mockMvc.perform(delete("/api/v1/medication-record/{medication-record-id}", recordId))
                 .andExpect(status().isNoContent());
 
         verify(medicationRecordService).deleteMedicationRecord(recordId);
@@ -275,7 +275,7 @@ class MedicationRecordControllerTest {
                 .thenThrow(new RuntimeException("Service error"));
 
         // when & then
-        mockMvc.perform(get("/medication-record/{medication-record-id}", recordId))
+        mockMvc.perform(get("/api/v1/medication-record/{medication-record-id}", recordId))
                 .andExpect(status().isInternalServerError());
 
         verify(medicationRecordService).getMedicationRecord(recordId);
@@ -288,7 +288,7 @@ class MedicationRecordControllerTest {
         String malformedJson = "{\"invalid\": " + "json" + "}";
         
         // when & then
-        mockMvc.perform(post("/medication-record")
+        mockMvc.perform(post("/api/v1/medication-record")
                 .contentType(MediaType.APPLICATION_JSON)
                 .content(malformedJson))
                 .andExpect(status().isBadRequest());
@@ -300,7 +300,7 @@ class MedicationRecordControllerTest {
     @DisplayName("Should return 400 for invalid path variable")
     void getMedicationRecord_InvalidPathVariable_ShouldReturn400() throws Exception {
         // when & then
-        mockMvc.perform(get("/medication-record/invalid"))
+        mockMvc.perform(get("/api/v1/medication-record/invalid"))
                 .andExpect(status().isBadRequest());
 
         verifyNoInteractions(medicationRecordService);

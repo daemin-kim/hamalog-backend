@@ -111,7 +111,7 @@ class AuthControllerTest {
         doNothing().when(memberRegistrationService).registerMember(any(SignupRequest.class));
 
         // When & Then
-        mockMvc.perform(post("/auth/signup")
+        mockMvc.perform(post("/api/v1/auth/signup")
                         .contentType(MediaType.APPLICATION_JSON)
                         .content(objectMapper.writeValueAsString(signupRequest)))
                 .andExpect(status().isOk())
@@ -134,7 +134,7 @@ class AuthControllerTest {
         );
 
         // When & Then
-        mockMvc.perform(post("/auth/signup")
+        mockMvc.perform(post("/api/v1/auth/signup")
                         .contentType(MediaType.APPLICATION_JSON)
                         .content(objectMapper.writeValueAsString(invalidRequest)))
                 .andExpect(status().isBadRequest());
@@ -151,7 +151,7 @@ class AuthControllerTest {
                 .willReturn(loginResponse);
 
         // When & Then
-        mockMvc.perform(post("/auth/login")
+        mockMvc.perform(post("/api/v1/auth/login")
                         .contentType(MediaType.APPLICATION_JSON)
                         .content(objectMapper.writeValueAsString(loginRequest)))
                 .andExpect(status().isOk())
@@ -167,7 +167,7 @@ class AuthControllerTest {
         LoginRequest invalidRequest = new LoginRequest("test@example.com", "");
 
         // When & Then
-        mockMvc.perform(post("/auth/login")
+        mockMvc.perform(post("/api/v1/auth/login")
                         .contentType(MediaType.APPLICATION_JSON)
                         .content(objectMapper.writeValueAsString(invalidRequest)))
                 .andExpect(status().isBadRequest());
@@ -184,7 +184,7 @@ class AuthControllerTest {
         doNothing().when(authenticationService).logoutUser(anyString());
 
         // When & Then
-        mockMvc.perform(post("/auth/logout")
+        mockMvc.perform(post("/api/v1/auth/logout")
                         .header("Authorization", "Bearer " + token))
                 .andExpect(status().isOk())
                 .andExpect(content().string("로그아웃 성공 - 토큰이 무효화되었습니다"));
@@ -197,7 +197,7 @@ class AuthControllerTest {
     @DisplayName("로그아웃 실패 - JWT 토큰 없음")
     void logout_WithoutJwtToken_Failure() throws Exception {
         // When & Then
-        mockMvc.perform(post("/auth/logout"))
+        mockMvc.perform(post("/api/v1/auth/logout"))
                 .andExpect(status().is4xxClientError());
 
         verify(authenticationService, never()).logoutUser(anyString());
@@ -219,7 +219,7 @@ class AuthControllerTest {
         doNothing().when(memberDeletionService).deleteMember(anyString(), anyString());
 
         // When & Then
-        mockMvc.perform(delete("/auth/account")
+        mockMvc.perform(delete("/api/v1/auth/account")
                         .header("Authorization", "Bearer jwt.token.here"))
                 .andExpect(status().isOk())
                 .andExpect(content().string("회원 탈퇴가 완료되었습니다"));
@@ -238,7 +238,7 @@ class AuthControllerTest {
         SecurityContextHolder.setContext(securityContext);
 
         // When & Then
-        mockMvc.perform(delete("/auth/account"))
+        mockMvc.perform(delete("/api/v1/auth/account"))
                 .andExpect(status().isUnauthorized())
                 .andExpect(content().string("인증이 필요합니다"));
 
@@ -259,7 +259,7 @@ class AuthControllerTest {
         SecurityContextHolder.setContext(securityContext);
 
         // When & Then
-        mockMvc.perform(delete("/auth/account"))
+        mockMvc.perform(delete("/api/v1/auth/account"))
                 .andExpect(status().isUnauthorized())
                 .andExpect(content().string("인증이 필요합니다"));
 

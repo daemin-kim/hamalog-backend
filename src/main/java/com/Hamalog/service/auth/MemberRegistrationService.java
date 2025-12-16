@@ -87,4 +87,3 @@ public class MemberRegistrationService {
         return local.substring(0, 2) + "***@" + parts[1];
     }
 }
-

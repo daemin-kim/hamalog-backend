@@ -1,5 +1,6 @@
 package com.Hamalog.controller.medication;
 
+import com.Hamalog.config.ApiVersion;
 import com.Hamalog.domain.medication.MedicationRecord;
 import com.Hamalog.dto.medication.request.MedicationRecordCreateRequest;
 import com.Hamalog.dto.medication.request.MedicationRecordUpdateRequest;
@@ -25,7 +26,7 @@ import org.springframework.web.bind.annotation.*;
 
 @Tag(name = "Medication Record API", description = "복약 기록 관련 CRUD API")
 @RestController
-@RequestMapping("/medication-record")
+@RequestMapping(ApiVersion.MEDICATION_RECORD)
 @RequiredArgsConstructor
 public class MedicationRecordController {
 

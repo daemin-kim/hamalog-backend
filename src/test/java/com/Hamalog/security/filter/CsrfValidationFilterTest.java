@@ -112,7 +112,7 @@ class CsrfValidationFilterTest {
     void doFilterInternal_LoginPath_ShouldSkipValidation() throws ServletException, IOException {
         // given
         given(request.getMethod()).willReturn("POST");
-        given(request.getRequestURI()).willReturn("/auth/login");
+        given(request.getRequestURI()).willReturn("/api/v1/auth/login");
 
         // when
         filter.doFilterInternal(request, response, filterChain);
@@ -127,7 +127,7 @@ class CsrfValidationFilterTest {
     void doFilterInternal_SignupPath_ShouldSkipValidation() throws ServletException, IOException {
         // given
         given(request.getMethod()).willReturn("POST");
-        given(request.getRequestURI()).willReturn("/auth/signup");
+        given(request.getRequestURI()).willReturn("/api/v1/auth/signup");
 
         // when
         filter.doFilterInternal(request, response, filterChain);
@@ -142,7 +142,7 @@ class CsrfValidationFilterTest {
     void doFilterInternal_CsrfTokenPath_ShouldSkipValidation() throws ServletException, IOException {
         // given
         given(request.getMethod()).willReturn("POST");
-        given(request.getRequestURI()).willReturn("/auth/csrf-token");
+        given(request.getRequestURI()).willReturn("/api/v1/auth/csrf-token");
 
         // when
         filter.doFilterInternal(request, response, filterChain);
@@ -157,7 +157,7 @@ class CsrfValidationFilterTest {
     void doFilterInternal_OAuth2Path_ShouldSkipValidation() throws ServletException, IOException {
         // given
         given(request.getMethod()).willReturn("POST");
-        given(request.getRequestURI()).willReturn("/oauth2/authorization/kakao");
+        given(request.getRequestURI()).willReturn("/api/v1/oauth2/authorization/kakao");
 
         // when
         filter.doFilterInternal(request, response, filterChain);

@@ -75,7 +75,7 @@ class RequestSizeMonitoringFilterTest {
     @DisplayName("Should apply strict limits for authentication endpoints")
     void doFilterInternal_StrictEndpoint_AppliesStrictLimits() throws ServletException, IOException {
         // given
-        request.setRequestURI("/auth/login");
+        request.setRequestURI("/api/v1/auth/login");
         request.setMethod("POST");
         request.addHeader("Content-Length", String.valueOf(1024 * 1024 * 2)); // 2MB - exceeds strict limit of 1MB
         request.setRemoteAddr("192.168.1.1");
@@ -117,7 +117,7 @@ class RequestSizeMonitoringFilterTest {
         request.setRequestURI("/api/data");
         assertThat(filter.shouldNotFilter(request)).isFalse();
 
-        request.setRequestURI("/auth/login");
+        request.setRequestURI("/api/v1/auth/login");
         assertThat(filter.shouldNotFilter(request)).isFalse();
 
         request.setRequestURI("/medication/schedule");
@@ -272,14 +272,14 @@ class RequestSizeMonitoringFilterTest {
     @DisplayName("Should handle multiple authentication endpoints correctly")
     void doFilterInternal_MultipleStrictEndpoints_AppliesStrictLimits() throws ServletException, IOException {
         // Test /auth/login
-        request.setRequestURI("/auth/login");
+        request.setRequestURI("/api/v1/auth/login");
         request.setMethod("POST");
         request.addHeader("Content-Length", String.valueOf(1024 * 1024)); // 1MB
         filter.doFilterInternal(request, response, filterChain);
 
         // Test /auth/signup
         request = new MockHttpServletRequest();
-        request.setRequestURI("/auth/signup");
+        request.setRequestURI("/api/v1/auth/signup");
         request.setMethod("POST");
         request.addHeader("Content-Length", String.valueOf(1024 * 1024)); // 1MB
         filter.doFilterInternal(request, response, filterChain);

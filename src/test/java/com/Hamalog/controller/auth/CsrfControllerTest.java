@@ -65,7 +65,7 @@ class CsrfControllerTest {
         when(trustedProxyService.resolveClientIp(any())).thenReturn(Optional.of("203.0.113.1"));
 
         // when & then
-        mockMvc.perform(get("/auth/csrf-token")
+        mockMvc.perform(get("/api/v1/auth/csrf-token")
                 .header("Authorization", "Bearer " + validToken)
                 .header("X-Real-IP", "192.168.1.100"))
                 .andExpect(status().isOk())
@@ -84,7 +84,7 @@ class CsrfControllerTest {
     @DisplayName("Should return 401 when JWT token is missing")
     void getCsrfToken_MissingJwtToken_ShouldReturn401() throws Exception {
         // when & then
-        mockMvc.perform(get("/auth/csrf-token"))
+        mockMvc.perform(get("/api/v1/auth/csrf-token"))
                 .andExpect(status().isUnauthorized())
                 .andExpect(jsonPath("$.error").value("UNAUTHORIZED"))
                 .andExpect(jsonPath("$.message").value("인증이 필요합니다"))
@@ -102,7 +102,7 @@ class CsrfControllerTest {
         when(jwtTokenProvider.validateToken(invalidToken)).thenReturn(false);
 
         // when & then
-        mockMvc.perform(get("/auth/csrf-token")
+        mockMvc.perform(get("/api/v1/auth/csrf-token")
                 .header("Authorization", "Bearer " + invalidToken))
                 .andExpect(status().isUnauthorized())
                 .andExpect(jsonPath("$.error").value("UNAUTHORIZED"))
@@ -116,7 +116,7 @@ class CsrfControllerTest {
     @DisplayName("Should return 401 when Authorization header format is incorrect")
     void getCsrfToken_IncorrectAuthHeaderFormat_ShouldReturn401() throws Exception {
         // when & then
-        mockMvc.perform(get("/auth/csrf-token")
+        mockMvc.perform(get("/api/v1/auth/csrf-token")
                 .header("Authorization", "InvalidFormat token"))
                 .andExpect(status().isUnauthorized())
                 .andExpect(jsonPath("$.error").value("UNAUTHORIZED"));
@@ -136,7 +136,7 @@ class CsrfControllerTest {
         when(csrfTokenProvider.generateToken(userId)).thenThrow(new RuntimeException("Token generation failed"));
 
         // when & then
-        mockMvc.perform(get("/auth/csrf-token")
+        mockMvc.perform(get("/api/v1/auth/csrf-token")
                 .header("Authorization", "Bearer " + validToken))
                 .andExpect(status().isInternalServerError())
                 .andExpect(jsonPath("$.error").value("INTERNAL_ERROR"))
@@ -157,7 +157,7 @@ class CsrfControllerTest {
         when(trustedProxyService.resolveClientIp(any())).thenReturn(Optional.of("192.168.1.100"));
 
         // when & then
-        mockMvc.perform(get("/auth/csrf-token")
+        mockMvc.perform(get("/api/v1/auth/csrf-token")
                 .header("Authorization", "Bearer " + validToken)
                 .header("X-Forwarded-For", "192.168.1.100, 10.0.0.1"))
                 .andExpect(status().isOk());
@@ -180,7 +180,7 @@ class CsrfControllerTest {
         when(trustedProxyService.resolveClientIp(any())).thenReturn(Optional.of("192.168.1.100"));
 
         // when & then
-        mockMvc.perform(get("/auth/csrf-status")
+        mockMvc.perform(get("/api/v1/auth/csrf-status")
                 .header("Authorization", "Bearer " + validJwtToken)
                 .header("X-CSRF-TOKEN", csrfToken))
                 .andExpect(status().isOk())
@@ -206,7 +206,7 @@ class CsrfControllerTest {
         when(trustedProxyService.resolveClientIp(any())).thenReturn(Optional.of("192.168.1.100"));
 
         // when & then
-        mockMvc.perform(get("/auth/csrf-status")
+        mockMvc.perform(get("/api/v1/auth/csrf-status")
                 .header("Authorization", "Bearer " + validJwtToken)
                 .header("X-CSRF-TOKEN", invalidCsrfToken))
                 .andExpect(status().isOk())
@@ -227,7 +227,7 @@ class CsrfControllerTest {
         when(trustedProxyService.resolveClientIp(any())).thenReturn(Optional.of("192.168.1.100"));
 
         // when & then
-        mockMvc.perform(get("/auth/csrf-status")
+        mockMvc.perform(get("/api/v1/auth/csrf-status")
                 .header("Authorization", "Bearer " + validJwtToken))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.userId").value(userId))
@@ -241,7 +241,7 @@ class CsrfControllerTest {
     @DisplayName("Should return 401 for CSRF status when not authenticated")
     void getCsrfStatus_NotAuthenticated_ShouldReturn401() throws Exception {
         // when & then
-        mockMvc.perform(get("/auth/csrf-status"))
+        mockMvc.perform(get("/api/v1/auth/csrf-status"))
                 .andExpect(status().isUnauthorized())
                 .andExpect(jsonPath("$.error").value("UNAUTHORIZED"))
                 .andExpect(jsonPath("$.message").value("인증이 필요합니다"));
@@ -259,7 +259,7 @@ class CsrfControllerTest {
         when(csrfTokenProvider.validateToken(anyString(), anyString())).thenThrow(new RuntimeException("Validation failed"));
 
         // when & then
-        mockMvc.perform(get("/auth/csrf-status")
+        mockMvc.perform(get("/api/v1/auth/csrf-status")
                 .header("Authorization", "Bearer " + validJwtToken)
                 .header("X-CSRF-TOKEN", "some-token"))
                 .andExpect(status().isInternalServerError())
@@ -275,7 +275,7 @@ class CsrfControllerTest {
         when(jwtTokenProvider.validateToken(problematicToken)).thenThrow(new RuntimeException("JWT parsing failed"));
 
         // when & then
-        mockMvc.perform(get("/auth/csrf-token")
+        mockMvc.perform(get("/api/v1/auth/csrf-token")
                 .header("Authorization", "Bearer " + problematicToken))
                 .andExpect(status().isUnauthorized());
     }

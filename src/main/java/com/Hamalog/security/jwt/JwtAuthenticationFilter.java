@@ -115,16 +115,16 @@ public class JwtAuthenticationFilter extends OncePerRequestFilter {
         String method = request.getMethod();
         
         // Skip authentication for public endpoints
-        if (uri.startsWith("/auth/login") ||
-            uri.startsWith("/auth/signup") ||
-            uri.startsWith("/oauth2/") ||
+        if (uri.startsWith("/api/v1/auth/login") ||
+            uri.startsWith("/api/v1/auth/signup") ||
+            uri.startsWith("/api/v1/oauth2/") ||
             uri.startsWith("/actuator/health") ||
             (uri.equals("/") && "GET".equals(method))) {
             return false;
         }
         
         // Most API endpoints require authentication
-        return uri.startsWith("/api/") || uri.startsWith("/medication/") || uri.startsWith("/side-effect/");
+        return uri.startsWith("/api/");
     }
 
     /**

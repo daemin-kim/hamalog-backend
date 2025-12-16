@@ -1,5 +1,6 @@
 package com.Hamalog.controller.medication;
 
+import com.Hamalog.config.ApiVersion;
 import com.Hamalog.domain.medication.MedicationSchedule;
 import com.Hamalog.dto.medication.request.MedicationScheduleCreateRequest;
 import com.Hamalog.dto.medication.request.MedicationScheduleUpdateRequest;
@@ -32,7 +33,7 @@ import org.springframework.web.multipart.MultipartFile;
 
 @Tag(name = "Medication Schedule API", description = "복약 스케줄 관련 CRUD API")
 @RestController
-@RequestMapping("/medication-schedule")
+@RequestMapping(ApiVersion.MEDICATION_SCHEDULE)
 @RequiredArgsConstructor
 public class MedicationScheduleController {
 

@@ -65,7 +65,7 @@ class RateLimitingFilterTest {
     @DisplayName("인증 엔드포인트 요청 허용 시 필터 통과")
     void doFilterInternal_AuthEndpointAllowed_PassesFilter() throws ServletException, IOException {
         // given
-        when(request.getRequestURI()).thenReturn("/auth/login");
+        when(request.getRequestURI()).thenReturn("/api/v1/auth/login");
         when(rateLimitingService.tryConsumeAuthRequest(anyString())).thenReturn(true);
         
         RateLimitingService.RateLimitInfo rateLimitInfo = 
@@ -87,7 +87,7 @@ class RateLimitingFilterTest {
     @DisplayName("인증 엔드포인트 요청 제한 초과 시 TOO_MANY_REQUESTS 응답")
     void doFilterInternal_AuthEndpointExceeded_ReturnsTooManyRequests() throws ServletException, IOException {
         // given
-        when(request.getRequestURI()).thenReturn("/auth/login");
+        when(request.getRequestURI()).thenReturn("/api/v1/auth/login");
         when(response.getWriter()).thenReturn(printWriter);
         when(rateLimitingService.tryConsumeAuthRequest(anyString())).thenReturn(false);
         when(objectMapper.writeValueAsString(any())).thenReturn("{\"error\":\"Too Many Requests\"}");
@@ -107,7 +107,7 @@ class RateLimitingFilterTest {
     @DisplayName("보호된 엔드포인트 요청 허용 시 필터 통과")
     void doFilterInternal_ProtectedEndpointAllowed_PassesFilter() throws ServletException, IOException {
         // given
-        when(request.getRequestURI()).thenReturn("/medication-record/123");
+        when(request.getRequestURI()).thenReturn("/api/v1/medication-record/123");
         when(rateLimitingService.tryConsumeApiRequest(anyString())).thenReturn(true);
         
         RateLimitingService.RateLimitInfo rateLimitInfo = 
@@ -129,7 +129,7 @@ class RateLimitingFilterTest {
     @DisplayName("보호된 엔드포인트 요청 제한 초과 시 TOO_MANY_REQUESTS 응답")
     void doFilterInternal_ProtectedEndpointExceeded_ReturnsTooManyRequests() throws ServletException, IOException {
         // given
-        when(request.getRequestURI()).thenReturn("/medication-schedule/create");
+        when(request.getRequestURI()).thenReturn("/api/v1/medication-schedule/create");
         when(response.getWriter()).thenReturn(printWriter);
         when(rateLimitingService.tryConsumeApiRequest(anyString())).thenReturn(false);
         when(objectMapper.writeValueAsString(any())).thenReturn("{\"error\":\"Too Many Requests\"}");
@@ -163,7 +163,7 @@ class RateLimitingFilterTest {
     @DisplayName("X-Forwarded-For 헤더를 통한 IP 추출")
     void getClientIpAddress_XForwardedForHeader_ExtractsIp() throws ServletException, IOException {
         // given
-        when(request.getRequestURI()).thenReturn("/auth/login");
+        when(request.getRequestURI()).thenReturn("/api/v1/auth/login");
         when(trustedProxyService.isTrustedProxy(anyString())).thenReturn(true);
         when(trustedProxyService.extractClientIp(anyString())).thenReturn(Optional.of("203.0.113.1"));
         when(request.getHeader("X-Forwarded-For")).thenReturn("203.0.113.1, 198.51.100.1");
@@ -185,7 +185,7 @@ class RateLimitingFilterTest {
     @DisplayName("X-Forwarded-For 헤더가 없을 때 RemoteAddr 사용")
     void getClientIpAddress_NoXForwardedFor_UsesRemoteAddr() throws ServletException, IOException {
         // given
-        when(request.getRequestURI()).thenReturn("/auth/login");
+        when(request.getRequestURI()).thenReturn("/api/v1/auth/login");
         when(trustedProxyService.isTrustedProxy(anyString())).thenReturn(true);
         when(trustedProxyService.extractClientIp(any())).thenReturn(Optional.empty());
         when(request.getRemoteAddr()).thenReturn("192.168.1.100");
@@ -207,7 +207,7 @@ class RateLimitingFilterTest {
     @DisplayName("X-Forwarded-For 헤더가 unknown일 때 RemoteAddr 사용")
     void getClientIpAddress_XForwardedForUnknown_UsesRemoteAddr() throws ServletException, IOException {
         // given
-        when(request.getRequestURI()).thenReturn("/auth/login");
+        when(request.getRequestURI()).thenReturn("/api/v1/auth/login");
         when(trustedProxyService.isTrustedProxy(anyString())).thenReturn(true);
         when(trustedProxyService.extractClientIp(any())).thenReturn(Optional.empty());
         when(request.getHeader("X-Forwarded-For")).thenReturn("unknown");
@@ -230,7 +230,7 @@ class RateLimitingFilterTest {
     @DisplayName("Rate Limit 헤더 추가 실패 시 예외 처리")
     void addRateLimitHeaders_ExceptionThrown_HandlesGracefully() throws ServletException, IOException {
         // given
-        when(request.getRequestURI()).thenReturn("/auth/login");
+        when(request.getRequestURI()).thenReturn("/api/v1/auth/login");
         when(rateLimitingService.tryConsumeAuthRequest(anyString())).thenReturn(true);
         when(rateLimitingService.getRateLimitInfo(anyString(), eq(true)))
             .thenThrow(new RuntimeException("Redis connection error"));
@@ -322,7 +322,7 @@ class RateLimitingFilterTest {
     @DisplayName("shouldNotFilter - API 엔드포인트는 필터링함")
     void shouldNotFilter_ApiEndpoints_ReturnsFalse() {
         // given
-        when(request.getRequestURI()).thenReturn("/auth/login");
+        when(request.getRequestURI()).thenReturn("/api/v1/auth/login");
 
         // when
         boolean result = rateLimitingFilter.shouldNotFilter(request);
@@ -335,7 +335,7 @@ class RateLimitingFilterTest {
     @DisplayName("인증 엔드포인트 signUp 요청 처리")
     void doFilterInternal_SignupEndpoint_ProcessesCorrectly() throws ServletException, IOException {
         // given
-        when(request.getRequestURI()).thenReturn("/auth/signup");
+        when(request.getRequestURI()).thenReturn("/api/v1/auth/signup");
         when(rateLimitingService.tryConsumeAuthRequest(anyString())).thenReturn(true);
         
         RateLimitingService.RateLimitInfo rateLimitInfo = 
@@ -357,7 +357,7 @@ class RateLimitingFilterTest {
     @DisplayName("인증 엔드포인트 logout 요청 처리")
     void doFilterInternal_LogoutEndpoint_ProcessesCorrectly() throws ServletException, IOException {
         // given
-        when(request.getRequestURI()).thenReturn("/auth/logout");
+        when(request.getRequestURI()).thenReturn("/api/v1/auth/logout");
         when(rateLimitingService.tryConsumeAuthRequest(anyString())).thenReturn(true);
         
         RateLimitingService.RateLimitInfo rateLimitInfo = 
@@ -377,7 +377,7 @@ class RateLimitingFilterTest {
     @DisplayName("side-effect 엔드포인트 요청 처리")
     void doFilterInternal_SideEffectEndpoint_ProcessesCorrectly() throws ServletException, IOException {
         // given
-        when(request.getRequestURI()).thenReturn("/side-effect/record");
+        when(request.getRequestURI()).thenReturn("/api/v1/side-effect/record");
         when(rateLimitingService.tryConsumeApiRequest(anyString())).thenReturn(true);
         
         RateLimitingService.RateLimitInfo rateLimitInfo = 
@@ -399,7 +399,7 @@ class RateLimitingFilterTest {
     @DisplayName("Rate Limit 초과 시 에러 메시지 차별화 - 인증 엔드포인트")
     void handleRateLimitExceeded_AuthEndpoint_ReturnsAuthSpecificMessage() throws ServletException, IOException {
         // given
-        when(request.getRequestURI()).thenReturn("/auth/login");
+        when(request.getRequestURI()).thenReturn("/api/v1/auth/login");
         when(response.getWriter()).thenReturn(printWriter);
         when(rateLimitingService.tryConsumeAuthRequest(anyString())).thenReturn(false);
         
@@ -419,7 +419,7 @@ class RateLimitingFilterTest {
     @DisplayName("Rate Limit 초과 시 에러 메시지 차별화 - API 엔드포인트")
     void handleRateLimitExceeded_ApiEndpoint_ReturnsApiSpecificMessage() throws ServletException, IOException {
         // given
-        when(request.getRequestURI()).thenReturn("/medication-record/list");
+        when(request.getRequestURI()).thenReturn("/api/v1/medication-record/list");
         when(response.getWriter()).thenReturn(printWriter);
         when(rateLimitingService.tryConsumeApiRequest(anyString())).thenReturn(false);
         

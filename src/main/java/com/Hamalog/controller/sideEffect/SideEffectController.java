@@ -1,5 +1,6 @@
 package com.Hamalog.controller.sideEffect;
 
+import com.Hamalog.config.ApiVersion;
 import com.Hamalog.dto.sideEffect.request.SideEffectRecordRequest;
 import com.Hamalog.dto.sideEffect.response.RecentSideEffectResponse;
 import com.Hamalog.security.annotation.RequireResourceOwnership;
@@ -20,7 +21,7 @@ import org.springframework.web.bind.annotation.*;
 
 @Tag(name = "Side Effect API", description = "사용자 부작용 기록 관련 API")
 @RestController
-@RequestMapping("/side-effect")
+@RequestMapping(ApiVersion.SIDE_EFFECT)
 @RequiredArgsConstructor
 public class SideEffectController {
 

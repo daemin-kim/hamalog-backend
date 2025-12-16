@@ -99,4 +99,3 @@ public class MemberDeletionService {
         log.debug("[DELETION] Member related data deleted - memberId: {}", memberId);
     }
 }
-

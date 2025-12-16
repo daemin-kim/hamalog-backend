@@ -29,8 +29,8 @@ public class RequestSizeMonitoringFilter extends OncePerRequestFilter {
     private boolean monitoringEnabled;
 
     private static final Set<String> STRICT_ENDPOINTS = Set.of(
-        "/auth/login",
-        "/auth/signup"
+        "/api/v1/auth/login",
+        "/api/v1/auth/signup"
     );
 
     private static final Set<String> EXCLUDED_ENDPOINTS = Set.of(

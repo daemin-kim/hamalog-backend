@@ -1,5 +1,6 @@
 package com.Hamalog.controller.diary;
 
+import com.Hamalog.config.ApiVersion;
 import com.Hamalog.dto.diary.request.MoodDiaryCreateRequest;
 import com.Hamalog.dto.diary.response.MoodDiaryListResponse;
 import com.Hamalog.dto.diary.response.MoodDiaryResponse;
@@ -28,7 +29,7 @@ import org.springframework.web.bind.annotation.*;
 
 @Tag(name = "Mood Diary API", description = "마음 일기 관련 CRD API")
 @RestController
-@RequestMapping("/mood-diary")
+@RequestMapping(ApiVersion.MOOD_DIARY)
 @RequiredArgsConstructor
 public class MoodDiaryController {
 

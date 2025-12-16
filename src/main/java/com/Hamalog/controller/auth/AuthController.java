@@ -1,5 +1,6 @@
 package com.Hamalog.controller.auth;
 
+import com.Hamalog.config.ApiVersion;
 import com.Hamalog.dto.auth.request.LoginRequest;
 import com.Hamalog.dto.auth.request.SignupRequest;
 import com.Hamalog.dto.auth.request.TokenRefreshRequest;
@@ -18,6 +19,7 @@ import io.swagger.v3.oas.annotations.media.ExampleObject;
 import io.swagger.v3.oas.annotations.media.Schema;
 import io.swagger.v3.oas.annotations.responses.ApiResponse;
 import io.swagger.v3.oas.annotations.responses.ApiResponses;
+import io.swagger.v3.oas.annotations.tags.Tag;
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
@@ -26,8 +28,9 @@ import org.springframework.security.core.Authentication;
 import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.web.bind.annotation.*;
 
+@Tag(name = "Authentication API", description = "인증 관련 API (회원가입, 로그인, 로그아웃, 토큰 갱신)")
 @RestController
-@RequestMapping("/auth")
+@RequestMapping(ApiVersion.AUTH)
 @RequiredArgsConstructor
 public class AuthController {
 

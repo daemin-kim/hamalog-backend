@@ -14,16 +14,30 @@
 
 ---
 
+## API 버전 정보
+
+> ⚠️ **2025-12-16 변경**: 모든 API 경로에 `/api/v1/` 프리픽스가 추가되었습니다.
+
+| 버전 | 프리픽스 | 상태 |
+|------|----------|------|
+| v1 (현재) | `/api/v1/` | ✅ 활성 |
+
+**예시:**
+- 기존: `/auth/login` → 변경: `/api/v1/auth/login`
+- 기존: `/medication-schedule` → 변경: `/api/v1/medication-schedule`
+
+---
+
 ## 공통 사항
 
-⚠️ **로그인 및 회원가입을 제외한 모든 엔드포인트는 JWT 토큰 기반 인증이 필요합니다. (`/auth/csrf-token`, `/auth/csrf-status` 포함)** ⚠️
+⚠️ **로그인 및 회원가입을 제외한 모든 엔드포인트는 JWT 토큰 기반 인증이 필요합니다. (`/api/v1/auth/csrf-token`, `/api/v1/auth/csrf-status` 포함)** ⚠️
 
 - 토큰은 요청 헤더에 포함해야 합니다. (예: `Authorization: Bearer {token}`)
 - 인증되지 않은 사용자가 API에 접근하는 것을 방지하기 위함입니다.
 - EndPoint에 파라미터가 포함되는 경우(GET 등), 구별하기 위해 파라미터는 `{}`로 감싸져 있습니다.
 - 가독성을 위해 엔드포인트 내 변수명은 케밥 케이스(띄어쓰기 대신에 하이픈 '-'이 들어간 형태)로 작성합니다.
 - 모든 API는 리소스 소유권 검증을 통해 본인의 데이터만 접근 가능하도록 보안이 강화되었습니다.
-- SPA 클라이언트는 `/auth/csrf-token` 으로 발급받은 CSRF 토큰을 `X-CSRF-TOKEN` 헤더에 포함해 안전하지 않은 메서드(POST, PUT, DELETE)에 함께 전송해야 합니다.
+- SPA 클라이언트는 `/api/v1/auth/csrf-token` 으로 발급받은 CSRF 토큰을 `X-CSRF-TOKEN` 헤더에 포함해 안전하지 않은 메서드(POST, PUT, DELETE)에 함께 전송해야 합니다.
 
 ### Base URL
 
@@ -53,7 +67,7 @@ Bean Validation 실패 시 `violations` 필드에 각 필드별 에러 상세 �
 {
   "code": "BAD_REQUEST",
   "message": "입력값이 유효하지 않습니다",
-  "path": "/auth/signup",
+  "path": "/api/v1/auth/signup",
   "violations": [
     {
       "field": "loginId",
@@ -124,19 +138,19 @@ Bean Validation 실패 시 `violations` 필드에 각 필드별 에러 상세 �
 
 ## API 엔드포인트
 
-### 인증 (Authentication) / CSRF API (`/auth`, `/oauth2`)
+### 인증 (Authentication) / CSRF API (`/api/v1/auth`, `/api/v1/oauth2`)
 
 | 기능 | EndPoint | Method | Request Data | Response Data | 비고 |
 |------|----------|--------|--------------|---------------|------|
-| 회원가입 | `/auth/signup` | `POST` | 회원가입 요청 데이터 | `"회원가입이 성공적으로 완료되었습니다"` | loginId 이메일 형식 필수, nickName 한글/영어 1-10자, phoneNumber 010으로 시작하는 11자리 |
-| 일반 로그인 | `/auth/login` | `POST` | 로그인 요청 데이터 | 로그인 응답 데이터 | JWT Access Token, Refresh Token, expiresIn(초), tokenType=Bearer 포함 |
-| 토큰 갱신 | `/auth/refresh` | `POST` | 토큰 갱신 요청 데이터 | 토큰 갱신 응답 데이터 | Refresh Token 로테이션. 새 Access/Refresh Token 반환 |
-| 로그아웃 | `/auth/logout` | `POST` | Authorization 헤더 | `"로그아웃이 성공적으로 처리되었습니다"` | Access Token 블랙리스트 등록으로 즉시 무효화 |
-| 회원 탈퇴 | `/auth/account` | `DELETE` | Authorization 헤더 | `"회원 탈퇴가 완료되었습니다"` | 인증 필요. 관련 데이터 모두 삭제 |
-| CSRF 토큰 발급 | `/auth/csrf-token` | `GET` | Authorization 헤더 | CSRF 토큰 응답 데이터 | **JWT 인증 필수**. 60분 TTL |
-| CSRF 토큰 상태 확인 | `/auth/csrf-status` | `GET` | Authorization 헤더, `X-CSRF-TOKEN` | CSRF 상태 응답 데이터 | **JWT 인증 필수** |
-| 카카오 로그인 시작 | `/oauth2/auth/kakao` | `GET` | 없음 | 302 리다이렉션 | 카카오 인증 서버로 리다이렉션 |
-| 카카오 로그인 콜백 | `/oauth2/auth/kakao/callback` | `GET` | `?code={authorization_code}&state={state}` | 302 리다이렉션 | JWT 발급 후 RN 앱으로 리다이렉트 |
+| 회원가입 | `/api/v1/auth/signup` | `POST` | 회원가입 요청 데이터 | `"회원가입이 성공적으로 완료되었습니다"` | loginId 이메일 형식 필수, nickName 한글/영어 1-10자, phoneNumber 010으로 시작하는 11자리 |
+| 일반 로그인 | `/api/v1/auth/login` | `POST` | 로그인 요청 데이터 | 로그인 응답 데이터 | JWT Access Token, Refresh Token, expiresIn(초), tokenType=Bearer 포함 |
+| 토큰 갱신 | `/api/v1/auth/refresh` | `POST` | 토큰 갱신 요청 데이터 | 토큰 갱신 응답 데이터 | Refresh Token 로테이션. 새 Access/Refresh Token 반환 |
+| 로그아웃 | `/api/v1/auth/logout` | `POST` | Authorization 헤더 | `"로그아웃이 성공적으로 처리되었습니다"` | Access Token 블랙리스트 등록으로 즉시 무효화 |
+| 회원 탈퇴 | `/api/v1/auth/account` | `DELETE` | Authorization 헤더 | `"회원 탈퇴가 완료되었습니다"` | 인증 필요. 관련 데이터 모두 삭제 |
+| CSRF 토큰 발급 | `/api/v1/auth/csrf-token` | `GET` | Authorization 헤더 | CSRF 토큰 응답 데이터 | **JWT 인증 필수**. 60분 TTL |
+| CSRF 토큰 상태 확인 | `/api/v1/auth/csrf-status` | `GET` | Authorization 헤더, `X-CSRF-TOKEN` | CSRF 상태 응답 데이터 | **JWT 인증 필수** |
+| 카카오 로그인 시작 | `/api/v1/oauth2/auth/kakao` | `GET` | 없음 | 302 리다이렉션 | 카카오 인증 서버로 리다이렉션 |
+| 카카오 로그인 콜백 | `/api/v1/oauth2/auth/kakao/callback` | `GET` | `?code={authorization_code}&state={state}` | 302 리다이렉션 | JWT 발급 후 RN 앱으로 리다이렉트 |
 
 #### 인증 API 데이터 구조
 
@@ -208,15 +222,15 @@ Bean Validation 실패 시 `violations` 필드에 각 필드별 에러 상세 �
 
 ---
 
-### 복약 스케줄 (Medication Schedule) API (`/medication-schedule`)
+### 복약 스케줄 (Medication Schedule) API (`/api/v1/medication-schedule`)
 
 | 기능 | EndPoint | Method | Request Data | Response Data | 비고 |
 |------|----------|--------|--------------|---------------|------|
-| 목록 조회 | `/medication-schedule/list/{member-id}` | `GET` | 쿼리: `page`, `size` (최대 100) | 복약 스케줄 목록 | 페이지네이션 |
-| 상세 조회 | `/medication-schedule/{medication-schedule-id}` | `GET` | 없음 | 복약 스케줄 상세 | - |
-| 등록 | `/medication-schedule` | `POST` (`multipart/form-data`) | data(JSON), image(선택) | 복약 스케줄 상세 | 이미지 최대 5MB |
-| 수정 | `/medication-schedule/{medication-schedule-id}` | `PUT` | 수정 요청 데이터 | 복약 스케줄 상세 | - |
-| 삭제 | `/medication-schedule/{medication-schedule-id}` | `DELETE` | 없음 | 204 No Content | - |
+| 목록 조회 | `/api/v1/medication-schedule/list/{member-id}` | `GET` | 쿼리: `page`, `size` (최대 100) | 복약 스케줄 목록 | 페이지네이션 |
+| 상세 조회 | `/api/v1/medication-schedule/{medication-schedule-id}` | `GET` | 없음 | 복약 스케줄 상세 | - |
+| 등록 | `/api/v1/medication-schedule` | `POST` (`multipart/form-data`) | data(JSON), image(선택) | 복약 스케줄 상세 | 이미지 최대 5MB |
+| 수정 | `/api/v1/medication-schedule/{medication-schedule-id}` | `PUT` | 수정 요청 데이터 | 복약 스케줄 상세 | - |
+| 삭제 | `/api/v1/medication-schedule/{medication-schedule-id}` | `DELETE` | 없음 | 204 No Content | - |
 
 #### 복약 스케줄 데이터 구조
 
@@ -286,15 +300,15 @@ if (imageFile) {
 
 ---
 
-### 복약 기록 (Medication Record) API (`/medication-record`)
+### 복약 기록 (Medication Record) API (`/api/v1/medication-record`)
 
 | 기능 | EndPoint | Method | Request Data | Response Data | 비고 |
 |------|----------|--------|--------------|---------------|------|
-| 목록 조회 | `/medication-record/list/{medication-schedule-id}` | `GET` | 없음 | 복약 기록 목록 | 특정 스케줄의 모든 기록 |
-| 상세 조회 | `/medication-record/{medication-record-id}` | `GET` | 없음 | 복약 기록 상세 | - |
-| 생성 | `/medication-record` | `POST` | 생성 요청 데이터 | 복약 기록 상세 | - |
-| 수정 | `/medication-record/{medication-record-id}` | `PUT` | 수정 요청 데이터 | 복약 기록 상세 | - |
-| 삭제 | `/medication-record/{medication-record-id}` | `DELETE` | 없음 | 204 No Content | - |
+| 목록 조회 | `/api/v1/medication-record/list/{medication-schedule-id}` | `GET` | 없음 | 복약 기록 목록 | 특정 스케줄의 모든 기록 |
+| 상세 조회 | `/api/v1/medication-record/{medication-record-id}` | `GET` | 없음 | 복약 기록 상세 | - |
+| 생성 | `/api/v1/medication-record` | `POST` | 생성 요청 데이터 | 복약 기록 상세 | - |
+| 수정 | `/api/v1/medication-record/{medication-record-id}` | `PUT` | 수정 요청 데이터 | 복약 기록 상세 | - |
+| 삭제 | `/api/v1/medication-record/{medication-record-id}` | `DELETE` | 없음 | 204 No Content | - |
 
 #### 복약 기록 데이터 구조
 
@@ -321,12 +335,12 @@ if (imageFile) {
 
 ---
 
-### 부작용 (Side Effect) API (`/side-effect`)
+### 부작용 (Side Effect) API (`/api/v1/side-effect`)
 
 | 기능 | EndPoint | Method | Request Data | Response Data | 비고 |
 |------|----------|--------|--------------|---------------|------|
-| 최근 부작용 조회 | `/side-effect/recent` | `GET` | 쿼리 `userId` | 최근 부작용 목록 | 최근 5개, Redis 캐시 |
-| 부작용 기록 생성 | `/side-effect/record` | `POST` | 부작용 기록 요청 | 201 Created | - |
+| 최근 부작용 조회 | `/api/v1/side-effect/recent` | `GET` | 쿼리 `userId` | 최근 부작용 목록 | 최근 5개, Redis 캐시 |
+| 부작용 기록 생성 | `/api/v1/side-effect/record` | `POST` | 부작용 기록 요청 | 201 Created | - |
 
 #### 부작용 데이터 구조
 
@@ -351,15 +365,15 @@ if (imageFile) {
 
 ---
 
-### 마음 일기 (Mood Diary) API (`/mood-diary`)
+### 마음 일기 (Mood Diary) API (`/api/v1/mood-diary`)
 
 | 기능 | EndPoint | Method | Request Data | Response Data | 비고 |
 |------|----------|--------|--------------|---------------|------|
-| 생성 | `/mood-diary` | `POST` | 마음 일기 생성 요청 | 마음 일기 상세 | 하루 1회 제한 |
-| 상세 조회 | `/mood-diary/{mood-diary-id}` | `GET` | 없음 | 마음 일기 상세 | 소유자만 접근 가능 |
-| 목록 조회 | `/mood-diary/list/{member-id}` | `GET` | 쿼리: `page`, `size` | 마음 일기 목록 | 최신 순, 페이지네이션 |
-| 날짜별 조회 | `/mood-diary/date/{member-id}` | `GET` | 쿼리: `diaryDate` | 마음 일기 상세 | yyyy-MM-dd |
-| 삭제 | `/mood-diary/{mood-diary-id}` | `DELETE` | 없음 | 204 No Content | 소유자만 삭제 가능 |
+| 생성 | `/api/v1/mood-diary` | `POST` | 마음 일기 생성 요청 | 마음 일기 상세 | 하루 1회 제한 |
+| 상세 조회 | `/api/v1/mood-diary/{mood-diary-id}` | `GET` | 없음 | 마음 일기 상세 | 소유자만 접근 가능 |
+| 목록 조회 | `/api/v1/mood-diary/list/{member-id}` | `GET` | 쿼리: `page`, `size` | 마음 일기 목록 | 최신 순, 페이지네이션 |
+| 날짜별 조회 | `/api/v1/mood-diary/date/{member-id}` | `GET` | 쿼리: `diaryDate` | 마음 일기 상세 | yyyy-MM-dd |
+| 삭제 | `/api/v1/mood-diary/{mood-diary-id}` | `DELETE` | 없음 | 204 No Content | 소유자만 삭제 가능 |
 
 #### 마음 일기 데이터 구조
 

@@ -52,7 +52,7 @@ Internet → Cloudflare Edge (DDoS/WAF) → Cloudflare Tunnel → Nginx → Spri
 | `HAMALOG_ENCRYPTION_KEY` | 데이터 암호화 키 (Base64) | `openssl rand -base64 32` |
 | `KAKAO_CLIENT_ID` | 카카오 REST API 키 | 카카오 개발자 콘솔에서 발급 |
 | `KAKAO_CLIENT_SECRET` | 카카오 Client Secret | 카카오 개발자 콘솔에서 발급 |
-| `KAKAO_REDIRECT_URI` | OAuth2 콜백 URI | `https://api.hamalog.shop/oauth2/auth/kakao/callback` |
+| `KAKAO_REDIRECT_URI` | OAuth2 콜백 URI | `https://api.hamalog.shop/api/v1/oauth2/auth/kakao/callback` |
 | `SPRING_DATA_REDIS_PASSWORD` | Redis 비밀번호 | `<강력한_비밀번호>` |
 | `CLOUDFLARE_TUNNEL_TOKEN` | Cloudflare Tunnel 토큰 | Cloudflare Zero Trust에서 발급 |
 
@@ -389,4 +389,14 @@ INSERT INTO side_effect (type, name) VALUES
     - **개발 환경 분리**: `application-dev.properties` 파일 신규 생성, `docker-compose-dev.yml`에서 dev 프로필 사용
     - **ValidationMessages.properties 확장**: auth, sideEffect 관련 메시지 키 추가
     - **테스트 코드 동기화**: MoodDiaryServiceTest, MoodDiaryControllerTest, LoginRequestTest를 record 방식에 맞게 수정
+- **2025/12/16**: **API 버전 관리 및 실무 개선 적용**
+    - **API 버전 관리**: 모든 API 경로에 `/api/v1/` 프리픽스 추가 (하위 호환성 유지를 위한 버전 관리)
+    - **새 경로 예시**: `/auth/login` → `/api/v1/auth/login`, `/medication-schedule` → `/api/v1/medication-schedule`
+    - **ApiVersion.java**: API 버전 상수 클래스 생성
+    - **OWASP Dependency Check**: 보안 취약점 스캔 플러그인 추가 (`./gradlew dependencyCheckAnalyze`)
+    - **ArchUnit 아키텍처 테스트**: 계층 간 의존성 규칙, 네이밍 컨벤션, 패키지 구조 검증 테스트 추가
+    - **Flyway DB 마이그레이션**: 스키마 버전 관리 도구 도입 (`V1__Initial_schema.sql`)
+    - **GitHub Actions CI/CD**: 자동화된 테스트, 보안 스캔, Docker 빌드 파이프라인 추가
+    - **Security 설정 업데이트**: 새 API 경로에 맞게 인증 필터 경로 수정
+    - **AuthService 리팩토링**: 417줄 단일 클래스를 4개 서비스로 분리 (MemberRegistrationService, AuthenticationService, MemberDeletionService, KakaoOAuth2AuthService)
 

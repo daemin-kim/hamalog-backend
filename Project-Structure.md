@@ -47,11 +47,18 @@ Hamalog/
 │   │   └── resources/
 │   │       ├── application.properties       # 기본 설정
 │   │       ├── application-prod.properties  # 프로덕션 설정
+│   │       ├── db/migration/                # Flyway 마이그레이션 스크립트
 │   │       ├── logback-spring.xml           # 로깅 설정
 │   │       ├── messages.properties          # 메시지 리소스 (영어)
 │   │       ├── messages_ko.properties       # 메시지 리소스 (한국어)
 │   │       └── ValidationMessages.properties # 유효성 검사 메시지
-│   └── test/                                # 테스트 코드
+│   └── test/
+│       └── java/com/Hamalog/
+│           ├── architecture/                # ArchUnit 아키텍처 테스트
+│           └── ...                          # 기타 테스트 코드
+├── .github/
+│   └── workflows/
+│       └── ci.yml                           # GitHub Actions CI 파이프라인
 ├── build.gradle                             # Gradle 빌드 설정
 ├── docker-compose.yml                       # Docker 컴포즈 (프로덕션)
 ├── docker-compose-dev.yml                   # Docker 컴포즈 (개발)
@@ -87,7 +94,10 @@ HTTP 요청을 처리하는 REST API 컨트롤러 계층입니다.
 
 | 패키지 | 파일 | 설명 |
 |--------|------|------|
-| `service/auth/` | `AuthService.java` | 인증 관련 비즈니스 로직 |
+| `service/auth/` | `MemberRegistrationService.java` | 회원가입 비즈니스 로직 |
+| | `AuthenticationService.java` | 로그인/로그아웃/토큰 관리 |
+| | `MemberDeletionService.java` | 회원 탈퇴 및 관련 데이터 삭제 |
+| | `KakaoOAuth2AuthService.java` | 카카오 OAuth2 인증 처리 |
 | | `MemberDeletedEventHandler.java` | 회원 탈퇴 이벤트 처리 |
 | `service/diary/` | `MoodDiaryService.java` | 마음 일기 비즈니스 로직 |
 | `service/medication/` | `MedicationScheduleService.java` | 복약 스케줄 비즈니스 로직 |
@@ -213,6 +223,7 @@ JPA 엔티티 및 도메인 모델을 정의합니다.
 
 | 파일 | 설명 |
 |------|------|
+| `ApiVersion.java` | API 버전 상수 (`/api/v1/`) |
 | `SecurityConfig.java` | Spring Security 설정 |
 | `WebMvcConfig.java` | Web MVC 설정 (CORS 등) |
 | `RedisConfig.java` | Redis 연결 설정 |

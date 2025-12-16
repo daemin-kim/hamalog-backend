@@ -132,7 +132,6 @@ public class ApiLoggingAspect {
         }
     }
 
-
     private String getAuthenticatedUser() {
         Authentication auth = SecurityContextHolder.getContext().getAuthentication();
         if (auth == null || !auth.isAuthenticated())

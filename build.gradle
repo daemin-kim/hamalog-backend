@@ -10,6 +10,10 @@ spotless {
 	java {
 		removeUnusedImports()
 		importOrder()
+		// 빈 줄 주석 제거 (예: "//", "// ")
+		replaceRegex 'Remove empty comments', '//\\s*\n', '\n'
+		// 연속 빈 줄을 하나로 정리
+		replaceRegex 'Remove multiple blank lines', '\n{3,}', '\n\n'
 		target 'src/**/*.java'
 	}
 }

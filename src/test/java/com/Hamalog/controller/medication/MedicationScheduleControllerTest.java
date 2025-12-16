@@ -52,7 +52,6 @@ class MedicationScheduleControllerTest {
     @Mock
     private MedicationScheduleService medicationScheduleService;
 
-
     @InjectMocks
     private MedicationScheduleController medicationScheduleController;
 

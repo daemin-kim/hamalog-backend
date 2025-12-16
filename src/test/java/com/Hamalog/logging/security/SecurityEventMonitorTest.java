@@ -184,7 +184,6 @@ class SecurityEventMonitorTest {
         assertThat(capturedEvent.getResource()).contains("/admin/users");
     }
 
-
     @Test
     @DisplayName("Should handle authentication success with exception gracefully")
     void handleAuthenticationSuccess_WithException_HandlesGracefully() {

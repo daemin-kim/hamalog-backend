@@ -1,7 +1,6 @@
 /*
 package com.Hamalog.controller.oauth2;
 
-
 @ExtendWith(MockitoExtension.class)
 @DisplayName("OAuth2 Controller Tests")
 class OAuth2ControllerTest {
@@ -212,7 +211,6 @@ class OAuth2ControllerTest {
                     assertThat(stateParam).hasSize(36); // UUID format length with hyphens
                 });
     }
-
 
     */
 /**

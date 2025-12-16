@@ -59,7 +59,7 @@ public class MoodDiaryController {
             @AuthenticationPrincipal CustomUserDetails userDetails
     ) {
         Long memberId = getAuthenticatedMemberId(userDetails);
-        if (!memberId.equals(request.getMemberId())) {
+        if (!memberId.equals(request.memberId())) {
             throw new CustomException(ErrorCode.FORBIDDEN);
         }
         MoodDiaryResponse response = moodDiaryService.createMoodDiary(memberId, request);

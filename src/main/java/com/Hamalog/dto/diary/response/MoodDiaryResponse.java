@@ -3,41 +3,58 @@ package com.Hamalog.dto.diary.response;
 import com.Hamalog.domain.diary.DiaryType;
 import com.Hamalog.domain.diary.MoodDiary;
 import com.Hamalog.domain.diary.MoodType;
+import io.swagger.v3.oas.annotations.media.Schema;
 import java.time.LocalDate;
 import java.time.LocalDateTime;
-import lombok.*;
 
-@Getter
-@Builder
-@NoArgsConstructor(access = AccessLevel.PROTECTED)
-@AllArgsConstructor
-public class MoodDiaryResponse {
+@Schema(description = "마음 일기 응답 데이터")
+public record MoodDiaryResponse(
+        @Schema(description = "마음 일기 ID", example = "1")
+        Long moodDiaryId,
 
-    private Long moodDiaryId;
-    private Long memberId;
-    private LocalDate diaryDate;
-    private MoodType moodType;
-    private DiaryType diaryType;
-    private String templateAnswer1;
-    private String templateAnswer2;
-    private String templateAnswer3;
-    private String templateAnswer4;
-    private String freeContent;
-    private LocalDateTime createdAt;
+        @Schema(description = "회원 ID", example = "1")
+        Long memberId,
 
+        @Schema(description = "일기 날짜", example = "2025-12-01")
+        LocalDate diaryDate,
+
+        @Schema(description = "기분 타입", example = "HAPPY")
+        MoodType moodType,
+
+        @Schema(description = "일기 형식", example = "TEMPLATE")
+        DiaryType diaryType,
+
+        @Schema(description = "템플릿 질문 1 답변")
+        String templateAnswer1,
+
+        @Schema(description = "템플릿 질문 2 답변")
+        String templateAnswer2,
+
+        @Schema(description = "템플릿 질문 3 답변")
+        String templateAnswer3,
+
+        @Schema(description = "템플릿 질문 4 답변")
+        String templateAnswer4,
+
+        @Schema(description = "자유 형식 내용")
+        String freeContent,
+
+        @Schema(description = "생성 일시", example = "2025-12-01T20:30:00")
+        LocalDateTime createdAt
+) {
     public static MoodDiaryResponse from(MoodDiary moodDiary) {
-        return MoodDiaryResponse.builder()
-                .moodDiaryId(moodDiary.getMoodDiaryId())
-                .memberId(moodDiary.getMember().getMemberId())
-                .diaryDate(moodDiary.getDiaryDate())
-                .moodType(moodDiary.getMoodType())
-                .diaryType(moodDiary.getDiaryType())
-                .templateAnswer1(moodDiary.getTemplateAnswer1())
-                .templateAnswer2(moodDiary.getTemplateAnswer2())
-                .templateAnswer3(moodDiary.getTemplateAnswer3())
-                .templateAnswer4(moodDiary.getTemplateAnswer4())
-                .freeContent(moodDiary.getFreeContent())
-                .createdAt(moodDiary.getCreatedAt())
-                .build();
+        return new MoodDiaryResponse(
+                moodDiary.getMoodDiaryId(),
+                moodDiary.getMember().getMemberId(),
+                moodDiary.getDiaryDate(),
+                moodDiary.getMoodType(),
+                moodDiary.getDiaryType(),
+                moodDiary.getTemplateAnswer1(),
+                moodDiary.getTemplateAnswer2(),
+                moodDiary.getTemplateAnswer3(),
+                moodDiary.getTemplateAnswer4(),
+                moodDiary.getFreeContent(),
+                moodDiary.getCreatedAt()
+        );
     }
 }

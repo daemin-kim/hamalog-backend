@@ -1,17 +1,30 @@
 package com.Hamalog.dto.medication.response;
 
+import io.swagger.v3.oas.annotations.media.Schema;
 import java.util.List;
 
 /**
  * 복약 스케줄 목록 응답 DTO
  * 페이지네이션 대신 사용되는 커스텀 응답 구조
  */
+@Schema(description = "복약 스케줄 목록 응답 데이터")
 public record MedicationScheduleListResponse(
+        @Schema(description = "복약 스케줄 목록")
         List<MedicationScheduleResponse> schedules,
+
+        @Schema(description = "전체 개수", example = "10")
         long totalCount,
+
+        @Schema(description = "현재 페이지", example = "0")
         int currentPage,
+
+        @Schema(description = "페이지 크기", example = "20")
         int pageSize,
+
+        @Schema(description = "다음 페이지 존재 여부", example = "false")
         boolean hasNext,
+
+        @Schema(description = "이전 페이지 존재 여부", example = "false")
         boolean hasPrevious
 ) {
     

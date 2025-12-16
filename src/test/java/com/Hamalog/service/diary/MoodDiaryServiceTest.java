@@ -71,30 +71,28 @@ class MoodDiaryServiceTest {
     @DisplayName("템플릿 마음 일기 생성 성공")
     void createMoodDiary_Template_Success() {
         // given
-        MoodDiaryCreateRequest request = MoodDiaryCreateRequest.builder()
-                .memberId(1L)
-                .diaryDate(LocalDate.of(2025, 12, 1))
-                .moodType(MoodType.HAPPY)
-                .diaryType(DiaryType.TEMPLATE)
-                .templateAnswer1("A1")
-                .templateAnswer2("A2")
-                .templateAnswer3("A3")
-                .templateAnswer4("A4")
-                .build();
+        MoodDiaryCreateRequest request = new MoodDiaryCreateRequest(
+                1L,
+                LocalDate.of(2025, 12, 1),
+                MoodType.HAPPY,
+                DiaryType.TEMPLATE,
+                "A1", "A2", "A3", "A4",
+                null
+        );
 
-        MoodDiary savedDiary = buildTemplateDiary(10L, request.getDiaryDate());
+        MoodDiary savedDiary = buildTemplateDiary(10L, request.diaryDate());
 
         when(memberRepository.findById(1L)).thenReturn(Optional.of(member));
-        when(moodDiaryRepository.existsByMemberAndDiaryDate(member, request.getDiaryDate())).thenReturn(false);
+        when(moodDiaryRepository.existsByMemberAndDiaryDate(member, request.diaryDate())).thenReturn(false);
         when(moodDiaryRepository.save(any(MoodDiary.class))).thenReturn(savedDiary);
 
         // when
         MoodDiaryResponse response = moodDiaryService.createMoodDiary(1L, request);
 
         // then
-        assertThat(response.getMoodDiaryId()).isEqualTo(10L);
-        assertThat(response.getDiaryType()).isEqualTo(DiaryType.TEMPLATE);
-        assertThat(response.getTemplateAnswer1()).isEqualTo("A1");
+        assertThat(response.moodDiaryId()).isEqualTo(10L);
+        assertThat(response.diaryType()).isEqualTo(DiaryType.TEMPLATE);
+        assertThat(response.templateAnswer1()).isEqualTo("A1");
 
         verify(moodDiaryRepository).save(any(MoodDiary.class));
     }
@@ -103,45 +101,44 @@ class MoodDiaryServiceTest {
     @DisplayName("자유 형식 마음 일기 생성 성공")
     void createMoodDiary_FreeForm_Success() {
         // given
-        MoodDiaryCreateRequest request = MoodDiaryCreateRequest.builder()
-                .memberId(1L)
-                .diaryDate(LocalDate.of(2025, 12, 2))
-                .moodType(MoodType.PEACEFUL)
-                .diaryType(DiaryType.FREE_FORM)
-                .freeContent("평온한 하루")
-                .build();
+        MoodDiaryCreateRequest request = new MoodDiaryCreateRequest(
+                1L,
+                LocalDate.of(2025, 12, 2),
+                MoodType.PEACEFUL,
+                DiaryType.FREE_FORM,
+                null, null, null, null,
+                "평온한 하루"
+        );
 
-        MoodDiary savedDiary = buildFreeFormDiary(11L, request.getDiaryDate(), "평온한 하루");
+        MoodDiary savedDiary = buildFreeFormDiary(11L, request.diaryDate(), "평온한 하루");
 
         when(memberRepository.findById(1L)).thenReturn(Optional.of(member));
-        when(moodDiaryRepository.existsByMemberAndDiaryDate(member, request.getDiaryDate())).thenReturn(false);
+        when(moodDiaryRepository.existsByMemberAndDiaryDate(member, request.diaryDate())).thenReturn(false);
         when(moodDiaryRepository.save(any(MoodDiary.class))).thenReturn(savedDiary);
 
         // when
         MoodDiaryResponse response = moodDiaryService.createMoodDiary(1L, request);
 
         // then
-        assertThat(response.getDiaryType()).isEqualTo(DiaryType.FREE_FORM);
-        assertThat(response.getFreeContent()).isEqualTo("평온한 하루");
+        assertThat(response.diaryType()).isEqualTo(DiaryType.FREE_FORM);
+        assertThat(response.freeContent()).isEqualTo("평온한 하루");
     }
 
     @Test
     @DisplayName("하루 1회 제한 위반 시 예외 발생")
     void createMoodDiary_Duplicate_ThrowsException() {
         // given
-        MoodDiaryCreateRequest request = MoodDiaryCreateRequest.builder()
-                .memberId(1L)
-                .diaryDate(LocalDate.now())
-                .moodType(MoodType.HAPPY)
-                .diaryType(DiaryType.TEMPLATE)
-                .templateAnswer1("A1")
-                .templateAnswer2("A2")
-                .templateAnswer3("A3")
-                .templateAnswer4("A4")
-                .build();
+        MoodDiaryCreateRequest request = new MoodDiaryCreateRequest(
+                1L,
+                LocalDate.now(),
+                MoodType.HAPPY,
+                DiaryType.TEMPLATE,
+                "A1", "A2", "A3", "A4",
+                null
+        );
 
         when(memberRepository.findById(1L)).thenReturn(Optional.of(member));
-        when(moodDiaryRepository.existsByMemberAndDiaryDate(member, request.getDiaryDate())).thenReturn(true);
+        when(moodDiaryRepository.existsByMemberAndDiaryDate(member, request.diaryDate())).thenReturn(true);
 
         // when & then
         assertThatThrownBy(() -> moodDiaryService.createMoodDiary(1L, request))
@@ -154,14 +151,14 @@ class MoodDiaryServiceTest {
     @DisplayName("유효하지 않은 템플릿 답변 시 예외 발생")
     void createMoodDiary_InvalidTemplate_ThrowsException() {
         // given
-        MoodDiaryCreateRequest request = MoodDiaryCreateRequest.builder()
-                .memberId(1L)
-                .diaryDate(LocalDate.now())
-                .moodType(MoodType.HAPPY)
-                .diaryType(DiaryType.TEMPLATE)
-                .templateAnswer1("A1")
-                .templateAnswer2(null)
-                .build();
+        MoodDiaryCreateRequest request = new MoodDiaryCreateRequest(
+                1L,
+                LocalDate.now(),
+                MoodType.HAPPY,
+                DiaryType.TEMPLATE,
+                "A1", null, null, null,
+                null
+        );
 
         when(memberRepository.findById(1L)).thenReturn(Optional.of(member));
         when(moodDiaryRepository.existsByMemberAndDiaryDate(eq(member), any())).thenReturn(false);
@@ -175,13 +172,14 @@ class MoodDiaryServiceTest {
     @DisplayName("회원 정보를 찾지 못하면 예외 발생")
     void createMoodDiary_MemberNotFound() {
         // given
-        MoodDiaryCreateRequest request = MoodDiaryCreateRequest.builder()
-                .memberId(2L)
-                .diaryDate(LocalDate.now())
-                .moodType(MoodType.HAPPY)
-                .diaryType(DiaryType.FREE_FORM)
-                .freeContent("content")
-                .build();
+        MoodDiaryCreateRequest request = new MoodDiaryCreateRequest(
+                2L,
+                LocalDate.now(),
+                MoodType.HAPPY,
+                DiaryType.FREE_FORM,
+                null, null, null, null,
+                "content"
+        );
 
         when(memberRepository.findById(2L)).thenReturn(Optional.empty());
 
@@ -201,8 +199,8 @@ class MoodDiaryServiceTest {
         MoodDiaryResponse response = moodDiaryService.getMoodDiary(5L, 1L);
 
         // then
-        assertThat(response.getMoodDiaryId()).isEqualTo(5L);
-        assertThat(response.getMemberId()).isEqualTo(member.getMemberId());
+        assertThat(response.moodDiaryId()).isEqualTo(5L);
+        assertThat(response.memberId()).isEqualTo(member.getMemberId());
     }
 
     @Test
@@ -232,8 +230,8 @@ class MoodDiaryServiceTest {
         MoodDiaryListResponse response = moodDiaryService.getMoodDiariesByMember(1L, 0, 200);
 
         // then
-        assertThat(response.getDiaries()).hasSize(1);
-        assertThat(response.getPageSize()).isEqualTo(100);
+        assertThat(response.diaries()).hasSize(1);
+        assertThat(response.pageSize()).isEqualTo(100);
 
         ArgumentCaptor<Pageable> captor = ArgumentCaptor.forClass(Pageable.class);
         verify(moodDiaryRepository).findByMemberOrderByDiaryDateDesc(eq(member), captor.capture());
@@ -254,7 +252,7 @@ class MoodDiaryServiceTest {
         MoodDiaryResponse response = moodDiaryService.getMoodDiaryByDate(1L, diaryDate);
 
         // then
-        assertThat(response.getDiaryDate()).isEqualTo(diaryDate);
+        assertThat(response.diaryDate()).isEqualTo(diaryDate);
     }
 
     @Test

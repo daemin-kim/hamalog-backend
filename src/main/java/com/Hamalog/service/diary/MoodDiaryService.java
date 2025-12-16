@@ -34,14 +34,14 @@ public class MoodDiaryService {
 
     @Transactional
     public MoodDiaryResponse createMoodDiary(Long memberId, MoodDiaryCreateRequest request) {
-        log.info("마음 일기 생성 시작 - memberId: {}, diaryDate: {}", memberId, request.getDiaryDate());
+        log.info("마음 일기 생성 시작 - memberId: {}, diaryDate: {}", memberId, request.diaryDate());
 
         Member member = memberRepository.findById(memberId)
                 .orElseThrow(MemberNotFoundException::new);
 
-        if (moodDiaryRepository.existsByMemberAndDiaryDate(member, request.getDiaryDate())) {
+        if (moodDiaryRepository.existsByMemberAndDiaryDate(member, request.diaryDate())) {
             log.warn("해당 날짜에 이미 일기가 존재함 - memberId: {}, diaryDate: {}",
-                    memberId, request.getDiaryDate());
+                    memberId, request.diaryDate());
             throw new DiaryAlreadyExistsException();
         }
 
@@ -81,14 +81,14 @@ public class MoodDiaryService {
                 .map(MoodDiaryResponse::from)
                 .collect(Collectors.toList());
 
-        return MoodDiaryListResponse.builder()
-                .diaries(diaries)
-                .totalCount(diaryPage.getTotalElements())
-                .currentPage(diaryPage.getNumber())
-                .pageSize(diaryPage.getSize())
-                .hasNext(diaryPage.hasNext())
-                .hasPrevious(diaryPage.hasPrevious())
-                .build();
+        return new MoodDiaryListResponse(
+                diaries,
+                diaryPage.getTotalElements(),
+                diaryPage.getNumber(),
+                diaryPage.getSize(),
+                diaryPage.hasNext(),
+                diaryPage.hasPrevious()
+        );
     }
 
     public MoodDiaryResponse getMoodDiaryByDate(Long memberId, LocalDate diaryDate) {
@@ -115,11 +115,11 @@ public class MoodDiaryService {
     }
 
     private void validateDiaryContent(MoodDiaryCreateRequest request) {
-        if (request.getDiaryType() == DiaryType.TEMPLATE) {
+        if (request.diaryType() == DiaryType.TEMPLATE) {
             if (!request.isValidTemplateType()) {
                 throw new InvalidDiaryTypeException();
             }
-        } else if (request.getDiaryType() == DiaryType.FREE_FORM) {
+        } else if (request.diaryType() == DiaryType.FREE_FORM) {
             if (!request.isValidFreeFormType()) {
                 throw new InvalidDiaryTypeException();
             }
@@ -129,22 +129,22 @@ public class MoodDiaryService {
     }
 
     private MoodDiary createMoodDiaryEntity(Member member, MoodDiaryCreateRequest request) {
-        if (request.getDiaryType() == DiaryType.TEMPLATE) {
+        if (request.diaryType() == DiaryType.TEMPLATE) {
             return MoodDiary.createTemplateType(
                     member,
-                    request.getDiaryDate(),
-                    request.getMoodType(),
-                    request.getTemplateAnswer1(),
-                    request.getTemplateAnswer2(),
-                    request.getTemplateAnswer3(),
-                    request.getTemplateAnswer4()
+                    request.diaryDate(),
+                    request.moodType(),
+                    request.templateAnswer1(),
+                    request.templateAnswer2(),
+                    request.templateAnswer3(),
+                    request.templateAnswer4()
             );
         } else {
             return MoodDiary.createFreeFormType(
                     member,
-                    request.getDiaryDate(),
-                    request.getMoodType(),
-                    request.getFreeContent()
+                    request.diaryDate(),
+                    request.moodType(),
+                    request.freeContent()
             );
         }
     }

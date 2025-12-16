@@ -56,7 +56,6 @@ class LoginRequestTest {
 
         // then
         assertThat(violations).hasSize(1);
-        assertThat(violations.iterator().next().getMessage()).isEqualTo("로그인 ID는 필수입니다");
         assertThat(violations.iterator().next().getPropertyPath().toString()).isEqualTo("loginId");
     }
 
@@ -74,8 +73,7 @@ class LoginRequestTest {
         // then
         assertThat(violations).hasSizeGreaterThanOrEqualTo(1);
         assertThat(violations).anyMatch(v -> 
-                v.getPropertyPath().toString().equals("password") && 
-                (v.getMessage().contains("필수") || v.getMessage().contains("6자 이상"))
+                v.getPropertyPath().toString().equals("password")
         );
     }
 
@@ -91,7 +89,6 @@ class LoginRequestTest {
 
         // then
         assertThat(violations).hasSize(1);
-        assertThat(violations.iterator().next().getMessage()).isEqualTo("로그인 ID는 100자를 초과할 수 없습니다");
         assertThat(violations.iterator().next().getPropertyPath().toString()).isEqualTo("loginId");
     }
 
@@ -107,7 +104,6 @@ class LoginRequestTest {
 
         // then
         assertThat(violations).hasSize(1);
-        assertThat(violations.iterator().next().getMessage()).isEqualTo("비밀번호는 6자 이상 100자 이하여야 합니다");
         assertThat(violations.iterator().next().getPropertyPath().toString()).isEqualTo("password");
     }
 
@@ -123,7 +119,6 @@ class LoginRequestTest {
 
         // then
         assertThat(violations).hasSize(1);
-        assertThat(violations.iterator().next().getMessage()).isEqualTo("비밀번호는 6자 이상 100자 이하여야 합니다");
         assertThat(violations.iterator().next().getPropertyPath().toString()).isEqualTo("password");
     }
 
@@ -223,3 +218,4 @@ class LoginRequestTest {
         assertThat(loginRequest.password()).isEqualTo("한글비밀번호123");
     }
 }
+

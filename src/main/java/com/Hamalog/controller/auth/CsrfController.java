@@ -6,8 +6,8 @@ import com.Hamalog.security.jwt.JwtTokenProvider;
 import jakarta.servlet.http.HttpServletRequest;
 import java.util.HashMap;
 import java.util.Map;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
+import lombok.RequiredArgsConstructor;
+import lombok.extern.slf4j.Slf4j;
 import org.springframework.http.ResponseEntity;
 import org.springframework.util.StringUtils;
 import org.springframework.web.bind.annotation.GetMapping;
@@ -20,10 +20,10 @@ import org.springframework.web.bind.annotation.RestController;
  */
 @RestController
 @RequestMapping("/auth")
+@RequiredArgsConstructor
+@Slf4j
 public class CsrfController {
 
-    private static final Logger log = LoggerFactory.getLogger(CsrfController.class);
-    
     private static final String JWT_HEADER = "Authorization";
     private static final String BEARER_PREFIX = "Bearer ";
 
@@ -31,11 +31,6 @@ public class CsrfController {
     private final JwtTokenProvider jwtTokenProvider;
     private final TrustedProxyService trustedProxyService;
 
-    public CsrfController(CsrfTokenProvider csrfTokenProvider, JwtTokenProvider jwtTokenProvider, TrustedProxyService trustedProxyService) {
-        this.csrfTokenProvider = csrfTokenProvider;
-        this.jwtTokenProvider = jwtTokenProvider;
-        this.trustedProxyService = trustedProxyService;
-    }
 
     /**
      * CSRF 토큰 발급

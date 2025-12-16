@@ -13,23 +13,24 @@ import io.swagger.v3.oas.annotations.media.Content;
 import io.swagger.v3.oas.annotations.media.Schema;
 import io.swagger.v3.oas.annotations.responses.ApiResponse;
 import io.swagger.v3.oas.annotations.responses.ApiResponses;
+import io.swagger.v3.oas.annotations.tags.Tag;
 import jakarta.validation.Valid;
 import java.util.List;
+import lombok.RequiredArgsConstructor;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.core.annotation.AuthenticationPrincipal;
 import org.springframework.security.core.userdetails.UserDetails;
 import org.springframework.web.bind.annotation.*;
 
+@Tag(name = "Medication Record API", description = "복약 기록 관련 CRUD API")
 @RestController
 @RequestMapping("/medication-record")
+@RequiredArgsConstructor
 public class MedicationRecordController {
 
     private final MedicationRecordService medicationRecordService;
 
-    public MedicationRecordController(MedicationRecordService medicationRecordService) {
-        this.medicationRecordService = medicationRecordService;
-    }
 
     @Operation(
             summary = "특정 복약 스케줄의 복약 기록 목록 조회",

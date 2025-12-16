@@ -11,6 +11,7 @@ import io.swagger.v3.oas.annotations.responses.ApiResponse;
 import io.swagger.v3.oas.annotations.responses.ApiResponses;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import jakarta.validation.Valid;
+import lombok.RequiredArgsConstructor;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.core.annotation.AuthenticationPrincipal;
@@ -20,13 +21,11 @@ import org.springframework.web.bind.annotation.*;
 @Tag(name = "Side Effect API", description = "사용자 부작용 기록 관련 API")
 @RestController
 @RequestMapping("/side-effect")
+@RequiredArgsConstructor
 public class SideEffectController {
 
     private final SideEffectService sideEffectService;
 
-    public SideEffectController(SideEffectService sideEffectService) {
-        this.sideEffectService = sideEffectService;
-    }
 
     @Operation(summary = "최근 부작용 목록 조회",
             description = "사용자 ID로 최근 5개의 부작용 이름을 조회합니다.")

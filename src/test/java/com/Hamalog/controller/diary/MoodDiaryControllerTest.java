@@ -8,6 +8,8 @@ import static org.mockito.Mockito.*;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.*;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.*;
 
+import com.Hamalog.domain.diary.DiaryType;
+import com.Hamalog.domain.diary.MoodType;
 import com.Hamalog.dto.diary.request.MoodDiaryCreateRequest;
 import com.Hamalog.dto.diary.response.MoodDiaryListResponse;
 import com.Hamalog.dto.diary.response.MoodDiaryResponse;
@@ -108,16 +110,19 @@ class MoodDiaryControllerTest {
     @DisplayName("마음 일기 생성 성공")
     void createMoodDiary_Success() throws Exception {
         MoodDiaryCreateRequest request = createTemplateRequest();
-        MoodDiaryResponse response = MoodDiaryResponse.builder()
-                .moodDiaryId(10L)
-                .memberId(1L)
-                .diaryDate(request.getDiaryDate())
-                .diaryType(request.getDiaryType())
-                .templateAnswer1(request.getTemplateAnswer1())
-                .templateAnswer2(request.getTemplateAnswer2())
-                .templateAnswer3(request.getTemplateAnswer3())
-                .templateAnswer4(request.getTemplateAnswer4())
-                .build();
+        MoodDiaryResponse response = new MoodDiaryResponse(
+                10L,
+                1L,
+                request.diaryDate(),
+                request.moodType(),
+                request.diaryType(),
+                request.templateAnswer1(),
+                request.templateAnswer2(),
+                request.templateAnswer3(),
+                request.templateAnswer4(),
+                null,
+                LocalDateTime.now()
+        );
 
         when(moodDiaryService.createMoodDiary(eq(1L), any(MoodDiaryCreateRequest.class)))
                 .thenReturn(response);
@@ -131,22 +136,20 @@ class MoodDiaryControllerTest {
 
         ArgumentCaptor<MoodDiaryCreateRequest> captor = ArgumentCaptor.forClass(MoodDiaryCreateRequest.class);
         verify(moodDiaryService).createMoodDiary(eq(1L), captor.capture());
-        assertThat(captor.getValue().getMemberId()).isEqualTo(1L);
+        assertThat(captor.getValue().memberId()).isEqualTo(1L);
     }
 
     @Test
     @DisplayName("인증 사용자와 요청 회원 ID 불일치 시 403")
     void createMoodDiary_ForbiddenWhenMemberMismatch() throws Exception {
-        MoodDiaryCreateRequest request = MoodDiaryCreateRequest.builder()
-                .memberId(2L)
-                .diaryDate(LocalDate.of(2025, 12, 1))
-                .moodType(com.Hamalog.domain.diary.MoodType.HAPPY)
-                .diaryType(com.Hamalog.domain.diary.DiaryType.TEMPLATE)
-                .templateAnswer1("A1")
-                .templateAnswer2("A2")
-                .templateAnswer3("A3")
-                .templateAnswer4("A4")
-                .build();
+        MoodDiaryCreateRequest request = new MoodDiaryCreateRequest(
+                2L,
+                LocalDate.of(2025, 12, 1),
+                MoodType.HAPPY,
+                DiaryType.TEMPLATE,
+                "A1", "A2", "A3", "A4",
+                null
+        );
 
         mockMvc.perform(post("/mood-diary")
                         .contentType(MediaType.APPLICATION_JSON)
@@ -160,11 +163,16 @@ class MoodDiaryControllerTest {
     @Test
     @DisplayName("마음 일기 단건 조회 성공")
     void getMoodDiary_Success() throws Exception {
-        MoodDiaryResponse response = MoodDiaryResponse.builder()
-                .moodDiaryId(5L)
-                .memberId(1L)
-                .diaryDate(LocalDate.of(2025, 12, 1))
-                .build();
+        MoodDiaryResponse response = new MoodDiaryResponse(
+                5L,
+                1L,
+                LocalDate.of(2025, 12, 1),
+                null,
+                null,
+                null, null, null, null,
+                null,
+                null
+        );
 
         when(moodDiaryService.getMoodDiary(5L, 1L)).thenReturn(response);
 
@@ -187,14 +195,14 @@ class MoodDiaryControllerTest {
     @Test
     @DisplayName("회원 일기 목록 조회 - 페이지 크기 제한 확인")
     void getMoodDiariesByMember_SizeCapped() throws Exception {
-        MoodDiaryListResponse response = MoodDiaryListResponse.builder()
-                .diaries(List.of())
-                .currentPage(0)
-                .pageSize(100)
-                .totalCount(0)
-                .hasNext(false)
-                .hasPrevious(false)
-                .build();
+        MoodDiaryListResponse response = new MoodDiaryListResponse(
+                List.of(),
+                0,
+                0,
+                100,
+                false,
+                false
+        );
 
         when(moodDiaryService.getMoodDiariesByMember(1L, 0, 200)).thenReturn(response);
 
@@ -210,11 +218,16 @@ class MoodDiaryControllerTest {
     @DisplayName("특정 날짜 일기 조회 성공")
     void getMoodDiaryByDate_Success() throws Exception {
         LocalDate date = LocalDate.of(2025, 12, 3);
-        MoodDiaryResponse response = MoodDiaryResponse.builder()
-                .moodDiaryId(7L)
-                .memberId(1L)
-                .diaryDate(date)
-                .build();
+        MoodDiaryResponse response = new MoodDiaryResponse(
+                7L,
+                1L,
+                date,
+                null,
+                null,
+                null, null, null, null,
+                null,
+                null
+        );
 
         when(moodDiaryService.getMoodDiaryByDate(1L, date)).thenReturn(response);
 
@@ -273,15 +286,13 @@ class MoodDiaryControllerTest {
     }
 
     private MoodDiaryCreateRequest createTemplateRequest() {
-        return MoodDiaryCreateRequest.builder()
-                .memberId(1L)
-                .diaryDate(LocalDate.of(2025, 12, 1))
-                .moodType(com.Hamalog.domain.diary.MoodType.HAPPY)
-                .diaryType(com.Hamalog.domain.diary.DiaryType.TEMPLATE)
-                .templateAnswer1("A1")
-                .templateAnswer2("A2")
-                .templateAnswer3("A3")
-                .templateAnswer4("A4")
-                .build();
+        return new MoodDiaryCreateRequest(
+                1L,
+                LocalDate.of(2025, 12, 1),
+                MoodType.HAPPY,
+                DiaryType.TEMPLATE,
+                "A1", "A2", "A3", "A4",
+                null
+        );
     }
 }

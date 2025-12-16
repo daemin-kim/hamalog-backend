@@ -17,6 +17,7 @@ import io.swagger.v3.oas.annotations.responses.ApiResponse;
 import io.swagger.v3.oas.annotations.responses.ApiResponses;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import jakarta.validation.Valid;
+import lombok.RequiredArgsConstructor;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.PageRequest;
 import org.springframework.data.domain.Pageable;
@@ -32,15 +33,11 @@ import org.springframework.web.multipart.MultipartFile;
 @Tag(name = "Medication Schedule API", description = "복약 스케줄 관련 CRUD API")
 @RestController
 @RequestMapping("/medication-schedule")
+@RequiredArgsConstructor
 public class MedicationScheduleController {
 
     private final MedicationScheduleService medicationScheduleService;
 
-    public MedicationScheduleController(
-            MedicationScheduleService medicationScheduleService
-    ) {
-        this.medicationScheduleService = medicationScheduleService;
-    }
 
     @Operation(summary = "회원의 복약 스케줄 목록 조회",
             description = "회원 ID를 통해 해당 사용자의 모든 복약 스케줄을 조회합니다.")

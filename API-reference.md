@@ -380,4 +380,13 @@ INSERT INTO side_effect (type, name) VALUES
     - **보안 레이어 구조 문서화**: 4단계 보안 레이어 (Cloudflare Edge → Tunnel → Nginx → Spring Security)
     - **DDL 스키마 버전**: 2025-12-16으로 갱신
     - **문서 분리**: API 명세서를 프론트엔드용(`API-specification.md`)과 참고용(`API-reference.md`)으로 분리
+- **2025/12/16**: **코드 스타일 통일 및 설정 일관성 점검**
+    - **DTO 타입 통일**: diary 패키지의 class를 Java Record로 변환 (MoodDiaryCreateRequest, MoodDiaryResponse, MoodDiaryListResponse)
+    - **Validation 메시지 통일**: 하드코딩된 메시지를 메시지 키 방식(`{auth.*}`, `{sideEffect.*}`)으로 변경
+    - **Swagger 어노테이션 보완**: 모든 Response DTO에 `@Schema` 추가 (MedicationScheduleResponse, MedicationRecordResponse, RecentSideEffectResponse 등)
+    - **의존성 주입 통일**: 모든 컨트롤러에 `@RequiredArgsConstructor` 적용 (MedicationScheduleController, MedicationRecordController, SideEffectController, CsrfController)
+    - **설정 일관성 점검**: JWT_EXPIRY, 데이터베이스 SSL 설정, Kakao redirect-uri 등 환경별 설정값 통일
+    - **개발 환경 분리**: `application-dev.properties` 파일 신규 생성, `docker-compose-dev.yml`에서 dev 프로필 사용
+    - **ValidationMessages.properties 확장**: auth, sideEffect 관련 메시지 키 추가
+    - **테스트 코드 동기화**: MoodDiaryServiceTest, MoodDiaryControllerTest, LoginRequestTest를 record 방식에 맞게 수정
 

@@ -38,18 +38,19 @@ jobs:
 
       - name: Upload Test Results
         uses: actions/upload-artifact@v4
-        if: always()
+        if: failure()
         with:
           name: test-results
           path: build/reports/tests/test/
-          retention-days: 7
+          retention-days: 3
 
       - name: Upload Coverage Report
         uses: actions/upload-artifact@v4
+        if: success()
         with:
           name: coverage-report
           path: build/jacocoHtml/
-          retention-days: 7
+          retention-days: 3
 
       - name: Upload Coverage to Codecov
         uses: codecov/codecov-action@v4
@@ -88,7 +89,7 @@ jobs:
         with:
           name: dependency-check-report
           path: build/reports/dependency-check/
-          retention-days: 30
+          retention-days: 7
 
   # 3단계: 아키텍처 테스트
   architecture-test:

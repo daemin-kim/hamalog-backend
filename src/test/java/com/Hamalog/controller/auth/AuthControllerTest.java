@@ -11,7 +11,9 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
 import com.Hamalog.dto.auth.request.LoginRequest;
 import com.Hamalog.dto.auth.request.SignupRequest;
 import com.Hamalog.dto.auth.response.LoginResponse;
+import com.Hamalog.handler.ExceptionHandlerUtils;
 import com.Hamalog.handler.GlobalExceptionHandler;
+import com.Hamalog.logging.StructuredLogger;
 import com.Hamalog.security.filter.TrustedProxyService;
 import com.Hamalog.security.jwt.JwtTokenProvider;
 import com.Hamalog.service.auth.AuthenticationService;
@@ -62,6 +64,12 @@ class AuthControllerTest {
     @Mock
     private TrustedProxyService trustedProxyService;
 
+    @Mock
+    private StructuredLogger structuredLogger;
+
+    @Mock
+    private ExceptionHandlerUtils handlerUtils;
+
     @InjectMocks
     private AuthController authController;
 
@@ -80,7 +88,7 @@ class AuthControllerTest {
         jsonConverter.setObjectMapper(objectMapper);
         
         mockMvc = MockMvcBuilders.standaloneSetup(authController)
-                .setControllerAdvice(new GlobalExceptionHandler(trustedProxyService))
+                .setControllerAdvice(new GlobalExceptionHandler(structuredLogger, handlerUtils))
                 .setMessageConverters(stringConverter, jsonConverter)
                 .defaultResponseCharacterEncoding(StandardCharsets.UTF_8)
                 .build();

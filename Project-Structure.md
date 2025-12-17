@@ -738,6 +738,37 @@ src/test/java/com/Hamalog/
 |------|------|--------|------|
 | 1.0.0 | 2025-12-16 | - | 최초 작성 |
 | 1.1.0 | 2025-12-16 | - | 배포 아키텍처 및 CI/CD 파이프라인 추가 |
+| 1.2.0 | 2025-12-17 | - | AuthService 분리 리팩토링 완료 (SRP 적용) |
+
+---
+
+## 변경 이력 (Changelog)
+
+### v1.2.0 (2025-12-17) - AuthService 리팩토링
+
+#### 🔄 주요 변경사항
+
+**AuthService 분리 (SRP 원칙 적용)**
+- 기존 417줄의 `AuthService.java`를 4개의 독립적인 서비스로 분리
+- 각 서비스가 단일 책임 원칙(SRP)을 준수
+
+| 서비스 | 책임 | 비고 |
+|--------|------|------|
+| `MemberRegistrationService` | 회원가입, 회원 정보 검증 | ~90줄 |
+| `AuthenticationService` | 로그인, 로그아웃, 토큰 관리 | ~132줄 |
+| `MemberDeletionService` | 회원 탈퇴, 관련 데이터 삭제 | ~102줄 |
+| `KakaoOAuth2AuthService` | 카카오 OAuth2 인증 처리 | ~290줄 |
+
+**테스트 추가**
+- `MemberRegistrationServiceTest` (208줄)
+- `AuthenticationServiceTest` (369줄)
+- `MemberDeletionServiceTest` 
+- `KakaoOAuth2AuthServiceTest`
+
+**코드 개선**
+- deprecated 메서드 완전 제거
+- 불필요한 import 문 정리
+- AuthService Facade 패턴 제거 완료
 
 ---
 

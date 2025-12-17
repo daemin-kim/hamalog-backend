@@ -205,8 +205,8 @@ class OpenApiConfigTest {
     }
 
     @Test
-    @DisplayName("Should configure components with security schemes only")
-    void customOpenAPI_Components_ConfiguresSecuritySchemesOnly() {
+    @DisplayName("Should configure components with security schemes and error response schemas")
+    void customOpenAPI_Components_ConfiguresSecuritySchemesAndSchemas() {
         // when
         OpenAPI openAPI = openApiConfig.customOpenAPI();
         Components components = openAPI.getComponents();
@@ -214,7 +214,9 @@ class OpenApiConfigTest {
         // then
         assertThat(components).isNotNull();
         assertThat(components.getSecuritySchemes()).hasSize(1);
-        assertThat(components.getSchemas()).isNullOrEmpty();
+        assertThat(components.getSchemas()).hasSize(2);
+        assertThat(components.getSchemas()).containsKey("ErrorResponse");
+        assertThat(components.getSchemas()).containsKey("ValidationErrorResponse");
         assertThat(components.getResponses()).isNullOrEmpty();
         assertThat(components.getParameters()).isNullOrEmpty();
         assertThat(components.getExamples()).isNullOrEmpty();

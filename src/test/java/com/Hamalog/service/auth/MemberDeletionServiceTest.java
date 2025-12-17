@@ -58,6 +58,9 @@ class MemberDeletionServiceTest {
     private AuthenticationService authenticationService;
 
     @Mock
+    private MemberCacheService memberCacheService;
+
+    @Mock
     private ApplicationEventPublisher eventPublisher;
 
     @InjectMocks
@@ -111,6 +114,8 @@ class MemberDeletionServiceTest {
             verify(medicationRecordRepository).deleteByScheduleIds(Arrays.asList(1L, 2L));
             verify(medicationScheduleRepository).deleteByMemberId(testMember.getMemberId());
             verify(memberRepository).delete(testMember);
+            verify(memberCacheService).evictByLoginId(loginId, testMember.getMemberId());
+            verify(memberCacheService).evictByMemberId(testMember.getMemberId());
 
             ArgumentCaptor<MemberDeletedEvent> eventCaptor = ArgumentCaptor.forClass(MemberDeletedEvent.class);
             verify(eventPublisher).publishEvent(eventCaptor.capture());

@@ -55,9 +55,20 @@
   "code": "에러 코드",
   "message": "에러 메시지",
   "path": "/요청 경로",
-  "violations": null
+  "violations": null,
+  "timestamp": "2025-12-17T12:34:56.789",
+  "traceId": "550e8400-e29b-41d4-a716-446655440000"
 }
 ```
+
+| 필드 | 타입 | 설명 |
+|------|------|------|
+| `code` | String | 에러 코드 (예: `NOT_FOUND`, `BAD_REQUEST`) |
+| `message` | String | 사용자 친화적 에러 메시지 |
+| `path` | String | 요청 경로 |
+| `violations` | Object | 유효성 검사 실패 시 필드별 에러 상세 |
+| `timestamp` | DateTime | 에러 발생 시각 (ISO 8601 형식) |
+| `traceId` | String | 요청 추적 ID (로그 상관관계 분석용) |
 
 #### 유효성 검사 실패 시 응답 형식
 
@@ -68,16 +79,12 @@ Bean Validation 실패 시 `violations` 필드에 각 필드별 에러 상세 �
   "code": "BAD_REQUEST",
   "message": "입력값이 유효하지 않습니다",
   "path": "/api/v1/auth/signup",
-  "violations": [
-    {
-      "field": "loginId",
-      "message": "올바른 이메일 형식이어야 합니다"
-    },
-    {
-      "field": "nickName",
-      "message": "닉네임은 한글 또는 영어 1~10자여야 합니다"
-    }
-  ]
+  "violations": {
+    "loginId": "올바른 이메일 형식이어야 합니다",
+    "nickName": "닉네임은 한글 또는 영어 1~10자여야 합니다"
+  },
+  "timestamp": "2025-12-17T12:34:56.789",
+  "traceId": "550e8400-e29b-41d4-a716-446655440000"
 }
 ```
 

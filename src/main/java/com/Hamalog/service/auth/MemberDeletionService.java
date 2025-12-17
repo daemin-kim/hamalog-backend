@@ -32,6 +32,7 @@ public class MemberDeletionService {
     private final SideEffectRecordRepository sideEffectRecordRepository;
     private final MoodDiaryRepository moodDiaryRepository;
     private final AuthenticationService authenticationService;
+    private final MemberCacheService memberCacheService;
     private final ApplicationEventPublisher eventPublisher;
 
     /**
@@ -63,11 +64,15 @@ public class MemberDeletionService {
         // 4. 회원 완전 삭제
         memberRepository.delete(member);
 
+        // 5. 캐시 무효화
+        memberCacheService.evictByLoginId(loginId, memberId);
+        memberCacheService.evictByMemberId(memberId);
+
         log.info("[AUTH] Member deleted successfully - loginId: {}, memberId: {}",
             SensitiveDataMasker.maskEmail(loginId),
             SensitiveDataMasker.maskUserId(memberId));
 
-        // 5. 이벤트 발행 (추가 후처리용)
+        // 6. 이벤트 발행 (추가 후처리용)
         eventPublisher.publishEvent(new MemberDeletedEvent(loginId, token, memberId));
     }
 

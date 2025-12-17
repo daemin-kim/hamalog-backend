@@ -12,7 +12,6 @@ import com.Hamalog.exception.token.TokenException;
 import com.Hamalog.exception.validation.InvalidInputException;
 import com.Hamalog.logging.MDCUtil;
 import com.Hamalog.logging.StructuredLogger;
-import com.Hamalog.security.filter.TrustedProxyService;
 import jakarta.persistence.OptimisticLockException;
 import jakarta.servlet.http.HttpServletRequest;
 import java.util.HashMap;
@@ -21,13 +20,11 @@ import lombok.RequiredArgsConstructor;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.slf4j.MDC;
-import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.dao.DataIntegrityViolationException;
 import org.springframework.dao.OptimisticLockingFailureException;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.http.converter.HttpMessageNotReadableException;
-import org.springframework.security.access.AccessDeniedException;
 import org.springframework.security.core.AuthenticationException;
 import org.springframework.validation.FieldError;
 import org.springframework.web.HttpMediaTypeNotSupportedException;
@@ -36,22 +33,18 @@ import org.springframework.web.bind.annotation.ExceptionHandler;
 import org.springframework.web.bind.annotation.RestControllerAdvice;
 import org.springframework.web.multipart.support.MissingServletRequestPartException;
 
+/**
+ * 전역 예외 처리기
+ * REST API에서 발생하는 모든 예외를 일관된 형식으로 처리합니다.
+ */
 @RequiredArgsConstructor
 @RestControllerAdvice
 public class GlobalExceptionHandler {
 
-    private final TrustedProxyService trustedProxyService;
-
     private static final Logger log = LoggerFactory.getLogger(GlobalExceptionHandler.class);
-    
-    @Autowired
-    private StructuredLogger structuredLogger;
-    
-    // Critical error patterns that require immediate attention
-    private static final String[] CRITICAL_ERROR_PATTERNS = {
-        "OutOfMemoryError", "StackOverflowError", "DatabaseConnectionException", 
-        "SecurityException", "DataIntegrityViolationException"
-    };
+
+    private final StructuredLogger structuredLogger;
+    private final ExceptionHandlerUtils handlerUtils;
 
     @ExceptionHandler({
             MedicationScheduleNotFoundException.class,
@@ -62,12 +55,11 @@ public class GlobalExceptionHandler {
     })
     public ResponseEntity<ErrorResponse> handleNotFound(CustomException ex, HttpServletRequest request) {
         ErrorSeverity severity = ErrorSeverity.LOW;
-        
-        // Enhanced error context using MDCUtil
+
         MDCUtil.addErrorContext(ex);
         MDCUtil.put("error.severity", severity.name());
         MDCUtil.put("error.category", "RESOURCE_NOT_FOUND");
-        
+
         ErrorResponse error = ErrorResponse.of(
                 HttpStatus.NOT_FOUND,
                 ex.getErrorCode().getCode(),
@@ -75,16 +67,14 @@ public class GlobalExceptionHandler {
                 request.getRequestURI(),
                 null
         );
-        
-        // Structured error logging
-        Map<String, Object> errorContext = createErrorContext(ex, request, severity);
+
+        Map<String, Object> errorContext = handlerUtils.createErrorContext(ex, request, severity);
         structuredLogger.error("Resource not found", ex, errorContext);
-        
-        log.warn("[RESOURCE_NOT_FOUND] Resource not found - path={} code={} message={} severity={} correlationId={}", 
-            request.getRequestURI(), ex.getErrorCode().getCode(), ex.getErrorCode().getMessage(), 
+
+        log.warn("[RESOURCE_NOT_FOUND] Resource not found - path={} code={} message={} severity={} correlationId={}",
+            request.getRequestURI(), ex.getErrorCode().getCode(), ex.getErrorCode().getMessage(),
             severity, MDCUtil.get(MDCUtil.CORRELATION_ID));
-        
-        // Clean up error context
+
         MDCUtil.clearErrorContext();
         return ResponseEntity.status(HttpStatus.NOT_FOUND).body(error);
     }
@@ -105,7 +95,7 @@ public class GlobalExceptionHandler {
                 null
         );
 
-        Map<String, Object> errorContext = createErrorContext(ex, request, severity);
+        Map<String, Object> errorContext = handlerUtils.createErrorContext(ex, request, severity);
         structuredLogger.error("OAuth2 error", ex, errorContext);
 
         log.error("[OAUTH2_ERROR] OAuth2 authentication failed - path={} code={} message={} correlationId={}",
@@ -132,7 +122,7 @@ public class GlobalExceptionHandler {
                 null
         );
 
-        Map<String, Object> errorContext = createErrorContext(ex, request, severity);
+        Map<String, Object> errorContext = handlerUtils.createErrorContext(ex, request, severity);
         structuredLogger.error("Token error", ex, errorContext);
 
         log.warn("[TOKEN_ERROR] Token validation failed - path={} code={} message={} correlationId={}",
@@ -159,7 +149,7 @@ public class GlobalExceptionHandler {
                 null
         );
 
-        Map<String, Object> errorContext = createErrorContext(ex, request, severity);
+        Map<String, Object> errorContext = handlerUtils.createErrorContext(ex, request, severity);
         structuredLogger.error("Input validation failed", ex, errorContext);
 
         log.warn("[VALIDATION_ERROR] Invalid input - path={} code={} message={} correlationId={}",
@@ -186,7 +176,7 @@ public class GlobalExceptionHandler {
                 null
         );
 
-        Map<String, Object> errorContext = createErrorContext(ex, request, severity);
+        Map<String, Object> errorContext = handlerUtils.createErrorContext(ex, request, severity);
         structuredLogger.error("Optimistic lock failure", ex, errorContext);
 
         log.warn("[CONCURRENCY_ERROR] Optimistic lock failed - path={} correlationId={}",
@@ -212,7 +202,7 @@ public class GlobalExceptionHandler {
                 null
         );
 
-        Map<String, Object> errorContext = createErrorContext(ex, request, severity);
+        Map<String, Object> errorContext = handlerUtils.createErrorContext(ex, request, severity);
         structuredLogger.error("Data integrity violation", ex, errorContext);
 
         log.error("[DATABASE_ERROR] Data integrity violation - path={} correlationId={}",
@@ -235,18 +225,16 @@ public class GlobalExceptionHandler {
                 request.getRequestURI(),
                 violations
         );
-        
-        // Add error context to MDC
+
         MDC.put("error.type", "VALIDATION_ERROR");
         MDC.put("error.code", "INVALID_INPUT");
         MDC.put("error.httpStatus", "400");
         MDC.put("error.violationCount", String.valueOf(violations.size()));
-        
-        log.info("[VALIDATION_ERROR] Input validation failed - path={} traceId={} violationCount={} violations={}", 
+
+        log.info("[VALIDATION_ERROR] Input validation failed - path={} traceId={} violationCount={} violations={}",
             request.getRequestURI(), MDC.get("requestId"), violations.size(), violations);
-        
-        // Clean up error context
-        cleanupErrorMDC();
+
+        handlerUtils.cleanupErrorMDC();
         return ResponseEntity.status(HttpStatus.BAD_REQUEST).body(error);
     }
 
@@ -259,23 +247,20 @@ public class GlobalExceptionHandler {
                 request.getRequestURI(),
                 null
         );
-        
-        // Add error context to MDC
+
         MDC.put("error.type", "AUTHENTICATION_ERROR");
         MDC.put("error.code", "UNAUTHORIZED");
         MDC.put("error.httpStatus", "401");
-        
-        log.warn("[AUTHENTICATION_ERROR] Authentication failed - path={} traceId={} message={}", 
+
+        log.warn("[AUTHENTICATION_ERROR] Authentication failed - path={} traceId={} message={}",
             request.getRequestURI(), MDC.get("requestId"), ex.getMessage());
-        
-        // Clean up error context
-        cleanupErrorMDC();
+
+        handlerUtils.cleanupErrorMDC();
         return ResponseEntity.status(HttpStatus.UNAUTHORIZED).body(error);
     }
 
     @ExceptionHandler(CustomException.class)
     public ResponseEntity<ErrorResponse> handleCustomException(CustomException ex, HttpServletRequest request) {
-        // HTTP 상태 코드 결정
         HttpStatus status = determineHttpStatus(ex.getErrorCode());
 
         ErrorResponse error = ErrorResponse.of(
@@ -286,16 +271,14 @@ public class GlobalExceptionHandler {
                 null
         );
 
-        // Add error context to MDC
         MDC.put("error.type", "BUSINESS_ERROR");
         MDC.put("error.code", ex.getErrorCode().getCode());
         MDC.put("error.httpStatus", String.valueOf(status.value()));
 
-        log.warn("[BUSINESS_ERROR] Business logic error - path={} code={} message={} traceId={}", 
+        log.warn("[BUSINESS_ERROR] Business logic error - path={} code={} message={} traceId={}",
             request.getRequestURI(), ex.getErrorCode().getCode(), ex.getErrorCode().getMessage(), MDC.get("requestId"));
-        
-        // Clean up error context
-        cleanupErrorMDC();
+
+        handlerUtils.cleanupErrorMDC();
         return ResponseEntity.status(status).body(error);
     }
 
@@ -326,7 +309,7 @@ public class GlobalExceptionHandler {
                 null
         );
 
-        Map<String, Object> errorContext = createErrorContext(ex, request, severity);
+        Map<String, Object> errorContext = handlerUtils.createErrorContext(ex, request, severity);
         structuredLogger.error("Unsupported media type", ex, errorContext);
 
         log.warn("[MEDIA_TYPE_ERROR] Unsupported content type - path={} contentType={} supportedTypes={} correlationId={}",
@@ -358,7 +341,7 @@ public class GlobalExceptionHandler {
                 null
         );
 
-        Map<String, Object> errorContext = createErrorContext(ex, request, severity);
+        Map<String, Object> errorContext = handlerUtils.createErrorContext(ex, request, severity);
         structuredLogger.error("Missing request part", ex, errorContext);
 
         log.warn("[REQUEST_PART_ERROR] Missing required part - path={} partName={} correlationId={}",
@@ -379,13 +362,11 @@ public class GlobalExceptionHandler {
         String errorMessage = "Failed to parse request body. Ensure JSON is valid and " +
             "Content-Type header is correctly set (application/json for JSON data).";
 
-        // 더 구체적인 에러 메시지 추출
         Throwable cause = ex.getCause();
         if (cause != null && cause.getMessage() != null) {
             String causeMsg = cause.getMessage();
-            // 보안상 민감한 정보는 제거하고 기본 파싱 에러만 표시
             if (causeMsg.contains("Cannot deserialize") || causeMsg.contains("Unexpected token")) {
-                errorMessage = "JSON parsing error: " + sanitizeErrorMessage(causeMsg);
+                errorMessage = "JSON parsing error: " + handlerUtils.sanitizeErrorMessage(causeMsg);
             }
         }
 
@@ -397,7 +378,7 @@ public class GlobalExceptionHandler {
                 null
         );
 
-        Map<String, Object> errorContext = createErrorContext(ex, request, severity);
+        Map<String, Object> errorContext = handlerUtils.createErrorContext(ex, request, severity);
         structuredLogger.error("HTTP message not readable", ex, errorContext);
 
         log.warn("[MESSAGE_PARSE_ERROR] Failed to parse request - path={} correlationId={}",
@@ -409,7 +390,6 @@ public class GlobalExceptionHandler {
 
     @ExceptionHandler(Exception.class)
     public ResponseEntity<ErrorResponse> handleException(Exception ex, HttpServletRequest request) {
-        // ✅ 클라이언트에는 일반적인 메시지만 전달
         ErrorResponse error = ErrorResponse.of(
                 HttpStatus.INTERNAL_SERVER_ERROR,
                 ErrorCode.INTERNAL_SERVER_ERROR.getCode(),
@@ -417,8 +397,7 @@ public class GlobalExceptionHandler {
                 request.getRequestURI(),
                 null
         );
-        
-        // ✅ 상세 정보는 로그에만 기록
+
         MDC.put("error.type", "UNEXPECTED_ERROR");
         MDC.put("error.code", ErrorCode.INTERNAL_SERVER_ERROR.getCode());
         MDC.put("error.httpStatus", "500");
@@ -427,9 +406,8 @@ public class GlobalExceptionHandler {
 
         log.error("[UNEXPECTED_ERROR] Unexpected system error - path={} traceId={} exception={} details={}",
             request.getRequestURI(), MDC.get("requestId"), ex.getClass().getSimpleName(), ex.getMessage(), ex);
-        
-        // Clean up error context
-        cleanupErrorMDC();
+
+        handlerUtils.cleanupErrorMDC();
         return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body(error);
     }
     
@@ -450,179 +428,5 @@ public class GlobalExceptionHandler {
             case FILE_SIZE_EXCEEDED -> HttpStatus.PAYLOAD_TOO_LARGE;
             default -> HttpStatus.BAD_REQUEST;
         };
-    }
-
-    /**
-     * Create comprehensive error context for structured logging
-     */
-    private Map<String, Object> createErrorContext(Exception ex, HttpServletRequest request, ErrorSeverity severity) {
-        Map<String, Object> context = new HashMap<>();
-        
-        // Basic error information
-        context.put("error_type", ex.getClass().getSimpleName());
-        context.put("error_message", sanitizeErrorMessage(ex.getMessage()));
-        context.put("error_severity", severity.name());
-        context.put("stack_trace", getStackTraceString(ex));
-        
-        // Request context
-        if (request != null) {
-            context.put("request_method", request.getMethod());
-            context.put("request_path", request.getRequestURI());
-            context.put("request_query", request.getQueryString());
-            context.put("user_agent", sanitizeUserAgent(request.getHeader("User-Agent")));
-            context.put("client_ip", resolveClientIpAddress(request));
-        }
-        
-        // User context
-        context.put("user_id", MDCUtil.get(MDCUtil.USER_ID));
-        context.put("session_id", MDCUtil.get(MDCUtil.SESSION_ID));
-        context.put("correlation_id", MDCUtil.get(MDCUtil.CORRELATION_ID));
-        
-        // System context
-        context.put("hostname", MDCUtil.get(MDCUtil.HOSTNAME));
-        context.put("thread_name", Thread.currentThread().getName());
-        context.put("timestamp", System.currentTimeMillis());
-        
-        return context;
-    }
-    
-    /**
-     * Determine error severity based on exception type and patterns
-     */
-    private ErrorSeverity determineErrorSeverity(Exception ex) {
-        String exceptionName = ex.getClass().getSimpleName();
-        String errorMessage = ex.getMessage();
-        
-        // Critical errors requiring immediate attention
-        for (String pattern : CRITICAL_ERROR_PATTERNS) {
-            if (exceptionName.contains(pattern) || (errorMessage != null && errorMessage.contains(pattern))) {
-                return ErrorSeverity.CRITICAL;
-            }
-        }
-        
-        // High severity errors
-        if (ex instanceof SecurityException || 
-            ex instanceof AccessDeniedException ||
-            exceptionName.contains("Security") ||
-            exceptionName.contains("Auth")) {
-            return ErrorSeverity.HIGH;
-        }
-        
-        // Medium severity errors
-        if (ex instanceof IllegalArgumentException ||
-            ex instanceof IllegalStateException ||
-            exceptionName.contains("Validation") ||
-            exceptionName.contains("Constraint")) {
-            return ErrorSeverity.MEDIUM;
-        }
-        
-        // Default to low severity
-        return ErrorSeverity.LOW;
-    }
-    
-    /**
-     * Get sanitized stack trace as string
-     */
-    private String getStackTraceString(Exception ex) {
-        if (ex == null) return "";
-        
-        java.io.StringWriter sw = new java.io.StringWriter();
-        java.io.PrintWriter pw = new java.io.PrintWriter(sw);
-        ex.printStackTrace(pw);
-        String stackTrace = sw.toString();
-        
-        // Limit stack trace size to prevent log bloat
-        return stackTrace.length() > 2000 ? stackTrace.substring(0, 2000) + "...[truncated]" : stackTrace;
-    }
-    
-    /**
-     * Sanitize error message to prevent log injection
-     */
-    private String sanitizeErrorMessage(String message) {
-        if (message == null || message.trim().isEmpty()) {
-            return "No error message available";
-        }
-        // Remove potentially dangerous characters and limit length
-        String sanitized = message.replaceAll("[\\r\\n\\t]", " ").trim();
-        return sanitized.length() > 500 ? sanitized.substring(0, 500) + "..." : sanitized;
-    }
-    
-    /**
-     * Sanitize user agent to prevent log injection
-     */
-    private String sanitizeUserAgent(String userAgent) {
-        if (userAgent == null || userAgent.trim().isEmpty()) {
-            return "unknown";
-        }
-        String sanitized = userAgent.replaceAll("[\\r\\n\\t]", "").trim();
-        return sanitized.length() > 200 ? sanitized.substring(0, 200) + "..." : sanitized;
-    }
-    
-    /**
-     * Extract client IP address with proxy support
-     */
-    private String resolveClientIpAddress(HttpServletRequest request) {
-        return trustedProxyService.resolveClientIp(request).orElse("unknown");
-    }
-    
-    /**
-     * Check if error requires immediate alerting
-     */
-    private boolean requiresImmediateAlert(ErrorSeverity severity, Exception ex) {
-        return severity == ErrorSeverity.CRITICAL || 
-               (severity == ErrorSeverity.HIGH && isSecurityRelated(ex));
-    }
-    
-    /**
-     * Check if exception is security-related
-     */
-    private boolean isSecurityRelated(Exception ex) {
-        String exceptionName = ex.getClass().getSimpleName().toLowerCase();
-        return exceptionName.contains("security") || 
-               exceptionName.contains("auth") || 
-               exceptionName.contains("access") ||
-               ex instanceof SecurityException ||
-               ex instanceof AccessDeniedException;
-    }
-    
-    public static class ErrorResponse {
-        private final String code;
-        private final String message;
-        private final String path;
-        private final Map<String, String> violations;
-
-        private ErrorResponse(HttpStatus status, String code, String message, String path, Map<String, String> violations) {
-            this.code = code;
-            this.message = message;
-            this.path = path;
-            this.violations = violations;
-        }
-
-        public static ErrorResponse of(HttpStatus status, String code, String message, String path, Map<String, String> violations) {
-            return new ErrorResponse(status, code, message, path, violations);
-        }
-
-        public String getCode() {
-            return code;
-        }
-
-        public String getMessage() {
-            return message;
-        }
-
-        public String getPath() {
-            return path;
-        }
-
-        public Map<String, String> getViolations() {
-            return violations;
-        }
-    }
-
-    private void cleanupErrorMDC() {
-        MDC.remove("error.type");
-        MDC.remove("error.code");
-        MDC.remove("error.httpStatus");
-        MDC.remove("error.violationCount");
     }
 }

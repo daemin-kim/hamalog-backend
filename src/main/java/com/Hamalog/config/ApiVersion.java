@@ -1,7 +1,7 @@
 package com.Hamalog.config;
 
 /**
- * API 버전 관리를 위한 상수 클래스
+ * API 경로 관리를 위한 상수 클래스
  */
 public final class ApiVersion {
 
@@ -10,37 +10,37 @@ public final class ApiVersion {
     }
 
     /**
-     * 현재 API 버전
+     * API 기본 경로 (버전 프리픽스 없음)
      */
-    public static final String CURRENT = "/api/v1";
+    public static final String CURRENT = "";
 
     /**
      * 인증 관련 API 경로
      */
-    public static final String AUTH = CURRENT + "/auth";
+    public static final String AUTH = "/auth";
 
     /**
      * 복약 스케줄 API 경로
      */
-    public static final String MEDICATION_SCHEDULE = CURRENT + "/medication-schedule";
+    public static final String MEDICATION_SCHEDULE = "/medication-schedule";
 
     /**
      * 복약 기록 API 경로
      */
-    public static final String MEDICATION_RECORD = CURRENT + "/medication-record";
+    public static final String MEDICATION_RECORD = "/medication-record";
 
     /**
      * 마음 일기 API 경로
      */
-    public static final String MOOD_DIARY = CURRENT + "/mood-diary";
+    public static final String MOOD_DIARY = "/mood-diary";
 
     /**
      * 부작용 API 경로
      */
-    public static final String SIDE_EFFECT = CURRENT + "/side-effect";
+    public static final String SIDE_EFFECT = "/side-effect";
 
     /**
      * OAuth2 API 경로
      */
-    public static final String OAUTH2 = CURRENT + "/oauth2";
+    public static final String OAUTH2 = "/oauth2";
 }

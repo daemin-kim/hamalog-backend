@@ -28,15 +28,15 @@ public class RateLimitingFilter extends OncePerRequestFilter {
     private final TrustedProxyService trustedProxyService;
 
     private static final Set<String> AUTH_ENDPOINTS = Set.of(
-        "/api/v1/auth/login",
-        "/api/v1/auth/signup",
-        "/api/v1/auth/logout"
+        "/auth/login",
+        "/auth/signup",
+        "/auth/logout"
     );
 
     private static final Set<String> PROTECTED_ENDPOINTS = Set.of(
-        "/api/v1/medication-record",
-        "/api/v1/medication-schedule",
-        "/api/v1/side-effect"
+        "/medication-record",
+        "/medication-schedule",
+        "/side-effect"
     );
 
     @Override

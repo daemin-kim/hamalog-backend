@@ -5,6 +5,21 @@
 
 ## 완료된 개선 사항
 
+### 0. API 경로 단순화 ✅
+- **변경 내용**: `/api/v1/` 프리픽스 제거하여 API 경로 단순화
+- **이유**: 프론트엔드 개발자 테스트 편의성 향상, 불필요한 복잡성 제거
+- **변경 파일**:
+  - `src/main/java/com/Hamalog/config/ApiVersion.java`
+  - `src/main/java/com/Hamalog/config/SecurityConfig.java`
+  - `src/main/java/com/Hamalog/security/jwt/JwtAuthenticationFilter.java`
+  - `src/main/java/com/Hamalog/security/filter/CsrfValidationFilter.java`
+  - `src/main/java/com/Hamalog/security/filter/RateLimitingFilter.java`
+  - `src/main/java/com/Hamalog/security/filter/RequestSizeMonitoringFilter.java`
+  - 관련 테스트 파일들
+- **예시**: 
+  - 기존: `/api/v1/auth/login` → 변경: `/auth/login`
+  - 기존: `/api/v1/medication-schedule` → 변경: `/medication-schedule`
+
 ### 1. ErrorResponse 표준화 개선 ✅
 - **변경 내용**: `ErrorResponse`에 `timestamp`와 `traceId` 필드 추가
 - **파일**: `src/main/java/com/Hamalog/handler/ErrorResponse.java`

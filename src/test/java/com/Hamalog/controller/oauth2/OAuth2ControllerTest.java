@@ -31,7 +31,7 @@ class OAuth2ControllerTest {
         when(clientRegistrationRepository.findByRegistrationId("kakao")).thenReturn(kakaoRegistration);
 
         // when & then
-        mockMvc.perform(get("/api/v1/oauth2/auth/kakao"))
+        mockMvc.perform(get("/oauth2/auth/kakao"))
                 .andExpect(status().is3xxRedirection())
                 .andExpect(result -> {
                     String location = result.getResponse().getHeader("Location");
@@ -53,7 +53,7 @@ class OAuth2ControllerTest {
         when(clientRegistrationRepository.findByRegistrationId("kakao")).thenReturn(null);
 
         // when & then
-        mockMvc.perform(get("/api/v1/oauth2/auth/kakao"))
+        mockMvc.perform(get("/oauth2/auth/kakao"))
                 .andExpect(status().isInternalServerError())
                 .andExpect(result -> {
                     MockHttpServletResponse response = result.getResponse();
@@ -71,7 +71,7 @@ class OAuth2ControllerTest {
                 .thenThrow(new RuntimeException("Database connection failed"));
 
         // when & then
-        mockMvc.perform(get("/api/v1/oauth2/auth/kakao"))
+        mockMvc.perform(get("/oauth2/auth/kakao"))
                 .andExpect(status().isInternalServerError())
                 .andExpect(result -> {
                     MockHttpServletResponse response = result.getResponse();
@@ -186,7 +186,7 @@ class OAuth2ControllerTest {
         when(clientRegistrationRepository.findByRegistrationId("kakao")).thenReturn(kakaoRegistration);
 
         // when & then
-        mockMvc.perform(get("/api/v1/oauth2/auth/kakao"))
+        mockMvc.perform(get("/oauth2/auth/kakao"))
                 .andExpect(status().is3xxRedirection())
                 .andExpect(result -> {
                     String location = result.getResponse().getHeader("Location");

@@ -150,7 +150,7 @@ class MedicationScheduleControllerTest {
                 .thenReturn(schedulePage);
 
         // when & then
-        mockMvc.perform(get("/api/v1/medication-schedule/list/{member-id}", memberId)
+        mockMvc.perform(get("/medication-schedule/list/{member-id}", memberId)
                 .param("page", "0")
                 .param("size", "10"))
                 .andExpect(status().isOk())
@@ -176,7 +176,7 @@ class MedicationScheduleControllerTest {
                 .thenReturn(emptyPage);
 
         // when & then
-        mockMvc.perform(get("/api/v1/medication-schedule/list/{member-id}", memberId))
+        mockMvc.perform(get("/medication-schedule/list/{member-id}", memberId))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.schedules.length()").value(0))
                 .andExpect(jsonPath("$.totalCount").value(0));
@@ -194,7 +194,7 @@ class MedicationScheduleControllerTest {
         when(medicationScheduleService.getMedicationSchedule(scheduleId)).thenReturn(schedule);
 
         // when & then
-        mockMvc.perform(get("/api/v1/medication-schedule/{medication-schedule-id}", scheduleId))
+        mockMvc.perform(get("/medication-schedule/{medication-schedule-id}", scheduleId))
                 .andExpect(status().isOk())
                 .andExpect(content().contentType(MediaType.APPLICATION_JSON))
                 .andExpect(jsonPath("$.medicationScheduleId").value(scheduleId))
@@ -214,7 +214,7 @@ class MedicationScheduleControllerTest {
                 .thenReturn(createdSchedule);
 
         // when & then
-        mockMvc.perform(multipart("/api/v1/medication-schedule")
+        mockMvc.perform(multipart("/medication-schedule")
                 .part(createJsonPart("data", objectMapper.writeValueAsString(request))))
                 .andExpect(status().isCreated())
                 .andExpect(content().contentType(MediaType.APPLICATION_JSON))
@@ -243,7 +243,7 @@ class MedicationScheduleControllerTest {
                 .thenReturn(createdSchedule);
 
         // when & then
-        mockMvc.perform(multipart("/api/v1/medication-schedule")
+        mockMvc.perform(multipart("/medication-schedule")
                 .file(imageFile)
                 .part(createJsonPart("data", objectMapper.writeValueAsString(request))))
                 .andExpect(status().isCreated())
@@ -264,7 +264,7 @@ class MedicationScheduleControllerTest {
                 .thenReturn(updatedSchedule);
 
         // when & then
-        mockMvc.perform(put("/api/v1/medication-schedule/{medication-schedule-id}", scheduleId)
+        mockMvc.perform(put("/medication-schedule/{medication-schedule-id}", scheduleId)
                 .contentType(MediaType.APPLICATION_JSON)
                 .content(objectMapper.writeValueAsString(request)))
                 .andExpect(status().isOk())
@@ -282,7 +282,7 @@ class MedicationScheduleControllerTest {
         doNothing().when(medicationScheduleService).deleteMedicationSchedule(scheduleId);
 
         // when & then
-        mockMvc.perform(delete("/api/v1/medication-schedule/{medication-schedule-id}", scheduleId))
+        mockMvc.perform(delete("/medication-schedule/{medication-schedule-id}", scheduleId))
                 .andExpect(status().isNoContent());
 
         verify(medicationScheduleService).deleteMedicationSchedule(scheduleId);
@@ -297,7 +297,7 @@ class MedicationScheduleControllerTest {
                 .thenThrow(new RuntimeException("Schedule not found"));
 
         // when & then
-        mockMvc.perform(get("/api/v1/medication-schedule/{medication-schedule-id}", scheduleId))
+        mockMvc.perform(get("/medication-schedule/{medication-schedule-id}", scheduleId))
                 .andExpect(status().isInternalServerError());
 
         verify(medicationScheduleService).getMedicationSchedule(scheduleId);
@@ -307,7 +307,7 @@ class MedicationScheduleControllerTest {
     @DisplayName("Should return 400 for invalid path variable")
     void getMedicationSchedule_InvalidPathVariable_ShouldReturn400() throws Exception {
         // when & then
-        mockMvc.perform(get("/api/v1/medication-schedule/invalid"))
+        mockMvc.perform(get("/medication-schedule/invalid"))
                 .andExpect(status().isBadRequest());
 
         verifyNoInteractions(medicationScheduleService);
@@ -324,7 +324,7 @@ class MedicationScheduleControllerTest {
                 .thenReturn(emptyPage);
 
         // when & then
-        mockMvc.perform(get("/api/v1/medication-schedule/list/{member-id}", memberId)
+        mockMvc.perform(get("/medication-schedule/list/{member-id}", memberId)
                 .param("page", "1")
                 .param("size", "5")
                 .param("sort", "medicationName,asc"))
@@ -341,7 +341,7 @@ class MedicationScheduleControllerTest {
         String malformedJson = "{\"invalid\": " + "json" + "}";
 
         // when & then
-        mockMvc.perform(put("/api/v1/medication-schedule/{medication-schedule-id}", scheduleId)
+        mockMvc.perform(put("/medication-schedule/{medication-schedule-id}", scheduleId)
                 .contentType(MediaType.APPLICATION_JSON)
                 .content(malformedJson))
                 .andExpect(status().isBadRequest());
@@ -356,7 +356,7 @@ class MedicationScheduleControllerTest {
         MockMultipartFile imageFile = new MockMultipartFile("image", "test.jpg", "image/jpeg", "test image content".getBytes());
 
         // when & then
-        mockMvc.perform(multipart("/api/v1/medication-schedule")
+        mockMvc.perform(multipart("/medication-schedule")
                 .file(imageFile))
                 .andExpect(status().isBadRequest());
 

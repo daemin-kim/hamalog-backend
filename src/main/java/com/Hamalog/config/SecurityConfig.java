@@ -112,11 +112,11 @@ public class SecurityConfig {
                 )
                 .sessionManagement(sess -> sess.sessionCreationPolicy(SessionCreationPolicy.STATELESS))
                 .authorizeHttpRequests(auth -> {
-                    // 기본 공개 엔드포인트 (API v1 지원)
+                    // 기본 공개 엔드포인트
                     auth.requestMatchers(
-                            "/api/v1/auth/login", "/api/v1/auth/signup",
+                            "/auth/login", "/auth/signup",
                             "/error",
-                            "/api/v1/oauth2/**", "/oauth2/**", "/login/oauth2/**", "/oauth2/authorization/**",
+                            "/oauth2/**", "/login/oauth2/**", "/oauth2/authorization/**",
                             "/api/auth/kakao/callback",
                             "/actuator/health"
                     ).permitAll();
@@ -131,7 +131,7 @@ public class SecurityConfig {
                         log.info("[SECURITY] Swagger UI disabled for production environment");
                     }
 
-                    auth.requestMatchers("/api/v1/auth/csrf-token", "/api/v1/auth/csrf-status").authenticated()
+                    auth.requestMatchers("/auth/csrf-token", "/auth/csrf-status").authenticated()
                         .requestMatchers(HttpMethod.GET, "/test").permitAll()
                         .anyRequest().authenticated();
                 })

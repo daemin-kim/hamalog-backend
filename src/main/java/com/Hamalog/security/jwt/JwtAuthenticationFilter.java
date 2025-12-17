@@ -113,18 +113,18 @@ public class JwtAuthenticationFilter extends OncePerRequestFilter {
     private boolean requiresAuthentication(HttpServletRequest request) {
         String uri = request.getRequestURI();
         String method = request.getMethod();
-        
+
         // Skip authentication for public endpoints
-        if (uri.startsWith("/api/v1/auth/login") ||
-            uri.startsWith("/api/v1/auth/signup") ||
-            uri.startsWith("/api/v1/oauth2/") ||
-            uri.startsWith("/actuator/health") ||
-            (uri.equals("/") && "GET".equals(method))) {
+        if (uri.startsWith("/auth/login")
+                || uri.startsWith("/auth/signup")
+                || uri.startsWith("/oauth2/")
+                || uri.startsWith("/actuator/health")
+                || (uri.equals("/") && "GET".equals(method))) {
             return false;
         }
-        
-        // Most API endpoints require authentication
-        return uri.startsWith("/api/");
+
+        // Most endpoints require authentication (except Swagger)
+        return !uri.startsWith("/v3/api-docs") && !uri.startsWith("/swagger-ui");
     }
 
     /**

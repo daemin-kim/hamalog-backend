@@ -118,7 +118,7 @@ class SideEffectControllerTest {
         when(sideEffectService.getRecentSideEffects(userId)).thenReturn(response);
 
         // when & then
-        mockMvc.perform(get("/api/v1/side-effect/recent")
+        mockMvc.perform(get("/side-effect/recent")
                 .param("userId", userId.toString()))
                 .andExpect(status().isOk())
                 .andExpect(content().contentType(MediaType.APPLICATION_JSON))
@@ -140,7 +140,7 @@ class SideEffectControllerTest {
         when(sideEffectService.getRecentSideEffects(userId)).thenReturn(response);
 
         // when & then
-        mockMvc.perform(get("/api/v1/side-effect/recent")
+        mockMvc.perform(get("/side-effect/recent")
                 .param("userId", userId.toString()))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.recentSideEffect.length()").value(0));
@@ -152,7 +152,7 @@ class SideEffectControllerTest {
     @DisplayName("Should return 400 when userId parameter is missing")
     void getRecentSideEffects_MissingUserId_ShouldReturn400() throws Exception {
         // when & then
-        mockMvc.perform(get("/api/v1/side-effect/recent"))
+        mockMvc.perform(get("/side-effect/recent"))
                 .andExpect(status().isBadRequest());
 
         verifyNoInteractions(sideEffectService);
@@ -162,7 +162,7 @@ class SideEffectControllerTest {
     @DisplayName("Should return 400 when userId parameter is invalid")
     void getRecentSideEffects_InvalidUserId_ShouldReturn400() throws Exception {
         // when & then
-        mockMvc.perform(get("/api/v1/side-effect/recent")
+        mockMvc.perform(get("/side-effect/recent")
                 .param("userId", "invalid"))
                 .andExpect(status().isBadRequest());
 
@@ -178,7 +178,7 @@ class SideEffectControllerTest {
                 .thenThrow(new RuntimeException("Service error"));
 
         // when & then
-        mockMvc.perform(get("/api/v1/side-effect/recent")
+        mockMvc.perform(get("/side-effect/recent")
                 .param("userId", userId.toString()))
                 .andExpect(status().isInternalServerError());
 
@@ -193,7 +193,7 @@ class SideEffectControllerTest {
         doNothing().when(sideEffectService).createSideEffectRecord(any(SideEffectRecordRequest.class));
 
         // when & then
-        mockMvc.perform(post("/api/v1/side-effect/record")
+        mockMvc.perform(post("/side-effect/record")
                 .contentType(MediaType.APPLICATION_JSON)
                 .content(objectMapper.writeValueAsString(request)))
                 .andExpect(status().isCreated());
@@ -208,7 +208,7 @@ class SideEffectControllerTest {
         String malformedJson = "{\"invalid\": " + "json" + "}";
 
         // when & then
-        mockMvc.perform(post("/api/v1/side-effect/record")
+        mockMvc.perform(post("/side-effect/record")
                 .contentType(MediaType.APPLICATION_JSON)
                 .content(malformedJson))
                 .andExpect(status().isBadRequest());
@@ -220,7 +220,7 @@ class SideEffectControllerTest {
     @DisplayName("Should return 400 when request body is missing")
     void createSideEffectRecord_MissingRequestBody_ShouldReturn400() throws Exception {
         // when & then
-        mockMvc.perform(post("/api/v1/side-effect/record")
+        mockMvc.perform(post("/side-effect/record")
                 .contentType(MediaType.APPLICATION_JSON))
                 .andExpect(status().isBadRequest());
 
@@ -236,7 +236,7 @@ class SideEffectControllerTest {
                 .when(sideEffectService).createSideEffectRecord(any(SideEffectRecordRequest.class));
 
         // when & then
-        mockMvc.perform(post("/api/v1/side-effect/record")
+        mockMvc.perform(post("/side-effect/record")
                 .contentType(MediaType.APPLICATION_JSON)
                 .content(objectMapper.writeValueAsString(request)))
                 .andExpect(status().isInternalServerError());
@@ -251,7 +251,7 @@ class SideEffectControllerTest {
         SideEffectRecordRequest request = createTestSideEffectRequest();
 
         // when & then
-        mockMvc.perform(post("/api/v1/side-effect/record")
+        mockMvc.perform(post("/side-effect/record")
                 .contentType(MediaType.TEXT_PLAIN)
                 .content(objectMapper.writeValueAsString(request)))
                 .andExpect(status().isBadRequest());
@@ -263,7 +263,7 @@ class SideEffectControllerTest {
     @DisplayName("Should handle null userId parameter")
     void getRecentSideEffects_NullUserId_ShouldReturn400() throws Exception {
         // when & then
-        mockMvc.perform(get("/api/v1/side-effect/recent")
+        mockMvc.perform(get("/side-effect/recent")
                 .param("userId", ""))
                 .andExpect(status().isBadRequest());
 
@@ -280,7 +280,7 @@ class SideEffectControllerTest {
         when(sideEffectService.getRecentSideEffects(userId)).thenReturn(response);
 
         // when & then
-        mockMvc.perform(get("/api/v1/side-effect/recent")
+        mockMvc.perform(get("/side-effect/recent")
                 .param("userId", userId.toString()))
                 .andExpect(status().isOk());
 
@@ -297,7 +297,7 @@ class SideEffectControllerTest {
         when(sideEffectService.getRecentSideEffects(userId)).thenReturn(response);
 
         // when & then
-        mockMvc.perform(get("/api/v1/side-effect/recent")
+        mockMvc.perform(get("/side-effect/recent")
                 .param("userId", userId.toString()))
                 .andExpect(status().isOk());
 

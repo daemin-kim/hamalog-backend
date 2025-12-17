@@ -30,10 +30,10 @@ public class CsrfValidationFilter extends OncePerRequestFilter {
     
     // CSRF 검증을 건너뛸 경로들
     private static final List<String> EXCLUDED_PATHS = Arrays.asList(
-        "/api/v1/auth/login",
-        "/api/v1/auth/signup",
-        "/api/v1/auth/csrf-token",
-        "/api/v1/oauth2/",
+        "/auth/login",
+        "/auth/signup",
+        "/auth/csrf-token",
+        "/oauth2/",
         "/v3/api-docs",
         "/swagger-ui",
         "/error",

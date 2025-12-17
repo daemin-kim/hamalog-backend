@@ -201,7 +201,7 @@ class JwtAuthenticationFilterTest {
         // given
         when(request.getHeader("Authorization")).thenReturn(null);
         when(request.getHeader("User-Agent")).thenReturn("Mozilla/5.0");
-        when(request.getRequestURI()).thenReturn("/api/v1/auth/login");
+        when(request.getRequestURI()).thenReturn("/auth/login");
         when(request.getMethod()).thenReturn("POST");
         when(request.getRemoteAddr()).thenReturn("127.0.0.1");
 
@@ -245,7 +245,7 @@ class JwtAuthenticationFilterTest {
 
         when(request.getHeader("Authorization")).thenReturn(null);
         when(request.getHeader("User-Agent")).thenReturn(maliciousUserAgent);
-        when(request.getRequestURI()).thenReturn("/api/v1/auth/login");
+        when(request.getRequestURI()).thenReturn("/auth/login");
         when(request.getMethod()).thenReturn("GET");
         when(request.getRemoteAddr()).thenReturn("127.0.0.1");
 
@@ -263,7 +263,7 @@ class JwtAuthenticationFilterTest {
         // given
         when(request.getHeader("Authorization")).thenReturn(null);
         when(request.getHeader("User-Agent")).thenReturn("Mozilla/5.0");
-        when(request.getRequestURI()).thenReturn("/api/v1/auth/login");
+        when(request.getRequestURI()).thenReturn("/auth/login");
         when(request.getMethod()).thenReturn("GET");
         when(request.getRemoteAddr()).thenReturn("127.0.0.1");
 
@@ -464,7 +464,7 @@ class JwtAuthenticationFilterTest {
         // given
         when(request.getHeader("Authorization")).thenReturn(null);
         when(request.getHeader("User-Agent")).thenReturn("Mozilla/5.0");
-        when(request.getRequestURI()).thenReturn("/api/v1/auth/login");
+        when(request.getRequestURI()).thenReturn("/auth/login");
         when(request.getMethod()).thenReturn("POST");
         when(request.getRemoteAddr()).thenReturn("127.0.0.1");
         when(trustedProxyService.isTrustedProxy(anyString())).thenReturn(true);
@@ -512,7 +512,7 @@ class JwtAuthenticationFilterTest {
 
         when(request.getHeader("Authorization")).thenReturn(null);
         when(request.getHeader("User-Agent")).thenReturn(maliciousUserAgent);
-        when(request.getRequestURI()).thenReturn("/api/v1/auth/login");
+        when(request.getRequestURI()).thenReturn("/auth/login");
         when(request.getMethod()).thenReturn("GET");
         when(request.getRemoteAddr()).thenReturn("127.0.0.1");
         when(trustedProxyService.isTrustedProxy(anyString())).thenReturn(true);
@@ -532,7 +532,7 @@ class JwtAuthenticationFilterTest {
         // given
         when(request.getHeader("Authorization")).thenReturn(null);
         when(request.getHeader("User-Agent")).thenReturn("Mozilla/5.0");
-        when(request.getRequestURI()).thenReturn("/api/v1/auth/login");
+        when(request.getRequestURI()).thenReturn("/auth/login");
         when(request.getMethod()).thenReturn("GET");
         when(request.getRemoteAddr()).thenReturn("127.0.0.1");
         when(trustedProxyService.isTrustedProxy(anyString())).thenReturn(true);

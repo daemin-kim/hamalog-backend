@@ -131,7 +131,7 @@ class MoodDiaryControllerTest {
         when(moodDiaryService.createMoodDiary(eq(1L), any(MoodDiaryCreateRequest.class)))
                 .thenReturn(response);
 
-        mockMvc.perform(post("/api/v1/mood-diary")
+        mockMvc.perform(post("/mood-diary")
                         .contentType(MediaType.APPLICATION_JSON)
                         .content(objectMapper.writeValueAsString(request))
                         .requestAttr("__TEST_PRINCIPAL__", userDetails))
@@ -155,7 +155,7 @@ class MoodDiaryControllerTest {
                 null
         );
 
-        mockMvc.perform(post("/api/v1/mood-diary")
+        mockMvc.perform(post("/mood-diary")
                         .contentType(MediaType.APPLICATION_JSON)
                         .content(objectMapper.writeValueAsString(request))
                         .requestAttr("__TEST_PRINCIPAL__", userDetails))
@@ -180,7 +180,7 @@ class MoodDiaryControllerTest {
 
         when(moodDiaryService.getMoodDiary(5L, 1L)).thenReturn(response);
 
-        mockMvc.perform(get("/api/v1/mood-diary/{mood-diary-id}", 5L)
+        mockMvc.perform(get("/mood-diary/{mood-diary-id}", 5L)
                         .requestAttr("__TEST_PRINCIPAL__", userDetails))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.moodDiaryId").value(5L));
@@ -191,7 +191,7 @@ class MoodDiaryControllerTest {
     void getMoodDiary_NotFound() throws Exception {
         when(moodDiaryService.getMoodDiary(5L, 1L)).thenThrow(new CustomException(ErrorCode.MOOD_DIARY_NOT_FOUND) {});
 
-        mockMvc.perform(get("/api/v1/mood-diary/{mood-diary-id}", 5L)
+        mockMvc.perform(get("/mood-diary/{mood-diary-id}", 5L)
                         .requestAttr("__TEST_PRINCIPAL__", userDetails))
                 .andExpect(status().isNotFound());
     }
@@ -210,7 +210,7 @@ class MoodDiaryControllerTest {
 
         when(moodDiaryService.getMoodDiariesByMember(1L, 0, 200)).thenReturn(response);
 
-        mockMvc.perform(get("/api/v1/mood-diary/list/{member-id}", 1L)
+        mockMvc.perform(get("/mood-diary/list/{member-id}", 1L)
                         .param("page", "0")
                         .param("size", "200")
                         .requestAttr("__TEST_PRINCIPAL__", userDetails))
@@ -235,7 +235,7 @@ class MoodDiaryControllerTest {
 
         when(moodDiaryService.getMoodDiaryByDate(1L, date)).thenReturn(response);
 
-        mockMvc.perform(get("/api/v1/mood-diary/date/{member-id}", 1L)
+        mockMvc.perform(get("/mood-diary/date/{member-id}", 1L)
                         .param("diaryDate", date.toString())
                         .requestAttr("__TEST_PRINCIPAL__", userDetails))
                 .andExpect(status().isOk())
@@ -247,7 +247,7 @@ class MoodDiaryControllerTest {
     void deleteMoodDiary_Success() throws Exception {
         doNothing().when(moodDiaryService).deleteMoodDiary(9L, 1L);
 
-        mockMvc.perform(delete("/api/v1/mood-diary/{mood-diary-id}", 9L)
+        mockMvc.perform(delete("/mood-diary/{mood-diary-id}", 9L)
                         .requestAttr("__TEST_PRINCIPAL__", userDetails))
                 .andExpect(status().isNoContent());
 
@@ -258,7 +258,7 @@ class MoodDiaryControllerTest {
     @DisplayName("회원 일기 목록 조회 권한 실패 - AOP 통합 테스트에서 검증")
     @org.junit.jupiter.api.Disabled("권한 검증이 @RequireResourceOwnership AOP로 이동되어 통합 테스트 필요")
     void getMoodDiariesByMember_Forbidden() throws Exception {
-        mockMvc.perform(get("/api/v1/mood-diary/list/{member-id}", 2L)
+        mockMvc.perform(get("/mood-diary/list/{member-id}", 2L)
                         .param("page", "0")
                         .param("size", "20")
                         .requestAttr("__TEST_PRINCIPAL__", userDetails))
@@ -271,7 +271,7 @@ class MoodDiaryControllerTest {
     @DisplayName("특정 날짜 조회 권한 실패 - AOP 통합 테스트에서 검증")
     @org.junit.jupiter.api.Disabled("권한 검증이 @RequireResourceOwnership AOP로 이동되어 통합 테스트 필요")
     void getMoodDiaryByDate_Forbidden() throws Exception {
-        mockMvc.perform(get("/api/v1/mood-diary/date/{member-id}", 2L)
+        mockMvc.perform(get("/mood-diary/date/{member-id}", 2L)
                         .param("diaryDate", LocalDate.now().toString())
                         .requestAttr("__TEST_PRINCIPAL__", userDetails))
                 .andExpect(status().isForbidden());

@@ -223,7 +223,7 @@ JPA 엔티티 및 도메인 모델을 정의합니다.
 
 | 파일 | 설명 |
 |------|------|
-| `ApiVersion.java` | API 버전 상수 (`/api/v1/`) |
+| `ApiVersion.java` | API 경로 상수 |
 | `SecurityConfig.java` | Spring Security 설정 |
 | `WebMvcConfig.java` | Web MVC 설정 (CORS 등) |
 | `RedisConfig.java` | Redis 연결 설정 |

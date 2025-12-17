@@ -63,7 +63,7 @@ public class OpenApiConfig {
                 .addProperty("code", new StringSchema().description("에러 코드").example("NOT_FOUND"))
                 .addProperty(
                         "message", new StringSchema().description("에러 메시지").example("요청한 리소스를 찾을 수 없습니다"))
-                .addProperty("path", new StringSchema().description("요청 경로").example("/api/v1/medication-schedule/1"))
+                .addProperty("path", new StringSchema().description("요청 경로").example("/medication-schedule/1"))
                 .addProperty("violations", new StringSchema().nullable(true).description("유효성 검사 위반 정보 (일반 에러 시 null)"))
                 .addProperty(
                         "timestamp",
@@ -82,7 +82,7 @@ public class OpenApiConfig {
                 .addProperty("code", new StringSchema().description("에러 코드").example("BAD_REQUEST"))
                 .addProperty(
                         "message", new StringSchema().description("에러 메시지").example("입력값이 유효하지 않습니다"))
-                .addProperty("path", new StringSchema().description("요청 경로").example("/api/v1/auth/signup"))
+                .addProperty("path", new StringSchema().description("요청 경로").example("/auth/signup"))
                 .addProperty(
                         "violations",
                         new MapSchema()

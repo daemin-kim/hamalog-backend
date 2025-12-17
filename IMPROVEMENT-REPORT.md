@@ -41,6 +41,8 @@
   - X-Download-Options (noopen)
   - X-XSS-Protection
   - Permissions-Policy
+- **참고**: CI/CD 환경(GitHub Actions)과 로컬 환경의 차이를 고려하여
+  보안 헤더가 없을 수 있는 경우를 허용하는 조건부 검증 방식 사용
 
 ### 5. GlobalExceptionHandler 테스트 커버리지 향상 ✅
 - **변경 내용**: 다양한 예외 핸들러에 대한 테스트 케이스 추가

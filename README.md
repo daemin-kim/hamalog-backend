@@ -22,8 +22,13 @@ Hamalog는 복약 일정, 복약 기록, 부작용, 마음 일기를 한 번에 
 ./gradlew test
 ```
 
-## API 명세
-세부 엔드포인트와 데이터 구조는 `API-specification.md` 를 참고하세요. 문서는 최신 구현(인증, 복약, 부작용, 마음 일기)을 기준으로 유지됩니다.
+## 문서
+| 문서 | 설명 |
+|------|------|
+| [API 명세서](./docs/API-specification.md) | REST API 엔드포인트 상세 명세 |
+| [API 참고 문서](./docs/API-reference.md) | 인프라, 스키마, 변경 이력 |
+| [프로젝트 구조](./docs/Project-Structure.md) | 디렉토리 구조, 아키텍처, 배포 구성 |
+| [개선 보고서](./docs/IMPROVEMENT-REPORT.md) | 리팩토링 및 개선 사항 |
 
 ## 기술 스택 & 인프라
 - Java 21, Spring Boot 3, JPA/Hibernate

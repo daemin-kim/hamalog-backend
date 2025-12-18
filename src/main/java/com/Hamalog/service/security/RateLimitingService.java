@@ -1,10 +1,14 @@
 package com.Hamalog.service.security;
 
+import com.Hamalog.config.RateLimitProperties;
+import io.micrometer.core.instrument.Counter;
+import io.micrometer.core.instrument.MeterRegistry;
 import java.time.Duration;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicLong;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty;
 import org.springframework.data.redis.core.RedisTemplate;
 import org.springframework.stereotype.Service;
@@ -21,20 +25,30 @@ public class RateLimitingService {
     private static final int AUTH_REQUESTS_PER_HOUR = 20;
     private static final int API_REQUESTS_PER_MINUTE = 60;
     private static final int API_REQUESTS_PER_HOUR = 1000;
-    private static final Duration DEGRADE_DURATION = Duration.ofMinutes(5);
+    private static final Duration DEFAULT_DEGRADE_DURATION = Duration.ofMinutes(5);
     private static final long MIN_DEGRADED_LOG_INTERVAL_MS = Duration.ofSeconds(30).toMillis();
 
     private final AtomicLong degradedUntilEpochMs = new AtomicLong(0);
     private final AtomicLong lastDegradedLogEpochMs = new AtomicLong(0);
 
+    @Autowired(required = false)
+    private RateLimitProperties rateLimitProperties;
+
+    @Autowired(required = false)
+    private MeterRegistry meterRegistry;
+
     public boolean tryConsumeAuthRequest(String key) {
-        return checkRateLimit(key, AUTH_REQUESTS_PER_MINUTE, 1, TimeUnit.MINUTES) &&
-               checkRateLimit(key, AUTH_REQUESTS_PER_HOUR, 1, TimeUnit.HOURS);
+        boolean allowed = checkRateLimit(key, authPerMinute(), 1, TimeUnit.MINUTES)
+                && checkRateLimit(key, authPerHour(), 1, TimeUnit.HOURS);
+        recordMetric("auth", allowed);
+        return allowed;
     }
 
     public boolean tryConsumeApiRequest(String key) {
-        return checkRateLimit(key, API_REQUESTS_PER_MINUTE, 1, TimeUnit.MINUTES) &&
-               checkRateLimit(key, API_REQUESTS_PER_HOUR, 1, TimeUnit.HOURS);
+        boolean allowed = checkRateLimit(key, apiPerMinute(), 1, TimeUnit.MINUTES)
+                && checkRateLimit(key, apiPerHour(), 1, TimeUnit.HOURS);
+        recordMetric("api", allowed);
+        return allowed;
     }
 
     private boolean checkRateLimit(String key, int maxRequests, long windowSize, TimeUnit timeUnit) {
@@ -84,7 +98,7 @@ public class RateLimitingService {
         }
 
         try {
-            int maxRequests = isAuthEndpoint ? AUTH_REQUESTS_PER_MINUTE : API_REQUESTS_PER_MINUTE;
+            int maxRequests = isAuthEndpoint ? authPerMinute() : apiPerMinute();
             String redisKey = "rate_limit:" + key + ":minutes";
             long currentTime = System.currentTimeMillis();
             long windowStart = currentTime - TimeUnit.MINUTES.toMillis(1);
@@ -100,8 +114,8 @@ public class RateLimitingService {
     }
 
     public RateLimitInfo getRateLimitInfo(String key, boolean isAuthEndpoint) {
-        int maxPerMinute = isAuthEndpoint ? AUTH_REQUESTS_PER_MINUTE : API_REQUESTS_PER_MINUTE;
-        int maxPerHour = isAuthEndpoint ? AUTH_REQUESTS_PER_HOUR : API_REQUESTS_PER_HOUR;
+        int maxPerMinute = isAuthEndpoint ? authPerMinute() : apiPerMinute();
+        int maxPerHour = isAuthEndpoint ? authPerHour() : apiPerHour();
         long remainingMinute = getRemainingRequests(key, isAuthEndpoint);
 
         return new RateLimitInfo(maxPerMinute, maxPerHour, remainingMinute);
@@ -128,7 +142,8 @@ public class RateLimitingService {
 
     private void enterDegradedMode(Exception e) {
         long now = System.currentTimeMillis();
-        degradedUntilEpochMs.set(now + DEGRADE_DURATION.toMillis());
+        Duration degradeDuration = getDegradeDuration();
+        degradedUntilEpochMs.set(now + degradeDuration.toMillis());
         logDegradedTransition(now, e);
     }
 
@@ -137,7 +152,7 @@ public class RateLimitingService {
         if (now - lastLog >= MIN_DEGRADED_LOG_INTERVAL_MS &&
                 lastDegradedLogEpochMs.compareAndSet(lastLog, now)) {
             log.error("[RATE_LIMIT] Redis unavailable. Entering fail-open mode for {} seconds.",
-                DEGRADE_DURATION.toSeconds(), e);
+                getDegradeDuration().toSeconds(), e);
         }
     }
 
@@ -155,4 +170,36 @@ public class RateLimitingService {
         int maxRequestsPerHour,
         long remainingRequestsThisMinute
     ) {}
+
+    // ===== Helper methods for dynamic configuration & metrics =====
+
+    private int authPerMinute() {
+        return rateLimitProperties != null ? rateLimitProperties.getAuth().getPerMinute() : AUTH_REQUESTS_PER_MINUTE;
+    }
+
+    private int authPerHour() {
+        return rateLimitProperties != null ? rateLimitProperties.getAuth().getPerHour() : AUTH_REQUESTS_PER_HOUR;
+    }
+
+    private int apiPerMinute() {
+        return rateLimitProperties != null ? rateLimitProperties.getApi().getPerMinute() : API_REQUESTS_PER_MINUTE;
+    }
+
+    private int apiPerHour() {
+        return rateLimitProperties != null ? rateLimitProperties.getApi().getPerHour() : API_REQUESTS_PER_HOUR;
+    }
+
+    private Duration getDegradeDuration() {
+        return rateLimitProperties != null ? Duration.ofSeconds(rateLimitProperties.getDegradeSeconds()) : DEFAULT_DEGRADE_DURATION;
+    }
+
+    private void recordMetric(String endpointType, boolean allowed) {
+        if (meterRegistry == null) return;
+        if (rateLimitProperties != null && !rateLimitProperties.isMetricsEnabled()) return;
+        Counter.builder("rate_limit.requests")
+            .tag("endpoint_type", endpointType)
+            .tag("outcome", allowed ? "allowed" : "blocked")
+            .register(meterRegistry)
+            .increment();
+    }
 }

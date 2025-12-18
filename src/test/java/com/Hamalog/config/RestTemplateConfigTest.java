@@ -10,9 +10,11 @@ import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.boot.test.context.TestConfiguration;
 import org.springframework.context.annotation.Import;
 import org.springframework.http.client.ClientHttpRequestFactory;
+import org.springframework.test.context.ActiveProfiles;
 import org.springframework.web.client.RestTemplate;
 
 @SpringBootTest(classes = RestTemplateConfigTest.TestConfig.class)
+@ActiveProfiles("test")
 class RestTemplateConfigTest {
     @TestConfiguration
     @Import(RestTemplateConfig.class)

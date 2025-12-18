@@ -22,6 +22,36 @@ Hamalog는 복약 일정, 복약 기록, 부작용, 마음 일기를 한 번에 
 ./gradlew test
 ```
 
+## 모니터링/메트릭(Prometheus)
+- Actuator Prometheus 엔드포인트가 기본 프로파일에서 활성화되어 있습니다.
+- 엔드포인트: `http://localhost:8080/actuator/prometheus`
+- Gradle 의존성: `io.micrometer:micrometer-registry-prometheus`
+- Docker/Infra에서 Prometheus가 해당 엔드포인트를 스크레이프하도록 설정하세요.
+
+## 레이트 리밋 설정
+환경변수로 임계값을 손쉽게 조정할 수 있습니다(기본값 괄호).
+```
+RATE_LIMIT_AUTH_PER_MINUTE=5
+RATE_LIMIT_AUTH_PER_HOUR=20
+RATE_LIMIT_API_PER_MINUTE=60
+RATE_LIMIT_API_PER_HOUR=1000
+RATE_LIMIT_DEGRADE_SECONDS=300
+RATE_LIMIT_METRICS_ENABLED=true
+```
+
+## Vault 연동(옵션)
+- 기본값으로 비활성화되어 있습니다.
+- 운영에서 활성화하려면 다음 환경변수를 설정하세요.
+```
+SPRING_CLOUD_VAULT_ENABLED=true
+# 예시: 접속 정보
+SPRING_CLOUD_VAULT_HOST=vault
+SPRING_CLOUD_VAULT_PORT=8200
+SPRING_CLOUD_VAULT_SCHEME=http
+SPRING_CLOUD_VAULT_TOKEN=your-token
+```
+- 테스트/개발 프로파일에서는 명시적으로 비활성화되어 있습니다.
+
 ## 문서
 | 문서 | 설명 |
 |------|------|

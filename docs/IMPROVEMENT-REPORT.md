@@ -82,10 +82,10 @@
 - **파일**:
   - `src/main/java/com/Hamalog/aop/ServiceLoggingAspect.java` (신규)
   - `src/test/java/com/Hamalog/aop/ServiceLoggingAspectIntegrationTest.java` (신규)
-  - 설정: `app.aop.service-logging.enabled` 토글 추가
+  - 설정: `app.aop.service-logging.enabled` 토글 추가 (기본값: `false`, 노이즈 방지를 위해 운영 시 선택적 활성화 권장)
 - **효과**:
   - 서비스 진입/성공/예외를 일관된 비즈니스 이벤트로 로깅
-  - API/성능/Audit 로깅과 함께 전 구간 가시성 확보
+  - 필요 시 상세 트래킹을 위한 가시성 확보 (현재는 API 로그 위주로 노출되도록 비활성 상태)
 
 ### 9. Rate Limiting 임계값 프로퍼티화 및 메트릭 수집 ✅
 - **변경 내용**:

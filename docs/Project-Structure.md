@@ -98,6 +98,7 @@ HTTP 요청을 처리하는 REST API 컨트롤러 계층입니다.
 | | `AuthenticationService.java` | 로그인/로그아웃/토큰 관리 |
 | | `MemberDeletionService.java` | 회원 탈퇴 및 관련 데이터 삭제 |
 | | `KakaoOAuth2AuthService.java` | 카카오 OAuth2 인증 처리 |
+| | `MemberCacheService.java` | 회원 정보 캐싱 서비스 |
 | | `MemberDeletedEventHandler.java` | 회원 탈퇴 이벤트 처리 |
 | `service/diary/` | `MoodDiaryService.java` | 마음 일기 비즈니스 로직 |
 | `service/medication/` | `MedicationScheduleService.java` | 복약 스케줄 비즈니스 로직 |
@@ -227,6 +228,7 @@ JPA 엔티티 및 도메인 모델을 정의합니다.
 | `SecurityConfig.java` | Spring Security 설정 |
 | `WebMvcConfig.java` | Web MVC 설정 (CORS 등) |
 | `RedisConfig.java` | Redis 연결 설정 |
+| `RateLimitProperties.java` | Rate Limit 설정 프로퍼티 |
 | `RestTemplateConfig.java` | RestTemplate 설정 |
 | `OpenApiConfig.java` | Swagger/OpenAPI 설정 |
 | `AopConfiguration.java` | AOP 설정 |
@@ -242,6 +244,7 @@ JPA 엔티티 및 도메인 모델을 정의합니다.
 |------|------|
 | `ApiLoggingAspect.java` | API 요청/응답 로깅 |
 | `PerformanceMonitoringAspect.java` | 성능 모니터링 (실행 시간 측정) |
+| `ServiceLoggingAspect.java` | 서비스 계층 일관 로깅 |
 | `BusinessAuditAspect.java` | 비즈니스 감사 로깅 |
 | `CachingAspect.java` | 캐싱 처리 |
 | `RetryAspect.java` | 재시도 메커니즘 |
@@ -739,6 +742,7 @@ src/test/java/com/Hamalog/
 | 1.0.0 | 2025-12-16 | - | 최초 작성 |
 | 1.1.0 | 2025-12-16 | - | 배포 아키텍처 및 CI/CD 파이프라인 추가 |
 | 1.2.0 | 2025-12-17 | - | AuthService 분리 리팩토링 완료 (SRP 적용) |
+| 1.3.0 | 2025-12-20 | - | 최종 명세 동기화 및 누락 클래스(MemberCacheService 등) 추가 |
 
 ---
 

@@ -80,11 +80,14 @@ HTTP 요청을 처리하는 REST API 컨트롤러 계층입니다.
 |--------|------|------|
 | `controller/auth/` | `AuthController.java` | 회원가입, 로그인, 로그아웃, 토큰 갱신, 회원 탈퇴 |
 | | `CsrfController.java` | CSRF 토큰 발급 및 상태 확인 |
-| `controller/diary/` | `MoodDiaryController.java` | 마음 일기 CRUD |
-| `controller/medication/` | `MedicationScheduleController.java` | 복약 스케줄 관리 |
+| | `MemberController.java` | 회원 프로필 조회/수정, 비밀번호 변경 **(신규)** |
+| `controller/diary/` | `MoodDiaryController.java` | 마음 일기 CRUD, 통계, 캘린더, 검색 |
+| `controller/medication/` | `MedicationScheduleController.java` | 복약 스케줄 관리, 검색 |
 | | `MedicationRecordController.java` | 복약 기록 관리 |
+| | `MedicationStatsController.java` | 복약 통계 (이행률, 요약) **(신규)** |
+| | `MedicationTimeController.java` | 복약 알림 시간 CRUD **(신규)** |
 | `controller/oauth2/` | `OAuth2Controller.java` | 카카오 OAuth2 로그인 처리 |
-| `controller/sideEffect/` | `SideEffectController.java` | 부작용 기록 관리 |
+| `controller/sideEffect/` | `SideEffectController.java` | 부작용 기록 CRUD, 목록 조회 |
 
 ---
 
@@ -99,10 +102,14 @@ HTTP 요청을 처리하는 REST API 컨트롤러 계층입니다.
 | | `MemberDeletionService.java` | 회원 탈퇴 및 관련 데이터 삭제 |
 | | `KakaoOAuth2AuthService.java` | 카카오 OAuth2 인증 처리 |
 | | `MemberCacheService.java` | 회원 정보 캐싱 서비스 |
+| | `MemberProfileService.java` | 회원 프로필 조회/수정, 비밀번호 변경 **(신규)** |
 | | `MemberDeletedEventHandler.java` | 회원 탈퇴 이벤트 처리 |
 | `service/diary/` | `MoodDiaryService.java` | 마음 일기 비즈니스 로직 |
+| | `MoodDiaryStatsService.java` | 마음 일기 통계 및 캘린더 **(신규)** |
 | `service/medication/` | `MedicationScheduleService.java` | 복약 스케줄 비즈니스 로직 |
 | | `MedicationRecordService.java` | 복약 기록 비즈니스 로직 |
+| | `MedicationStatsService.java` | 복약 이행률 및 통계 **(신규)** |
+| | `MedicationTimeService.java` | 복약 알림 시간 관리 **(신규)** |
 | | `FileStorageService.java` | 파일 저장 서비스 |
 | | `SecureFileStorageService.java` | 보안 파일 저장 서비스 |
 | | `MedicationScheduleEventHandler.java` | 복약 스케줄 이벤트 처리 |
@@ -172,20 +179,33 @@ JPA 엔티티 및 도메인 모델을 정의합니다.
 | `dto/auth/request/` | Request | `SignupRequest.java` | 회원가입 요청 |
 | | | `LoginRequest.java` | 로그인 요청 |
 | | | `TokenRefreshRequest.java` | 토큰 갱신 요청 |
+| | | `ProfileUpdateRequest.java` | 프로필 수정 요청 **(신규)** |
+| | | `PasswordChangeRequest.java` | 비밀번호 변경 요청 **(신규)** |
 | `dto/auth/response/` | Response | `LoginResponse.java` | 로그인 응답 |
 | | | `TokenRefreshResponse.java` | 토큰 갱신 응답 |
+| | | `MemberProfileResponse.java` | 회원 프로필 응답 **(신규)** |
 | `dto/diary/request/` | Request | `MoodDiaryCreateRequest.java` | 마음 일기 생성 요청 |
+| | | `MoodDiaryUpdateRequest.java` | 마음 일기 수정 요청 **(신규)** |
 | `dto/diary/response/` | Response | `MoodDiaryResponse.java` | 마음 일기 응답 |
 | | | `MoodDiaryListResponse.java` | 마음 일기 목록 응답 |
+| | | `MoodDiaryStatsResponse.java` | 마음 일기 통계 응답 **(신규)** |
+| | | `MoodDiaryCalendarResponse.java` | 마음 일기 캘린더 응답 **(신규)** |
 | `dto/medication/request/` | Request | `MedicationScheduleCreateRequest.java` | 복약 스케줄 생성 요청 |
 | | | `MedicationScheduleUpdateRequest.java` | 복약 스케줄 수정 요청 |
 | | | `MedicationRecordCreateRequest.java` | 복약 기록 생성 요청 |
 | | | `MedicationRecordUpdateRequest.java` | 복약 기록 수정 요청 |
+| | | `MedicationTimeCreateRequest.java` | 알림 시간 생성 요청 **(신규)** |
+| | | `MedicationTimeUpdateRequest.java` | 알림 시간 수정 요청 **(신규)** |
 | `dto/medication/response/` | Response | `MedicationScheduleResponse.java` | 복약 스케줄 응답 |
 | | | `MedicationScheduleListResponse.java` | 복약 스케줄 목록 응답 |
 | | | `MedicationRecordResponse.java` | 복약 기록 응답 |
+| | | `MedicationAdherenceResponse.java` | 복약 이행률 응답 **(신규)** |
+| | | `MedicationSummaryResponse.java` | 복약 요약 응답 **(신규)** |
+| | | `MedicationTimeResponse.java` | 알림 시간 응답 **(신규)** |
 | `dto/sideEffect/request/` | Request | `SideEffectRecordRequest.java` | 부작용 기록 요청 |
 | `dto/sideEffect/response/` | Response | `RecentSideEffectResponse.java` | 최근 부작용 응답 |
+| | | `SideEffectRecordResponse.java` | 부작용 기록 상세 응답 **(신규)** |
+| | | `SideEffectRecordListResponse.java` | 부작용 기록 목록 응답 **(신규)** |
 
 ---
 

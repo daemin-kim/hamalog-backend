@@ -94,7 +94,7 @@ Hamalog 시스템은 총 12개의 테이블로 구성되어 있으며, 회원 �
 ```sql
 -- =====================================================
 -- Hamalog Database Schema
--- Version: 2025-12-20
+-- Version: 2025-12-22
 -- Description: 복약 관리 시스템 데이터베이스 스키마
 -- =====================================================
 
@@ -406,4 +406,30 @@ INSERT INTO side_effect (type, name) VALUES
     - **전체 문서 동기화**: API 명세서, 참고 문서, 구조 명세서 간 일관성 확보
     - **누락 정보 보완**: `MemberCacheService`, `RateLimitProperties`, `ServiceLoggingAspect` 등 최근 추가된 구성 요소 반영
     - **상태 점검**: 모든 엔드포인트 및 DTO 구현 상태가 명세와 100% 일치함을 최종 확인
-
+- **2025/12/22**: **대규모 기능 확장 및 API 추가**
+    - **마음 일기 기능 확장**:
+        - `PUT /mood-diary/{id}` - 마음 일기 수정 API 추가
+        - `GET /mood-diary/stats/{member-id}` - 기분 통계 API 추가 (기분 분포, 연속 작성일)
+        - `GET /mood-diary/calendar/{member-id}` - 월별 캘린더 API 추가
+        - `GET /mood-diary/search/{member-id}` - 일기 내용 검색 API 추가
+    - **회원 프로필 API 신규 추가**:
+        - `GET /member/profile` - 내 프로필 조회
+        - `PUT /member/profile` - 프로필 수정 (이름, 닉네임, 전화번호, 생년월일)
+        - `PUT /member/password` - 비밀번호 변경 (현재 비밀번호 확인 필요)
+    - **복약 통계 API 신규 추가**:
+        - `GET /medication-stats/{member-id}/adherence` - 기간별 복약 이행률
+        - `GET /medication-stats/{member-id}/summary` - 오늘/주간/월간 요약 통계
+    - **복약 알림 시간 API 신규 추가**:
+        - `GET /medication-schedule/{id}/times` - 스케줄별 알림 시간 목록
+        - `POST /medication-schedule/{id}/times` - 알림 시간 추가
+        - `PUT /medication-time/{id}` - 알림 시간 수정
+        - `DELETE /medication-time/{id}` - 알림 시간 삭제
+    - **부작용 API 확장**:
+        - `GET /side-effect/list/{member-id}` - 부작용 기록 목록 조회 (페이징)
+        - `GET /side-effect/{record-id}` - 부작용 기록 상세 조회
+        - `DELETE /side-effect/{record-id}` - 부작용 기록 삭제
+    - **검색 기능 추가**:
+        - `GET /medication-schedule/search/{member-id}` - 약 이름 검색
+    - **국제화 개선**: `messages_ko.properties` UTF-8 인코딩 수정
+    - **신규 DTO 24개, 서비스 4개, 컨트롤러 3개 추가**
+    - **DDL 스키마 버전**: 2025-12-22로 갱신

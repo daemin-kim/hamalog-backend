@@ -275,6 +275,41 @@ public class MoodDiaryController {
         return ResponseEntity.ok(response);
     }
 
+    @Operation(summary = "마음 일기 검색",
+            description = "키워드로 마음 일기 내용을 검색합니다. 자유형식 내용과 템플릿 답변 모두 검색됩니다.")
+    @ApiResponses({
+            @ApiResponse(responseCode = "200", description = "검색 성공",
+                    content = @Content(mediaType = "application/json",
+                            schema = @Schema(implementation = MoodDiaryListResponse.class))),
+            @ApiResponse(responseCode = "401", description = "인증 실패", content = @Content),
+            @ApiResponse(responseCode = "403", description = "권한 없음", content = @Content),
+            @ApiResponse(responseCode = "404", description = "회원을 찾을 수 없음", content = @Content)
+    })
+    @GetMapping("/search/{member-id}")
+    @RequireResourceOwnership(
+            resourceType = RequireResourceOwnership.ResourceType.MOOD_DIARY_BY_MEMBER,
+            paramName = "member-id",
+            strategy = RequireResourceOwnership.OwnershipStrategy.DIRECT
+    )
+    public ResponseEntity<MoodDiaryListResponse> searchMoodDiaries(
+            @Parameter(description = "회원 ID", required = true, example = "1", in = ParameterIn.PATH)
+            @PathVariable("member-id") Long memberId,
+            @Parameter(description = "검색 키워드", required = true, example = "행복")
+            @RequestParam String keyword,
+            @Parameter(description = "페이지 번호 (0부터 시작)", example = "0")
+            @RequestParam(defaultValue = "0") int page,
+            @Parameter(description = "페이지 크기 (최대 100)", example = "20")
+            @RequestParam(defaultValue = "20") int size,
+            @AuthenticationPrincipal CustomUserDetails userDetails
+    ) {
+        Long authenticatedMemberId = getAuthenticatedMemberId(userDetails);
+        if (!authenticatedMemberId.equals(memberId)) {
+            throw new CustomException(ErrorCode.FORBIDDEN);
+        }
+        MoodDiaryListResponse response = moodDiaryService.searchMoodDiaries(memberId, keyword, page, size);
+        return ResponseEntity.ok(response);
+    }
+
     private Long getAuthenticatedMemberId(UserDetails userDetails) {
         if (!(userDetails instanceof CustomUserDetails customUserDetails)) {
             throw new CustomException(ErrorCode.UNAUTHORIZED);

@@ -172,4 +172,38 @@ public class MedicationScheduleController {
         return ResponseEntity.noContent().build();
     }
 
+    @Operation(summary = "복약 스케줄 검색",
+            description = "약 이름으로 복약 스케줄을 검색합니다.")
+    @ApiResponses({
+            @ApiResponse(responseCode = "200", description = "검색 성공",
+                    content = @Content(mediaType = "application/json",
+                            schema = @Schema(implementation = MedicationScheduleListResponse.class))),
+            @ApiResponse(responseCode = "401", description = "인증 실패", content = @Content),
+            @ApiResponse(responseCode = "403", description = "권한 없음", content = @Content),
+            @ApiResponse(responseCode = "404", description = "회원을 찾을 수 없음", content = @Content)
+    })
+    @GetMapping("/search/{member-id}")
+    @RequireResourceOwnership(
+        resourceType = RequireResourceOwnership.ResourceType.MEDICATION_SCHEDULE_BY_MEMBER,
+        paramName = "member-id",
+        strategy = RequireResourceOwnership.OwnershipStrategy.DIRECT
+    )
+    public ResponseEntity<MedicationScheduleListResponse> searchMedicationSchedules(
+            @Parameter(description = "회원 ID", required = true, example = "1", in = ParameterIn.PATH)
+            @PathVariable("member-id") Long memberId,
+            @Parameter(description = "검색 키워드 (약 이름)", required = true, example = "타이레놀")
+            @RequestParam String keyword,
+            @Parameter(description = "페이지네이션 정보 (최대 100개)", required = false)
+            @PageableDefault(size = 20, page = 0) Pageable pageable,
+            @AuthenticationPrincipal UserDetails userDetails
+    ) {
+        if (pageable.getPageSize() > 100) {
+            pageable = PageRequest.of(pageable.getPageNumber(), 100, pageable.getSort());
+        }
+
+        Page<MedicationSchedule> schedules = medicationScheduleService.searchMedicationSchedules(memberId, keyword, pageable);
+        Page<MedicationScheduleResponse> scheduleResponses = schedules.map(MedicationScheduleResponse::from);
+        MedicationScheduleListResponse response = MedicationScheduleListResponse.from(scheduleResponses);
+        return ResponseEntity.ok(response);
+    }
 }

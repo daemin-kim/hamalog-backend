@@ -6,6 +6,9 @@ import com.Hamalog.domain.sideEffect.SideEffectRecord;
 import com.Hamalog.domain.sideEffect.SideEffectSideEffectRecord;
 import com.Hamalog.dto.sideEffect.request.SideEffectRecordRequest;
 import com.Hamalog.dto.sideEffect.response.RecentSideEffectResponse;
+import com.Hamalog.dto.sideEffect.response.SideEffectRecordListResponse;
+import com.Hamalog.dto.sideEffect.response.SideEffectRecordResponse;
+import com.Hamalog.dto.sideEffect.response.SideEffectRecordResponse.SideEffectDetailResponse;
 import com.Hamalog.exception.ErrorCode;
 import com.Hamalog.exception.member.MemberNotFoundException;
 import com.Hamalog.exception.sideEffect.SideEffectNotFoundException;
@@ -22,6 +25,9 @@ import java.util.function.Function;
 import java.util.stream.Collectors;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.PageRequest;
+import org.springframework.data.domain.Pageable;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -178,6 +184,96 @@ public class SideEffectService {
         return memberRepository.findById(memberId)
                 .map(member -> member.getLoginId().equals(loginId))
                 .orElse(false);
+    }
+
+    /**
+     * 부작용 기록 목록 조회 (페이징)
+     */
+    public SideEffectRecordListResponse getSideEffectRecords(Long memberId, int page, int size) {
+        log.info("부작용 기록 목록 조회 - memberId: {}, page: {}, size: {}", memberId, page, size);
+
+        if (!memberRepository.existsById(memberId)) {
+            throw new MemberNotFoundException();
+        }
+
+        if (size > 100) {
+            size = 100;
+        }
+
+        Pageable pageable = PageRequest.of(page, size);
+        Page<SideEffectRecord> recordPage = sideEffectRecordRepository
+                .findByMember_MemberIdOrderByCreatedAtDesc(memberId, pageable);
+
+        List<SideEffectRecordResponse> records = recordPage.getContent().stream()
+                .map(this::toSideEffectRecordResponse)
+                .collect(Collectors.toList());
+
+        return new SideEffectRecordListResponse(
+                records,
+                recordPage.getTotalElements(),
+                recordPage.getNumber(),
+                recordPage.getSize(),
+                recordPage.hasNext(),
+                recordPage.hasPrevious()
+        );
+    }
+
+    /**
+     * 부작용 기록 상세 조회
+     */
+    public SideEffectRecordResponse getSideEffectRecord(Long recordId) {
+        log.info("부작용 기록 상세 조회 - recordId: {}", recordId);
+
+        SideEffectRecord record = sideEffectRecordRepository.findByIdWithMember(recordId)
+                .orElseThrow(SideEffectNotFoundException::new);
+
+        return toSideEffectRecordResponse(record);
+    }
+
+    /**
+     * 부작용 기록 삭제
+     */
+    @Transactional
+    public void deleteSideEffectRecord(Long recordId, Long memberId) {
+        log.info("부작용 기록 삭제 - recordId: {}, memberId: {}", recordId, memberId);
+
+        if (!sideEffectRecordRepository.existsByIdAndMemberId(recordId, memberId)) {
+            throw new SideEffectNotFoundException();
+        }
+
+        // 연관된 SideEffectSideEffectRecord 먼저 삭제
+        sideEffectSideEffectRecordRepository.deleteBySideEffectRecordId(recordId);
+
+        // SideEffectRecord 삭제
+        sideEffectRecordRepository.deleteById(recordId);
+
+        // 캐시 갱신
+        if (cacheService != null) {
+            List<String> updatedNames = sideEffectRepository.findRecentSideEffectNames(memberId);
+            cacheService.refreshRecentSideEffects(memberId, updatedNames);
+        }
+
+        log.info("부작용 기록 삭제 완료 - recordId: {}", recordId);
+    }
+
+    private SideEffectRecordResponse toSideEffectRecordResponse(SideEffectRecord record) {
+        List<SideEffectSideEffectRecord> sideEffectRecords = sideEffectSideEffectRecordRepository
+                .findBySideEffectRecordIdWithSideEffect(record.getSideEffectRecordId());
+
+        List<SideEffectDetailResponse> details = sideEffectRecords.stream()
+                .map(ssr -> new SideEffectDetailResponse(
+                        ssr.getSideEffect().getSideEffectId(),
+                        ssr.getSideEffect().getName(),
+                        ssr.getDegree()
+                ))
+                .collect(Collectors.toList());
+
+        return new SideEffectRecordResponse(
+                record.getSideEffectRecordId(),
+                record.getMember().getMemberId(),
+                record.getCreatedAt(),
+                details
+        );
     }
 
     // ========== Private Validation Methods ==========

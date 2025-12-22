@@ -30,4 +30,3 @@ public record ProfileUpdateRequest(
         return name == null && nickName == null && phoneNumber == null && birth == null;
     }
 }
-

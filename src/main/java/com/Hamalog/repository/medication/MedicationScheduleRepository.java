@@ -33,4 +33,15 @@ public interface MedicationScheduleRepository extends JpaRepository<MedicationSc
     @Modifying
     @Query("DELETE FROM MedicationSchedule ms WHERE ms.member.memberId = :memberId")
     void deleteByMemberId(@Param("memberId") Long memberId);
+
+    // 약 이름으로 검색
+    @EntityGraph(attributePaths = {"member"})
+    @Query("SELECT ms FROM MedicationSchedule ms " +
+           "WHERE ms.member.memberId = :memberId " +
+           "AND LOWER(ms.name) LIKE LOWER(CONCAT('%', :keyword, '%'))")
+    Page<MedicationSchedule> searchByName(
+            @Param("memberId") Long memberId,
+            @Param("keyword") String keyword,
+            Pageable pageable
+    );
 }

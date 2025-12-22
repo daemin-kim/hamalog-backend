@@ -191,4 +191,35 @@ public class MoodDiaryService {
             );
         }
     }
+
+    /**
+     * 일기 내용 검색
+     */
+    public MoodDiaryListResponse searchMoodDiaries(Long memberId, String keyword, int page, int size) {
+        log.info("마음 일기 검색 - memberId: {}, keyword: {}", memberId, keyword);
+
+        if (!memberRepository.existsById(memberId)) {
+            throw new MemberNotFoundException();
+        }
+
+        if (size > 100) {
+            size = 100;
+        }
+
+        Pageable pageable = PageRequest.of(page, size);
+        Page<MoodDiary> diaryPage = moodDiaryRepository.searchByKeyword(memberId, keyword, pageable);
+
+        List<MoodDiaryResponse> diaries = diaryPage.getContent().stream()
+                .map(MoodDiaryResponse::from)
+                .collect(Collectors.toList());
+
+        return new MoodDiaryListResponse(
+                diaries,
+                diaryPage.getTotalElements(),
+                diaryPage.getNumber(),
+                diaryPage.getSize(),
+                diaryPage.hasNext(),
+                diaryPage.hasPrevious()
+        );
+    }
 }

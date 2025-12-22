@@ -94,4 +94,3 @@ public class MemberController {
         return userDetails.getMember().getMemberId();
     }
 }
-

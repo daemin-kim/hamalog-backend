@@ -55,4 +55,18 @@ public interface MoodDiaryRepository extends JpaRepository<MoodDiary, Long> {
             @Param("startDate") LocalDate startDate,
             @Param("endDate") LocalDate endDate
     );
+
+    // 일기 내용 검색 (자유형식 내용 + 템플릿 답변 검색)
+    @Query("SELECT m FROM MoodDiary m WHERE m.member.memberId = :memberId " +
+           "AND (LOWER(m.freeContent) LIKE LOWER(CONCAT('%', :keyword, '%')) " +
+           "OR LOWER(m.templateAnswer1) LIKE LOWER(CONCAT('%', :keyword, '%')) " +
+           "OR LOWER(m.templateAnswer2) LIKE LOWER(CONCAT('%', :keyword, '%')) " +
+           "OR LOWER(m.templateAnswer3) LIKE LOWER(CONCAT('%', :keyword, '%')) " +
+           "OR LOWER(m.templateAnswer4) LIKE LOWER(CONCAT('%', :keyword, '%'))) " +
+           "ORDER BY m.diaryDate DESC")
+    Page<MoodDiary> searchByKeyword(
+            @Param("memberId") Long memberId,
+            @Param("keyword") String keyword,
+            Pageable pageable
+    );
 }

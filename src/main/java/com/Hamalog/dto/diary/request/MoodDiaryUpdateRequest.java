@@ -66,4 +66,3 @@ public record MoodDiaryUpdateRequest(
         return freeContent != null && !freeContent.isBlank();
     }
 }
-

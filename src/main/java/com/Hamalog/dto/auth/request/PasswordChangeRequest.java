@@ -31,4 +31,3 @@ public record PasswordChangeRequest(
         return newPassword != null && newPassword.equals(confirmPassword);
     }
 }
-

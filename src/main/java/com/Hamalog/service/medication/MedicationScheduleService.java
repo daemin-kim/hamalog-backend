@@ -307,4 +307,21 @@ public class MedicationScheduleService {
             throw new InvalidInputException(ErrorCode.INVALID_PAGE_SIZE);
         }
     }
+
+    /**
+     * 약 이름으로 검색
+     */
+    @Transactional(readOnly = true)
+    public org.springframework.data.domain.Page<MedicationSchedule> searchMedicationSchedules(
+            Long memberId, String keyword, org.springframework.data.domain.Pageable pageable) {
+        log.info("복약 스케줄 검색 - memberId: {}, keyword: {}", memberId, keyword);
+
+        if (!memberRepository.existsById(memberId)) {
+            throw new MemberNotFoundException();
+        }
+
+        validatePaginationParams(pageable);
+
+        return medicationScheduleRepository.searchByName(memberId, keyword, pageable);
+    }
 }

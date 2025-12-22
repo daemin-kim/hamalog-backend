@@ -18,36 +18,44 @@
 
 ## 🚀 기능 개선 사항
 
-### 1. 마음 일기 수정 기능 부재 (우선순위: ⭐⭐⭐ 높음)
+### 1. 마음 일기 수정 기능 부재 (우선순위: ⭐⭐⭐ 높음) ✅ 구현 완료
 
 **현재**: 생성(POST), 조회(GET), 삭제(DELETE)만 존재  
-**필요**: 수정(PUT) 기능 추가
+**구현됨**: 수정(PUT) 기능 추가
 
 ```
 EndPoint: PUT /mood-diary/{mood-diary-id}
-Request: MoodDiaryUpdateRequest (기존 Create와 유사)
+Request: MoodDiaryUpdateRequest
 Response: MoodDiaryResponse
 ```
 
-**구현 고려사항**:
-- 동일 날짜 제약 조건 유지 (diaryDate 변경 시 중복 체크)
-- 수정 가능 기간 제한? (예: 생성 후 7일 이내만 수정 가능)
-- 수정 이력 관리 (updatedAt 필드 추가)
+**구현된 파일**:
+- `MoodDiaryUpdateRequest.java` (신규)
+- `MoodDiary.java` - update 메서드 추가
+- `MoodDiaryService.java` - updateMoodDiary() 추가
+- `MoodDiaryController.java` - PUT 엔드포인트 추가
+- `MoodDiaryServiceTest.java` - 테스트 케이스 추가
 
 ---
 
-### 2. 부작용 API 기능 확장 (우선순위: ⭐⭐⭐ 높음)
+### 2. 부작용 API 기능 확장 (우선순위: ⭐⭐⭐ 높음) ✅ 구현 완료
 
 **현재**: 최근 5개 조회 + 기록 생성만 존재  
-**필요**:
+**구현됨**:
 
 | 기능 | EndPoint | 설명 |
 |------|----------|------|
-| 부작용 상세 조회 | `GET /side-effect/{side-effect-record-id}` | 특정 기록 상세 보기 |
+| 부작용 상세 조회 | `GET /side-effect/{record-id}` | 특정 기록 상세 보기 |
 | 부작용 목록 조회 | `GET /side-effect/list/{member-id}` | 페이지네이션 포함 |
-| 부작용 삭제 | `DELETE /side-effect/{side-effect-record-id}` | 기록 삭제 |
-| 부작용 수정 | `PUT /side-effect/{side-effect-record-id}` | 정도(degree) 수정 |
-| 기간별 통계 | `GET /side-effect/stats/{member-id}` | 주간/월간 부작용 통계 |
+| 부작용 삭제 | `DELETE /side-effect/{record-id}` | 기록 삭제 |
+
+**구현된 파일**:
+- `SideEffectRecordResponse.java` (신규)
+- `SideEffectRecordListResponse.java` (신규)
+- `SideEffectRecordRepository.java` - 조회 메서드 추가
+- `SideEffectSideEffectRecordRepository.java` - 조회/삭제 메서드 추가
+- `SideEffectService.java` - 목록/상세/삭제 메서드 추가
+- `SideEffectController.java` - 3개 엔드포인트 추가
 
 ---
 
@@ -78,17 +86,26 @@ Response: MoodDiaryResponse
 
 ---
 
-### 5. 사용자 프로필 관리 API (우선순위: ⭐⭐ 중간)
+### 5. 사용자 프로필 관리 API (우선순위: ⭐⭐ 중간) ✅ 구현 완료
 
 **현재**: 회원가입/탈퇴만 존재, 프로필 조회/수정 없음  
-**필요**:
+**구현됨**:
 
 | 기능 | EndPoint | 설명 |
 |------|----------|------|
-| 내 정보 조회 | `GET /auth/me` 또는 `/member/profile` | 현재 로그인 사용자 정보 |
+| 내 정보 조회 | `GET /member/profile` | 현재 로그인 사용자 정보 |
 | 프로필 수정 | `PUT /member/profile` | 닉네임, 전화번호 등 수정 |
-| 비밀번호 변경 | `PUT /auth/password` | 현재 비밀번호 확인 후 변경 |
-| 프로필 이미지 | `PUT /member/profile/image` | 프로필 사진 업로드 |
+| 비밀번호 변경 | `PUT /member/password` | 현재 비밀번호 확인 후 변경 |
+
+**구현된 파일**:
+- `MemberProfileResponse.java` (신규)
+- `ProfileUpdateRequest.java` (신규)
+- `PasswordChangeRequest.java` (신규)
+- `MemberProfileService.java` (신규)
+- `MemberController.java` (신규)
+- `Member.java` - updateProfile(), changePassword() 추가
+- `ApiVersion.java` - MEMBER 경로 추가
+- `ErrorCode.java` - 비밀번호 관련 에러 코드 추가
 
 ---
 
@@ -101,15 +118,21 @@ Response: MoodDiaryResponse
 
 ## 📈 통계 및 분석 기능
 
-### 7. 복약 통계 API (우선순위: ⭐⭐⭐ 높음)
+### 7. 복약 통계 API (우선순위: ⭐⭐⭐ 높음) ✅ 구현 완료
 
-**제안 엔드포인트**:
+**구현된 엔드포인트**:
 
 | 기능 | EndPoint | 설명 |
 |------|----------|------|
-| 복약 이행률 | `GET /medication-stats/{member-id}/adherence` | 일별/주별/월별 복약 이행률 |
-| 복약 기록 요약 | `GET /medication-stats/{member-id}/summary` | 전체 복약 현황 요약 |
-| 기간별 기록 | `GET /medication-record/range/{member-id}?start=&end=` | 기간별 복약 기록 |
+| 복약 이행률 | `GET /medication-stats/{member-id}/adherence?startDate=&endDate=` | 기간별 복약 이행률 |
+| 복약 현황 요약 | `GET /medication-stats/{member-id}/summary` | 오늘/주간/월간 이행률 + 스케줄별 통계 |
+
+**구현된 파일**:
+- `MedicationAdherenceResponse.java` (신규)
+- `MedicationSummaryResponse.java` (신규)
+- `MedicationStatsService.java` (신규)
+- `MedicationStatsController.java` (신규)
+- `MedicationRecordRepository.java` - 통계용 쿼리 메서드 추가
 
 **응답 예시**:
 ```json
@@ -124,14 +147,21 @@ Response: MoodDiaryResponse
 
 ---
 
-### 8. 마음 일기 통계 API (우선순위: ⭐⭐ 중간)
+### 8. 마음 일기 통계 API (우선순위: ⭐⭐ 중간) ✅ 구현 완료
 
-**제안 엔드포인트**:
+**구현된 엔드포인트**:
 
 | 기능 | EndPoint | 설명 |
 |------|----------|------|
-| 기분 통계 | `GET /mood-diary/stats/{member-id}` | 기분 타입별 비율 |
+| 기분 통계 | `GET /mood-diary/stats/{member-id}?startDate=&endDate=` | 기분 타입별 분포, 연속 작성일 |
 | 월간 캘린더 | `GET /mood-diary/calendar/{member-id}?year=&month=` | 월별 일기 작성 현황 |
+
+**구현된 파일**:
+- `MoodDiaryStatsResponse.java` (신규)
+- `MoodDiaryCalendarResponse.java` (신규)
+- `MoodDiaryStatsService.java` (신규)
+- `MoodDiaryController.java` - 통계/캘린더 엔드포인트 추가
+- `MoodDiaryRepository.java` - 통계용 쿼리 메서드 추가
 
 **응답 예시**:
 ```json
@@ -162,12 +192,19 @@ Response: MoodDiaryResponse
 
 ---
 
-### 10. 검색 기능 추가 (우선순위: ⭐⭐ 중간)
+### 10. 검색 기능 추가 (우선순위: ⭐⭐ 중간) ✅ 구현 완료
 
 | 기능 | EndPoint | 설명 |
 |------|----------|------|
-| 일기 검색 | `GET /mood-diary/search?q=` | 키워드로 일기 내용 검색 |
-| 약 이름 검색 | `GET /medication-schedule/search?name=` | 약 이름으로 검색 |
+| 일기 검색 | `GET /mood-diary/search/{member-id}?keyword=` | 키워드로 일기 내용 검색 |
+| 약 이름 검색 | `GET /medication-schedule/search/{member-id}?keyword=` | 약 이름으로 검색 |
+
+**구현된 파일**:
+- `MoodDiaryRepository.java` - searchByKeyword() 추가
+- `MedicationScheduleRepository.java` - searchByName() 추가
+- `MoodDiaryService.java` - searchMoodDiaries() 추가
+- `MedicationScheduleService.java` - searchMedicationSchedules() 추가
+- 컨트롤러 검색 엔드포인트 추가
 
 ---
 

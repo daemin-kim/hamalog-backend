@@ -104,4 +104,3 @@ public class MemberProfileService {
         log.info("비밀번호 변경 완료 - memberId: {}", memberId);
     }
 }
-

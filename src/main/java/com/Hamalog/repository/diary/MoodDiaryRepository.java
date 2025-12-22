@@ -3,6 +3,7 @@ package com.Hamalog.repository.diary;
 import com.Hamalog.domain.diary.MoodDiary;
 import com.Hamalog.domain.member.Member;
 import java.time.LocalDate;
+import java.util.List;
 import java.util.Optional;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
@@ -27,4 +28,31 @@ public interface MoodDiaryRepository extends JpaRepository<MoodDiary, Long> {
     @Modifying
     @Query("DELETE FROM MoodDiary m WHERE m.member.memberId = :memberId")
     void deleteByMember_MemberId(@Param("memberId") Long memberId);
+
+    // 기간별 일기 조회 (통계용)
+    @Query("SELECT m FROM MoodDiary m WHERE m.member.memberId = :memberId " +
+           "AND m.diaryDate BETWEEN :startDate AND :endDate ORDER BY m.diaryDate ASC")
+    List<MoodDiary> findByMemberIdAndDateRange(
+            @Param("memberId") Long memberId,
+            @Param("startDate") LocalDate startDate,
+            @Param("endDate") LocalDate endDate
+    );
+
+    // 월별 일기 조회 (캘린더용)
+    @Query("SELECT m FROM MoodDiary m WHERE m.member.memberId = :memberId " +
+           "AND YEAR(m.diaryDate) = :year AND MONTH(m.diaryDate) = :month ORDER BY m.diaryDate ASC")
+    List<MoodDiary> findByMemberIdAndYearMonth(
+            @Param("memberId") Long memberId,
+            @Param("year") int year,
+            @Param("month") int month
+    );
+
+    // 회원별 일기 작성 일수 조회
+    @Query("SELECT COUNT(m) FROM MoodDiary m WHERE m.member.memberId = :memberId " +
+           "AND m.diaryDate BETWEEN :startDate AND :endDate")
+    long countByMemberIdAndDateRange(
+            @Param("memberId") Long memberId,
+            @Param("startDate") LocalDate startDate,
+            @Param("endDate") LocalDate endDate
+    );
 }

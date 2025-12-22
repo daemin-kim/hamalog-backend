@@ -98,4 +98,31 @@ public class MoodDiary {
                 .freeContent(content)
                 .build();
     }
+
+    /**
+     * 템플릿 형식으로 일기 내용 수정
+     */
+    public void updateAsTemplateType(MoodType moodType, String answer1, String answer2,
+                                      String answer3, String answer4) {
+        this.moodType = moodType;
+        this.diaryType = DiaryType.TEMPLATE;
+        this.templateAnswer1 = answer1;
+        this.templateAnswer2 = answer2;
+        this.templateAnswer3 = answer3;
+        this.templateAnswer4 = answer4;
+        this.freeContent = null;
+    }
+
+    /**
+     * 자유 형식으로 일기 내용 수정
+     */
+    public void updateAsFreeFormType(MoodType moodType, String content) {
+        this.moodType = moodType;
+        this.diaryType = DiaryType.FREE_FORM;
+        this.freeContent = content;
+        this.templateAnswer1 = null;
+        this.templateAnswer2 = null;
+        this.templateAnswer3 = null;
+        this.templateAnswer4 = null;
+    }
 }

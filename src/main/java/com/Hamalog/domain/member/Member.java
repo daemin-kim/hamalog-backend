@@ -55,4 +55,28 @@ public class Member {
     @Column(name = "version")
     private Long version;
 
+    /**
+     * 프로필 정보 수정
+     */
+    public void updateProfile(String name, String nickName, String phoneNumber, LocalDate birth) {
+        if (name != null) {
+            this.name = name;
+        }
+        if (nickName != null) {
+            this.nickName = nickName;
+        }
+        if (phoneNumber != null) {
+            this.phoneNumber = phoneNumber;
+        }
+        if (birth != null) {
+            this.birth = birth;
+        }
+    }
+
+    /**
+     * 비밀번호 변경
+     */
+    public void changePassword(String encodedPassword) {
+        this.password = encodedPassword;
+    }
 }

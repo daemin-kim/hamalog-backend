@@ -8,6 +8,10 @@ public enum ErrorCode {
     // Business Logic Errors - Member
     MEMBER_NOT_FOUND("MEMBER_NOT_FOUND", "회원을 찾을 수 없습니다."),
     DUPLICATE_MEMBER("DUPLICATE_MEMBER", "이미 존재하는 회원입니다."),
+    INVALID_CURRENT_PASSWORD("INVALID_CURRENT_PASSWORD", "현재 비밀번호가 일치하지 않습니다."),
+    PASSWORD_CONFIRM_MISMATCH("PASSWORD_CONFIRM_MISMATCH", "새 비밀번호와 확인 비밀번호가 일치하지 않습니다."),
+    SAME_AS_CURRENT_PASSWORD("SAME_AS_CURRENT_PASSWORD", "새 비밀번호는 현재 비밀번호와 달라야 합니다."),
+    NO_PROFILE_UPDATE_DATA("NO_PROFILE_UPDATE_DATA", "수정할 프로필 정보가 없습니다."),
 
     // Business Logic Errors - Medication
     MEDICATION_SCHEDULE_NOT_FOUND("SCHEDULE_NOT_FOUND", "복약 스케줄을 찾을 수 없습니다."),

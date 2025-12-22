@@ -1,6 +1,7 @@
 package com.Hamalog.repository.medication;
 
 import com.Hamalog.domain.medication.MedicationRecord;
+import java.time.LocalDateTime;
 import java.util.List;
 import java.util.Optional;
 import org.springframework.data.jpa.repository.EntityGraph;
@@ -37,4 +38,59 @@ public interface MedicationRecordRepository extends JpaRepository<MedicationReco
     @Modifying
     @Query("DELETE FROM MedicationRecord mr WHERE mr.medicationSchedule.medicationScheduleId IN :scheduleIds")
     void deleteByScheduleIds(@Param("scheduleIds") List<Long> scheduleIds);
+
+    // 회원별 기간 내 복약 기록 조회 (통계용)
+    @Query("SELECT mr FROM MedicationRecord mr " +
+           "JOIN FETCH mr.medicationSchedule ms " +
+           "JOIN FETCH mr.medicationTime mt " +
+           "WHERE ms.member.memberId = :memberId " +
+           "AND mr.realTakeTime BETWEEN :startDateTime AND :endDateTime")
+    List<MedicationRecord> findByMemberIdAndDateRange(
+            @Param("memberId") Long memberId,
+            @Param("startDateTime") LocalDateTime startDateTime,
+            @Param("endDateTime") LocalDateTime endDateTime
+    );
+
+    // 회원별 전체 복약 기록 수 조회
+    @Query("SELECT COUNT(mr) FROM MedicationRecord mr " +
+           "JOIN mr.medicationSchedule ms " +
+           "WHERE ms.member.memberId = :memberId")
+    long countByMemberId(@Param("memberId") Long memberId);
+
+    // 회원별 복용 완료 기록 수 조회
+    @Query("SELECT COUNT(mr) FROM MedicationRecord mr " +
+           "JOIN mr.medicationSchedule ms " +
+           "WHERE ms.member.memberId = :memberId AND mr.isTakeMedication = true")
+    long countTakenByMemberId(@Param("memberId") Long memberId);
+
+    // 회원별 기간 내 복약 기록 수 조회
+    @Query("SELECT COUNT(mr) FROM MedicationRecord mr " +
+           "JOIN mr.medicationSchedule ms " +
+           "WHERE ms.member.memberId = :memberId " +
+           "AND mr.realTakeTime BETWEEN :startDateTime AND :endDateTime")
+    long countByMemberIdAndDateRange(
+            @Param("memberId") Long memberId,
+            @Param("startDateTime") LocalDateTime startDateTime,
+            @Param("endDateTime") LocalDateTime endDateTime
+    );
+
+    // 회원별 기간 내 복용 완료 기록 수 조회
+    @Query("SELECT COUNT(mr) FROM MedicationRecord mr " +
+           "JOIN mr.medicationSchedule ms " +
+           "WHERE ms.member.memberId = :memberId " +
+           "AND mr.isTakeMedication = true " +
+           "AND mr.realTakeTime BETWEEN :startDateTime AND :endDateTime")
+    long countTakenByMemberIdAndDateRange(
+            @Param("memberId") Long memberId,
+            @Param("startDateTime") LocalDateTime startDateTime,
+            @Param("endDateTime") LocalDateTime endDateTime
+    );
+
+    // 스케줄별 복약 기록 통계
+    @Query("SELECT mr.medicationSchedule.medicationScheduleId, COUNT(mr), " +
+           "SUM(CASE WHEN mr.isTakeMedication = true THEN 1 ELSE 0 END) " +
+           "FROM MedicationRecord mr " +
+           "WHERE mr.medicationSchedule.member.memberId = :memberId " +
+           "GROUP BY mr.medicationSchedule.medicationScheduleId")
+    List<Object[]> getScheduleStatsByMemberId(@Param("memberId") Long memberId);
 }

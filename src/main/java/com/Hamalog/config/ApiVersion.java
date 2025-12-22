@@ -43,4 +43,9 @@ public final class ApiVersion {
      * OAuth2 API 경로
      */
     public static final String OAUTH2 = "/oauth2";
+
+    /**
+     * 회원 프로필 API 경로
+     */
+    public static final String MEMBER = "/member";
 }

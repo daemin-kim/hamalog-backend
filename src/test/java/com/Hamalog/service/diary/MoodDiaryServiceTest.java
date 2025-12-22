@@ -11,6 +11,7 @@ import com.Hamalog.domain.diary.MoodDiary;
 import com.Hamalog.domain.diary.MoodType;
 import com.Hamalog.domain.member.Member;
 import com.Hamalog.dto.diary.request.MoodDiaryCreateRequest;
+import com.Hamalog.dto.diary.request.MoodDiaryUpdateRequest;
 import com.Hamalog.dto.diary.response.MoodDiaryListResponse;
 import com.Hamalog.dto.diary.response.MoodDiaryResponse;
 import com.Hamalog.exception.diary.DiaryAlreadyExistsException;
@@ -265,6 +266,110 @@ class MoodDiaryServiceTest {
         // when & then
         assertThatThrownBy(() -> moodDiaryService.getMoodDiaryByDate(1L, diaryDate))
                 .isInstanceOf(MoodDiaryNotFoundException.class);
+    }
+
+    @Test
+    @DisplayName("마음 일기 수정 성공 - 템플릿에서 자유 형식으로 변경")
+    void updateMoodDiary_TemplateToFreeForm_Success() {
+        // given
+        MoodDiary diary = buildTemplateDiary(10L, LocalDate.of(2025, 12, 1));
+        MoodDiaryUpdateRequest request = new MoodDiaryUpdateRequest(
+                MoodType.SAD,
+                DiaryType.FREE_FORM,
+                null, null, null, null,
+                "오늘은 슬픈 하루였습니다."
+        );
+
+        when(moodDiaryRepository.findByIdAndMemberId(10L, 1L)).thenReturn(Optional.of(diary));
+
+        // when
+        MoodDiaryResponse response = moodDiaryService.updateMoodDiary(10L, 1L, request);
+
+        // then
+        assertThat(response.moodType()).isEqualTo(MoodType.SAD);
+        assertThat(response.diaryType()).isEqualTo(DiaryType.FREE_FORM);
+        assertThat(response.freeContent()).isEqualTo("오늘은 슬픈 하루였습니다.");
+        assertThat(response.templateAnswer1()).isNull();
+    }
+
+    @Test
+    @DisplayName("마음 일기 수정 성공 - 자유 형식에서 템플릿으로 변경")
+    void updateMoodDiary_FreeFormToTemplate_Success() {
+        // given
+        MoodDiary diary = buildFreeFormDiary(11L, LocalDate.of(2025, 12, 2), "기존 내용");
+        MoodDiaryUpdateRequest request = new MoodDiaryUpdateRequest(
+                MoodType.EXCITED,
+                DiaryType.TEMPLATE,
+                "새로운 A1", "새로운 A2", "새로운 A3", "새로운 A4",
+                null
+        );
+
+        when(moodDiaryRepository.findByIdAndMemberId(11L, 1L)).thenReturn(Optional.of(diary));
+
+        // when
+        MoodDiaryResponse response = moodDiaryService.updateMoodDiary(11L, 1L, request);
+
+        // then
+        assertThat(response.moodType()).isEqualTo(MoodType.EXCITED);
+        assertThat(response.diaryType()).isEqualTo(DiaryType.TEMPLATE);
+        assertThat(response.templateAnswer1()).isEqualTo("새로운 A1");
+        assertThat(response.freeContent()).isNull();
+    }
+
+    @Test
+    @DisplayName("마음 일기 수정 실패 - 일기를 찾을 수 없음")
+    void updateMoodDiary_NotFound() {
+        // given
+        MoodDiaryUpdateRequest request = new MoodDiaryUpdateRequest(
+                MoodType.HAPPY,
+                DiaryType.FREE_FORM,
+                null, null, null, null,
+                "내용"
+        );
+
+        when(moodDiaryRepository.findByIdAndMemberId(99L, 1L)).thenReturn(Optional.empty());
+
+        // when & then
+        assertThatThrownBy(() -> moodDiaryService.updateMoodDiary(99L, 1L, request))
+                .isInstanceOf(MoodDiaryNotFoundException.class);
+    }
+
+    @Test
+    @DisplayName("마음 일기 수정 실패 - 유효하지 않은 템플릿 답변")
+    void updateMoodDiary_InvalidTemplate() {
+        // given
+        MoodDiary diary = buildTemplateDiary(12L, LocalDate.of(2025, 12, 3));
+        MoodDiaryUpdateRequest request = new MoodDiaryUpdateRequest(
+                MoodType.HAPPY,
+                DiaryType.TEMPLATE,
+                "A1만 있음", null, null, null,
+                null
+        );
+
+        when(moodDiaryRepository.findByIdAndMemberId(12L, 1L)).thenReturn(Optional.of(diary));
+
+        // when & then
+        assertThatThrownBy(() -> moodDiaryService.updateMoodDiary(12L, 1L, request))
+                .isInstanceOf(InvalidDiaryTypeException.class);
+    }
+
+    @Test
+    @DisplayName("마음 일기 수정 실패 - 자유 형식인데 내용 없음")
+    void updateMoodDiary_InvalidFreeForm() {
+        // given
+        MoodDiary diary = buildFreeFormDiary(13L, LocalDate.of(2025, 12, 4), "기존 내용");
+        MoodDiaryUpdateRequest request = new MoodDiaryUpdateRequest(
+                MoodType.HAPPY,
+                DiaryType.FREE_FORM,
+                null, null, null, null,
+                "   "  // 공백만 있는 경우
+        );
+
+        when(moodDiaryRepository.findByIdAndMemberId(13L, 1L)).thenReturn(Optional.of(diary));
+
+        // when & then
+        assertThatThrownBy(() -> moodDiaryService.updateMoodDiary(13L, 1L, request))
+                .isInstanceOf(InvalidDiaryTypeException.class);
     }
 
     @Test

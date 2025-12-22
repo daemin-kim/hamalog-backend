@@ -4,6 +4,7 @@ import com.Hamalog.domain.diary.DiaryType;
 import com.Hamalog.domain.diary.MoodDiary;
 import com.Hamalog.domain.member.Member;
 import com.Hamalog.dto.diary.request.MoodDiaryCreateRequest;
+import com.Hamalog.dto.diary.request.MoodDiaryUpdateRequest;
 import com.Hamalog.dto.diary.response.MoodDiaryListResponse;
 import com.Hamalog.dto.diary.response.MoodDiaryResponse;
 import com.Hamalog.exception.diary.DiaryAlreadyExistsException;
@@ -112,6 +113,48 @@ public class MoodDiaryService {
 
         moodDiaryRepository.delete(moodDiary);
         log.info("마음 일기 삭제 완료 - moodDiaryId: {}", moodDiaryId);
+    }
+
+    @Transactional
+    public MoodDiaryResponse updateMoodDiary(Long moodDiaryId, Long memberId, MoodDiaryUpdateRequest request) {
+        log.info("마음 일기 수정 시작 - moodDiaryId: {}, memberId: {}", moodDiaryId, memberId);
+
+        MoodDiary moodDiary = moodDiaryRepository.findByIdAndMemberId(moodDiaryId, memberId)
+                .orElseThrow(MoodDiaryNotFoundException::new);
+
+        validateUpdateRequest(request);
+
+        if (request.diaryType() == DiaryType.TEMPLATE) {
+            moodDiary.updateAsTemplateType(
+                    request.moodType(),
+                    request.templateAnswer1(),
+                    request.templateAnswer2(),
+                    request.templateAnswer3(),
+                    request.templateAnswer4()
+            );
+        } else {
+            moodDiary.updateAsFreeFormType(
+                    request.moodType(),
+                    request.freeContent()
+            );
+        }
+
+        log.info("마음 일기 수정 완료 - moodDiaryId: {}", moodDiaryId);
+        return MoodDiaryResponse.from(moodDiary);
+    }
+
+    private void validateUpdateRequest(MoodDiaryUpdateRequest request) {
+        if (request.diaryType() == DiaryType.TEMPLATE) {
+            if (!request.isValidTemplateType()) {
+                throw new InvalidDiaryTypeException();
+            }
+        } else if (request.diaryType() == DiaryType.FREE_FORM) {
+            if (!request.isValidFreeFormType()) {
+                throw new InvalidDiaryTypeException();
+            }
+        } else {
+            throw new InvalidDiaryTypeException();
+        }
     }
 
     private void validateDiaryContent(MoodDiaryCreateRequest request) {

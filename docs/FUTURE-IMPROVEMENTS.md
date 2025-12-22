@@ -72,10 +72,10 @@ Response: MoodDiaryResponse
 
 ---
 
-### 4. 복약 알림 시간(MedicationTime) 관리 API (우선순위: ⭐⭐⭐ 높음)
+### 4. 복약 알림 시간(MedicationTime) 관리 API (우선순위: ⭐⭐⭐ 높음) ✅ 구현 완료
 
 **현재**: DB 스키마에 `medication_time` 테이블 존재하지만 API 없음  
-**필요**:
+**구현됨**:
 
 | 기능 | EndPoint | 설명 |
 |------|----------|------|
@@ -83,6 +83,15 @@ Response: MoodDiaryResponse
 | 알림 시간 추가 | `POST /medication-schedule/{id}/times` | 새 알림 시간 추가 |
 | 알림 시간 수정 | `PUT /medication-time/{time-id}` | 시간 변경 |
 | 알림 시간 삭제 | `DELETE /medication-time/{time-id}` | 알림 삭제 |
+
+**구현된 파일**:
+- `MedicationTimeResponse.java` (신규)
+- `MedicationTimeCreateRequest.java` (신규)
+- `MedicationTimeUpdateRequest.java` (신규)
+- `MedicationTimeService.java` (신규)
+- `MedicationTimeController.java` (신규)
+- `MedicationTime.java` - 생성자, update 메서드 추가
+- `MedicationTimeRepository.java` - 조회/삭제 메서드 추가
 
 ---
 

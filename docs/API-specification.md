@@ -225,6 +225,9 @@ Bean Validation 실패 시 `violations` 필드에 각 필드별 에러 상세 �
 | 등록 | `/medication-schedule` | `POST` (`multipart/form-data`) | data(JSON), image(선택) | 복약 스케줄 상세 | 이미지 최대 5MB |
 | 수정 | `/medication-schedule/{medication-schedule-id}` | `PUT` | 수정 요청 데이터 | 복약 스케줄 상세 | - |
 | 삭제 | `/medication-schedule/{medication-schedule-id}` | `DELETE` | 없음 | 204 No Content | - |
+| **검색** | `/medication-schedule/search/{member-id}` | `GET` | 쿼리: `keyword`, `page`, `size` | 복약 스케줄 목록 | **신규** 약 이름 검색 |
+| **알림 시간 목록** | `/medication-schedule/{schedule-id}/times` | `GET` | 없음 | 알림 시간 목록 | **신규** |
+| **알림 시간 추가** | `/medication-schedule/{schedule-id}/times` | `POST` | 알림 시간 생성 요청 | 알림 시간 상세 | **신규** |
 
 #### 복약 스케줄 데이터 구조
 
@@ -335,6 +338,9 @@ if (imageFile) {
 |------|----------|--------|--------------|---------------|------|
 | 최근 부작용 조회 | `/side-effect/recent` | `GET` | 쿼리 `userId` | 최근 부작용 목록 | 최근 5개, Redis 캐시 |
 | 부작용 기록 생성 | `/side-effect/record` | `POST` | 부작용 기록 요청 | 201 Created | - |
+| **목록 조회** | `/side-effect/list/{member-id}` | `GET` | 쿼리: `page`, `size` | 부작용 기록 목록 | **신규** 페이지네이션 |
+| **상세 조회** | `/side-effect/{record-id}` | `GET` | 없음 | 부작용 기록 상세 | **신규** |
+| **삭제** | `/side-effect/{record-id}` | `DELETE` | 없음 | 204 No Content | **신규** |
 
 #### 부작용 데이터 구조
 
@@ -357,6 +363,39 @@ if (imageFile) {
 }
 ```
 
+##### 부작용 기록 상세 응답 데이터 **신규**
+```json
+{
+  "sideEffectRecordId": 1,
+  "memberId": 1,
+  "createdAt": "2025-08-29T10:30:00",
+  "sideEffects": [
+    {
+      "sideEffectId": 1,
+      "name": "두통",
+      "degree": 3
+    },
+    {
+      "sideEffectId": 3,
+      "name": "메스꺼움",
+      "degree": 2
+    }
+  ]
+}
+```
+
+##### 부작용 기록 목록 응답 데이터 **신규**
+```json
+{
+  "records": [...],
+  "totalElements": 50,
+  "pageNumber": 0,
+  "pageSize": 20,
+  "hasNext": true,
+  "hasPrevious": false
+}
+```
+
 ---
 
 ### 마음 일기 (Mood Diary) API (`/mood-diary`)
@@ -367,7 +406,11 @@ if (imageFile) {
 | 상세 조회 | `/mood-diary/{mood-diary-id}` | `GET` | 없음 | 마음 일기 상세 | 소유자만 접근 가능 |
 | 목록 조회 | `/mood-diary/list/{member-id}` | `GET` | 쿼리: `page`, `size` | 마음 일기 목록 | 최신 순, 페이지네이션 |
 | 날짜별 조회 | `/mood-diary/date/{member-id}` | `GET` | 쿼리: `diaryDate` | 마음 일기 상세 | yyyy-MM-dd |
+| **수정** | `/mood-diary/{mood-diary-id}` | `PUT` | 마음 일기 수정 요청 | 마음 일기 상세 | **신규** 날짜 변경 불가 |
 | 삭제 | `/mood-diary/{mood-diary-id}` | `DELETE` | 없음 | 204 No Content | 소유자만 삭제 가능 |
+| **통계 조회** | `/mood-diary/stats/{member-id}` | `GET` | 쿼리: `startDate`, `endDate` | 마음 일기 통계 | **신규** 기분 분포, 연속 작성일 |
+| **캘린더 조회** | `/mood-diary/calendar/{member-id}` | `GET` | 쿼리: `year`, `month` | 마음 일기 캘린더 | **신규** 월별 작성 현황 |
+| **검색** | `/mood-diary/search/{member-id}` | `GET` | 쿼리: `keyword`, `page`, `size` | 마음 일기 목록 | **신규** 내용 검색 |
 
 #### 마음 일기 데이터 구조
 
@@ -453,6 +496,195 @@ if (imageFile) {
 }
 ```
 
+##### 수정 요청 데이터
+```json
+{
+  "moodType": "PEACEFUL",
+  "diaryType": "FREE_FORM",
+  "freeContent": "오늘 기분이 조금 나아졌어요..."
+}
+```
+
+> ⚠️ 수정 시 `diaryDate`는 변경할 수 없습니다. 날짜는 생성 시점에 고정됩니다.
+
+##### 통계 응답 데이터
+```json
+{
+  "startDate": "2025-12-01",
+  "endDate": "2025-12-31",
+  "totalWrittenDays": 25,
+  "totalDays": 31,
+  "writingRate": 80.6,
+  "consecutiveDays": 12,
+  "moodDistribution": {
+    "HAPPY": 8,
+    "PEACEFUL": 5,
+    "EXCITED": 4,
+    "ANXIOUS": 3,
+    "SAD": 2,
+    "LETHARGIC": 2,
+    "ANGRY": 1
+  },
+  "mostFrequentMood": "HAPPY",
+  "dailyRecords": [...]
+}
+```
+
+##### 캘린더 응답 데이터
+```json
+{
+  "year": 2025,
+  "month": 12,
+  "totalDays": 31,
+  "writtenDays": 25,
+  "writingRate": 80.6,
+  "records": [
+    {
+      "day": 1,
+      "date": "2025-12-01",
+      "hasEntry": true,
+      "moodType": "HAPPY",
+      "moodDiaryId": 123
+    },
+    {
+      "day": 2,
+      "date": "2025-12-02",
+      "hasEntry": false,
+      "moodType": null,
+      "moodDiaryId": null
+    }
+  ]
+}
+```
+
+---
+
+### 회원 프로필 (Member Profile) API (`/member`) **신규**
+
+| 기능 | EndPoint | Method | Request Data | Response Data | 비고 |
+|------|----------|--------|--------------|---------------|------|
+| 내 정보 조회 | `/member/profile` | `GET` | 없음 | 회원 프로필 응답 | JWT 인증 필수 |
+| 프로필 수정 | `/member/profile` | `PUT` | 프로필 수정 요청 | 회원 프로필 응답 | 변경할 필드만 전송 |
+| 비밀번호 변경 | `/member/password` | `PUT` | 비밀번호 변경 요청 | 성공 메시지 | 현재 비밀번호 확인 필요 |
+
+#### 회원 프로필 데이터 구조
+
+##### 프로필 응답 데이터
+```json
+{
+  "memberId": 1,
+  "loginId": "user@example.com",
+  "name": "홍길동",
+  "nickName": "길동이",
+  "phoneNumber": "01012345678",
+  "birth": "1990-01-01",
+  "createdAt": "2025-01-01T12:00:00"
+}
+```
+
+##### 프로필 수정 요청 데이터
+```json
+{
+  "name": "새이름",
+  "nickName": "새닉네임",
+  "phoneNumber": "01098765432",
+  "birth": "1995-05-05"
+}
+```
+
+> 💡 수정할 필드만 포함하면 됩니다. null인 필드는 변경되지 않습니다.
+
+##### 비밀번호 변경 요청 데이터
+```json
+{
+  "currentPassword": "currentPassword123",
+  "newPassword": "newPassword456!",
+  "confirmPassword": "newPassword456!"
+}
+```
+
+---
+
+### 복약 통계 (Medication Stats) API (`/medication-stats`) **신규**
+
+| 기능 | EndPoint | Method | Request Data | Response Data | 비고 |
+|------|----------|--------|--------------|---------------|------|
+| 이행률 조회 | `/medication-stats/{member-id}/adherence` | `GET` | 쿼리: `startDate`, `endDate` | 이행률 응답 | 기간별 통계 |
+| 현황 요약 | `/medication-stats/{member-id}/summary` | `GET` | 없음 | 요약 응답 | 오늘/주간/월간 |
+
+#### 복약 통계 데이터 구조
+
+##### 이행률 응답 데이터
+```json
+{
+  "startDate": "2025-12-01",
+  "endDate": "2025-12-31",
+  "totalScheduled": 90,
+  "totalTaken": 82,
+  "adherenceRate": 91.1,
+  "missedDates": ["2025-12-15", "2025-12-22"],
+  "dailyStats": [
+    {
+      "date": "2025-12-01",
+      "scheduled": 3,
+      "taken": 3,
+      "rate": 100.0
+    }
+  ]
+}
+```
+
+##### 현황 요약 응답 데이터
+```json
+{
+  "totalActiveSchedules": 5,
+  "todayScheduled": 12,
+  "todayTaken": 8,
+  "todayAdherenceRate": 66.7,
+  "weeklyAdherenceRate": 85.5,
+  "monthlyAdherenceRate": 91.2,
+  "scheduleSummaries": [
+    {
+      "scheduleId": 1,
+      "medicationName": "타이레놀",
+      "medicationNickname": null,
+      "totalRecords": 30,
+      "takenCount": 27,
+      "adherenceRate": 90.0
+    }
+  ]
+}
+```
+
+---
+
+### 복약 알림 시간 (Medication Time) API **신규**
+
+| 기능 | EndPoint | Method | Request Data | Response Data | 비고 |
+|------|----------|--------|--------------|---------------|------|
+| 목록 조회 | `/medication-schedule/{schedule-id}/times` | `GET` | 없음 | 알림 시간 배열 | 시간순 정렬 |
+| 추가 | `/medication-schedule/{schedule-id}/times` | `POST` | 알림 시간 생성 요청 | 알림 시간 상세 | - |
+| 수정 | `/medication-time/{time-id}` | `PUT` | 알림 시간 수정 요청 | 알림 시간 상세 | - |
+| 삭제 | `/medication-time/{time-id}` | `DELETE` | 없음 | 204 No Content | - |
+
+#### 알림 시간 데이터 구조
+
+##### 알림 시간 응답 데이터
+```json
+{
+  "medicationTimeId": 1,
+  "medicationScheduleId": 101,
+  "takeTime": "09:00:00"
+}
+```
+
+##### 알림 시간 생성/수정 요청 데이터
+```json
+{
+  "takeTime": "09:00"
+}
+```
+
 ---
 
 ## 에러 코드 목록
@@ -473,6 +705,10 @@ if (imageFile) {
 |-----------|--------|------|
 | `MEMBER_NOT_FOUND` | 회원을 찾을 수 없습니다. | 404 |
 | `DUPLICATE_MEMBER` | 이미 존재하는 회원입니다. | 409 |
+| `INVALID_CURRENT_PASSWORD` | 현재 비밀번호가 일치하지 않습니다. | 400 |
+| `PASSWORD_CONFIRM_MISMATCH` | 새 비밀번호와 확인 비밀번호가 일치하지 않습니다. | 400 |
+| `SAME_AS_CURRENT_PASSWORD` | 새 비밀번호는 현재 비밀번호와 달라야 합니다. | 400 |
+| `NO_PROFILE_UPDATE_DATA` | 수정할 프로필 정보가 없습니다. | 400 |
 
 ### 복약 관련
 

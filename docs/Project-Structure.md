@@ -57,8 +57,24 @@ Hamalog/
 │           ├── architecture/                # ArchUnit 아키텍처 테스트
 │           └── ...                          # 기타 테스트 코드
 ├── .github/
-│   └── workflows/
-│       └── ci.yml                           # GitHub Actions CI 파이프라인
+│   ├── workflows/
+│   │   └── ci.yml                           # GitHub Actions CI 파이프라인
+│   └── copilot-instructions.md              # GitHub Copilot 지시 파일 **(신규)**
+├── scripts/
+│   └── generate-crud.sh                     # CRUD 스캐폴딩 스크립트 **(신규)**
+├── docs/
+│   ├── adr/                                 # Architecture Decision Records **(신규)**
+│   │   ├── 0001-adr-template.md
+│   │   ├── 0002-jwt-csrf-dual-protection.md
+│   │   ├── 0003-aop-cross-cutting-concerns.md
+│   │   ├── 0004-domain-event-pattern.md
+│   │   ├── 0005-redis-cache-strategy.md
+│   │   └── 0006-sensitive-data-encryption.md
+│   ├── VIBE-CODING-GUIDE.md                 # 바이브 코딩 가이드 **(신규)**
+│   ├── CODING-CONVENTIONS.md                # 코딩 컨벤션 **(신규)**
+│   └── ...                                  # 기타 문서
+├── .cursorrules                             # Cursor IDE 컨텍스트 **(신규)**
+├── CHANGELOG.md                             # 변경 이력 **(신규)**
 ├── build.gradle                             # Gradle 빌드 설정
 ├── docker-compose.yml                       # Docker 컴포즈 (프로덕션)
 ├── docker-compose-dev.yml                   # Docker 컴포즈 (개발)

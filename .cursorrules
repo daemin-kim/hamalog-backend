@@ -1,0 +1,194 @@
+# Hamalog Project Context for AI Assistants
+
+## 프로젝트 개요
+Hamalog는 **Spring Boot 3.4.5** 기반의 헬스케어 백엔드 시스템입니다.
+복약 스케줄 관리, 마음 일기 작성, 부작용 기록 기능을 제공합니다.
+
+## 기술 스택
+- **Language**: Java 21 (OpenJDK)
+- **Framework**: Spring Boot 3.4.5, Spring Security, Spring Data JPA
+- **Database**: MySQL 8.0 (Production), H2 (Development/Test)
+- **Cache**: Redis 7 (CSRF 토큰, Rate Limiting, 캐싱)
+- **Auth**: JWT (jjwt 0.12.6) + CSRF 이중 보호
+- **Migration**: Flyway
+- **Build**: Gradle
+- **Container**: Docker, Docker Compose
+- **CDN/Security**: Cloudflare Tunnel (Zero Trust)
+
+## 아키텍처
+### 레이어 구조
+```
+Controller (요청 검증, 라우팅)
+    ↓
+Service (비즈니스 로직, 트랜잭션)
+    ↓
+Repository (데이터 접근, JPA)
+    ↓
+Domain (엔티티, 도메인 이벤트)
+```
+
+### AOP 횡단 관심사
+- `ApiLoggingAspect` - API 요청/응답 로깅
+- `ServiceLoggingAspect` - 서비스 메서드 로깅
+- `PerformanceMonitoringAspect` - 성능 모니터링
+- `BusinessAuditAspect` - 비즈니스 감사 로깅
+- `RetryAspect` - 재시도 로직
+- `CachingAspect` - 캐싱 처리
+
+## 코딩 컨벤션
+
+### DTO
+- **Java Record** 사용
+- 요청: `XxxRequest`, 응답: `XxxResponse`
+- Validation 어노테이션 적용 (`@NotNull`, `@Size`, `@Email` 등)
+
+```java
+public record MoodDiaryCreateRequest(
+    @NotNull Long memberId,
+    @NotNull LocalDate diaryDate,
+    @NotNull MoodType moodType
+) {}
+```
+
+### Entity
+- `@Entity`, `@Table` 필수
+- Lombok 최소화 (생성자 직접 정의)
+- `@Version` 낙관적 락 적용
+- 연관관계는 지연 로딩 (`FetchType.LAZY`)
+
+```java
+@Entity
+@Table(name = "mood_diary")
+@Getter
+@NoArgsConstructor(access = AccessLevel.PROTECTED)
+public class MoodDiary {
+    @Id @GeneratedValue(strategy = GenerationType.IDENTITY)
+    private Long moodDiaryId;
+
+    @Version
+    private Long version;
+}
+```
+
+### Service
+- SRP 준수 (기능별 서비스 분리)
+- 예: `AuthenticationService`, `MemberRegistrationService`, `MemberDeletionService`
+- `@Transactional` 적절히 사용
+- 응답은 `XxxResponse.from(entity)` 팩토리 메서드 사용
+
+```java
+@Service
+@RequiredArgsConstructor
+@Transactional(readOnly = true)
+public class MoodDiaryService {
+
+    @Transactional
+    public MoodDiaryResponse create(MoodDiaryCreateRequest request) {
+        // 1. 유효성 검증
+        // 2. 엔티티 생성
+        // 3. 저장
+        // 4. 응답 변환
+        return MoodDiaryResponse.from(savedDiary);
+    }
+}
+```
+
+### Controller
+- `@RequireResourceOwnership` 으로 리소스 소유권 검증
+- `@Valid` 요청 검증
+- ResponseEntity 사용
+
+```java
+@RestController
+@RequestMapping("/mood-diary")
+@RequiredArgsConstructor
+public class MoodDiaryController {
+
+    @GetMapping("/{id}")
+    @RequireResourceOwnership(resourceType = "MOOD_DIARY", idParam = "id")
+    public ResponseEntity<MoodDiaryResponse> getById(@PathVariable Long id) {
+        return ResponseEntity.ok(service.findById(id));
+    }
+}
+```
+
+### 에러 처리
+- `ErrorCode` Enum 사용
+- `BusinessException` 표준 예외
+
+```java
+// ErrorCode 정의
+MEMBER_NOT_FOUND(HttpStatus.NOT_FOUND, "M001", "회원을 찾을 수 없습니다"),
+
+// 사용
+Member member = memberRepository.findById(id)
+    .orElseThrow(ErrorCode.MEMBER_NOT_FOUND::toException);
+```
+
+### 테스트
+- `@DisplayName` 한글 작성
+- Given-When-Then 패턴
+- Nested 클래스로 그룹화
+
+```java
+@DisplayName("마음 일기 서비스 테스트")
+class MoodDiaryServiceTest {
+
+    @Nested
+    @DisplayName("마음 일기 생성")
+    class Create {
+        @Test
+        @DisplayName("성공: 유효한 요청으로 일기 생성")
+        void success() {
+            // given
+            // when
+            // then
+        }
+    }
+}
+```
+
+## 주요 패턴
+
+### 리소스 소유권 검증
+```java
+@RequireResourceOwnership(resourceType = "MEDICATION_SCHEDULE", idParam = "id")
+```
+
+### 재시도
+```java
+@Retryable(maxAttempts = 3, delay = 1000, backoffMultiplier = 1.5)
+```
+
+### 캐싱
+```java
+@Cacheable(value = "memberProfile", key = "#memberId")
+@CacheEvict(value = "memberProfile", key = "#memberId")
+```
+
+## 파일 위치
+| 유형 | 경로 |
+|------|------|
+| Entity | `src/main/java/com/Hamalog/domain/` |
+| DTO | `src/main/java/com/Hamalog/dto/` |
+| Service | `src/main/java/com/Hamalog/service/` |
+| Controller | `src/main/java/com/Hamalog/controller/` |
+| Repository | `src/main/java/com/Hamalog/repository/` |
+| Config | `src/main/java/com/Hamalog/config/` |
+| AOP | `src/main/java/com/Hamalog/aop/` |
+| Test | `src/test/java/com/Hamalog/` |
+| DB Migration | `src/main/resources/db/migration/` |
+| Messages | `src/main/resources/messages*.properties` |
+
+## 중요 규칙
+1. **DB 스키마 변경은 Flyway 마이그레이션만** (`V{n}__description.sql`)
+2. **민감 정보는 AES 암호화** (전화번호, 생년월일)
+3. **새 에러 코드는 ErrorCode enum에 추가**
+4. **테스트 커버리지 유지** (현재 1,400+ 테스트)
+5. **Spotless 포맷팅 준수** (`./gradlew spotlessApply`)
+
+## API 문서
+- Swagger UI: `http://localhost:8080/swagger-ui.html`
+- API 명세서: `docs/API-specification.md`
+- 프로젝트 구조: `docs/Project-Structure.md`
+

@@ -10,7 +10,11 @@
 | [API 명세서](./API-specification.md) | REST API 엔드포인트 상세 명세 | 프론트엔드 개발자 |
 | [API 참고 문서](./API-reference.md) | 현재 문서 - 인프라, 스키마, 변경 이력 | 백엔드/DevOps |
 | [프로젝트 구조 설명서](./Project-Structure.md) | 프로젝트 디렉토리 구조, 아키텍처, 배포 구성 | 전체 |
-| [README](./README.md) | 프로젝트 소개 및 시작 가이드 | 전체 |
+| [바이브 코딩 가이드](./VIBE-CODING-GUIDE.md) | AI 협업 개발 가이드, 바이브 코딩 전략 | AI/개발자 |
+| [코딩 컨벤션](./CODING-CONVENTIONS.md) | 코드 스타일 및 규칙 | 개발자 |
+| [ADR 문서](./adr/) | 아키텍처 결정 기록 | 개발자 |
+| [향후 개선사항](./FUTURE-IMPROVEMENTS.md) | 기능 구현 현황 및 로드맵 | 전체 |
+| [README](../README.md) | 프로젝트 소개 및 시작 가이드 | 전체 |
 
 ---
 

@@ -1,12 +1,12 @@
 package com.Hamalog.aop;
 
 import static org.assertj.core.api.Assertions.assertThat;
-import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.Mockito.times;
 import static org.mockito.Mockito.verify;
 
 import com.Hamalog.logging.StructuredLogger;
 import com.Hamalog.logging.events.BusinessEvent;
+import com.Hamalog.security.SecurityContextUtils;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 import org.mockito.ArgumentCaptor;
@@ -41,6 +41,14 @@ class ServiceLoggingAspectIntegrationTest {
         StructuredLogger structuredLoggerMock() {
             return org.mockito.Mockito.mock(StructuredLogger.class);
         }
+
+        @Bean
+        @org.springframework.context.annotation.Primary
+        SecurityContextUtils securityContextUtilsMock() {
+            SecurityContextUtils mock = org.mockito.Mockito.mock(SecurityContextUtils.class);
+            org.mockito.Mockito.when(mock.getCurrentUserId()).thenReturn("testuser");
+            return mock;
+        }
     }
 
     static class DummyService {
@@ -56,18 +64,17 @@ class ServiceLoggingAspectIntegrationTest {
     private StructuredLogger structuredLogger;
 
     @Test
-    @DisplayName("ServiceLoggingAspect가 서비스 호출 시작/성공 이벤트를 로깅해야 한다")
-    void shouldLogStartAndSuccess() {
+    @DisplayName("ServiceLoggingAspect가 서비스 호출 성공 이벤트를 로깅해야 한다")
+    void shouldLogSuccess() {
         String out = dummyService.doWork("ping");
         assertThat(out).isEqualTo("OK:ping");
 
         ArgumentCaptor<BusinessEvent> captor = ArgumentCaptor.forClass(BusinessEvent.class);
-        verify(structuredLogger, times(2)).business(captor.capture());
+        // 리팩토링 후 SUCCESS만 로깅 (START 제거됨)
+        verify(structuredLogger, times(1)).business(captor.capture());
 
         assertThat(captor.getAllValues())
             .extracting(BusinessEvent::getResult)
-            .contains("START", "SUCCESS");
-
-        verify(structuredLogger, times(2)).business(any(BusinessEvent.class));
+            .contains("SUCCESS");
     }
 }

@@ -1,6 +1,7 @@
 package com.Hamalog.logging;
 
 import com.Hamalog.logging.events.ApiEvent;
+import com.Hamalog.security.SecurityContextUtils;
 import jakarta.servlet.FilterChain;
 import jakarta.servlet.ServletException;
 import jakarta.servlet.http.HttpServletRequest;
@@ -12,14 +13,16 @@ import java.util.UUID;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.slf4j.MDC;
-import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.core.Ordered;
 import org.springframework.core.annotation.Order;
-import org.springframework.security.core.Authentication;
-import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.stereotype.Component;
 import org.springframework.web.filter.OncePerRequestFilter;
 
+/**
+ * HTTP 요청/응답 로깅 필터
+ * 모든 API 요청에 대한 통합 로깅을 담당합니다.
+ * AOP 기반 로깅(ApiLoggingAspect)보다 우선하여 실행됩니다.
+ */
 @Component
 @Order(Ordered.HIGHEST_PRECEDENCE)
 public class RequestLoggingFilter extends OncePerRequestFilter {
@@ -28,15 +31,14 @@ public class RequestLoggingFilter extends OncePerRequestFilter {
     public static final String REQUEST_ID_HEADER = "X-Request-Id";
 
     private final StructuredLogger structuredLogger;
+    private final SecurityContextUtils securityContextUtils;
 
-    @Autowired
-    public RequestLoggingFilter(StructuredLogger structuredLogger) {
+    public RequestLoggingFilter(StructuredLogger structuredLogger,
+                                SecurityContextUtils securityContextUtils) {
         this.structuredLogger = structuredLogger;
+        this.securityContextUtils = securityContextUtils;
     }
 
-    /**
-     * 헬스체크 요청은 로깅에서 제외
-     */
     @Override
     protected boolean shouldNotFilter(HttpServletRequest request) {
         String path = request.getRequestURI();
@@ -49,81 +51,71 @@ public class RequestLoggingFilter extends OncePerRequestFilter {
         long start = System.currentTimeMillis();
         boolean requestFailed = false;
 
+        // Correlation/Request ID 설정
         String correlationId = headerOrGenerate(request, LoggingConstants.CORRELATION_ID_HEADER);
-        boolean putCorrelationId = false;
-        if (MDC.get(MDCUtil.CORRELATION_ID) == null) {
-            MDC.put(MDCUtil.CORRELATION_ID, correlationId);
-            putCorrelationId = true;
-        }
         String requestId = headerOrGenerate(request, REQUEST_ID_HEADER);
-        boolean putRequestId = false;
-        if (MDC.get(MDCUtil.REQUEST_ID) == null) {
-            MDC.put(MDCUtil.REQUEST_ID, requestId);
-            putRequestId = true;
-        }
+
+        boolean putCorrelationId = MDC.get(MDCUtil.CORRELATION_ID) == null;
+        boolean putRequestId = MDC.get(MDCUtil.REQUEST_ID) == null;
+
+        if (putCorrelationId) MDC.put(MDCUtil.CORRELATION_ID, correlationId);
+        if (putRequestId) MDC.put(MDCUtil.REQUEST_ID, requestId);
         MDC.put("method", request.getMethod());
         MDC.put("path", request.getRequestURI());
 
         response.setHeader(LoggingConstants.CORRELATION_ID_HEADER, correlationId);
         response.setHeader(REQUEST_ID_HEADER, requestId);
 
+        // AOP에서 중복 로깅 방지를 위한 플래그 설정
         request.setAttribute(LoggingConstants.API_LOGGING_OWNER_ATTRIBUTE, "FILTER");
 
-        String user = currentPrincipal();
-        String ip = request.getRemoteAddr();
-        String ua = safeHeader(request, "User-Agent");
-        String referer = safeHeader(request, "Referer");
-        String requestType = determineRequestType(request.getRequestURI());
+        String user = securityContextUtils.getCurrentUserId();
+        String ip = securityContextUtils.getClientIpAddress(request);
+        String ua = securityContextUtils.sanitizeUserAgent(request.getHeader("User-Agent"));
+        String requestType = securityContextUtils.determineRequestType(request.getRequestURI());
 
-        Map<String, Object> requestParams = new HashMap<>();
+        Map<String, Object> requestParams = new HashMap<>(4);
         if (request.getQueryString() != null) {
             requestParams.put("queryString", request.getQueryString());
         }
-        requestParams.put("referer", shorten(referer));
         requestParams.put("headers", SensitiveDataMasker.maskHeaders(collectSafeHeaders(request)));
 
         StatusAwareResponseWrapper statusAwareResponse = wrapResponse(response);
 
         try {
-            log.debug("REQ [{}] {} {} | User: {} | IP: {} | UA: {} | Ref: {}",
-                    requestType, request.getMethod(), request.getRequestURI(), user, ip, shorten(ua), shorten(referer));
+            log.debug("REQ [{}] {} {} | User: {} | IP: {}",
+                    requestType, request.getMethod(), request.getRequestURI(), user, ip);
             filterChain.doFilter(request, statusAwareResponse);
 
             long took = System.currentTimeMillis() - start;
             int status = resolveStatus(statusAwareResponse, false);
             request.setAttribute(LoggingConstants.RESPONSE_STATUS_ATTRIBUTE, status);
 
-            ApiEvent successEvent = buildEvent(request, requestType, user, ip, ua, took, status, requestParams);
-            logStructuredApiOnce(request, successEvent);
+            logStructuredApiOnce(request, buildEvent(request, requestType, user, ip, ua, took, status, requestParams));
         } catch (Exception ex) {
             requestFailed = true;
             long took = System.currentTimeMillis() - start;
             int status = resolveStatus(statusAwareResponse, true);
             request.setAttribute(LoggingConstants.RESPONSE_STATUS_ATTRIBUTE, status);
 
-            ApiEvent errorEvent = buildEvent(request, requestType, user, ip, ua, took, status, requestParams);
-            logStructuredApiOnce(request, errorEvent);
+            logStructuredApiOnce(request, buildEvent(request, requestType, user, ip, ua, took, status, requestParams));
 
             log.error("ERR [{}] {} {} | User: {} | Status: {} | Error: {}",
-                    requestType, request.getMethod(), request.getRequestURI(), user, status, ex.toString(), ex);
+                    requestType, request.getMethod(), request.getRequestURI(), user, status, ex.toString());
             throw ex;
         } finally {
             long took = System.currentTimeMillis() - start;
             int status = resolveStatus(statusAwareResponse, requestFailed);
-            String statusText = getStatusText(status);
             request.setAttribute(LoggingConstants.RESPONSE_STATUS_ATTRIBUTE, status);
             request.setAttribute(LoggingConstants.API_LOGGING_OWNER_ATTRIBUTE, null);
 
-            log.debug("RES [{}] {} {} | User: {} | Status: {} {} | Time: {}ms",
-                    requestType, request.getMethod(), request.getRequestURI(), user, status, statusText, took);
+            log.debug("RES [{}] {} {} | User: {} | Status: {} | Time: {}ms",
+                    requestType, request.getMethod(), request.getRequestURI(), user, status, took);
+
             MDC.remove("method");
             MDC.remove("path");
-            if (putRequestId) {
-                MDC.remove(MDCUtil.REQUEST_ID);
-            }
-            if (putCorrelationId) {
-                MDC.remove(MDCUtil.CORRELATION_ID);
-            }
+            if (putRequestId) MDC.remove(MDCUtil.REQUEST_ID);
+            if (putCorrelationId) MDC.remove(MDCUtil.CORRELATION_ID);
         }
     }
 
@@ -140,73 +132,27 @@ public class RequestLoggingFilter extends OncePerRequestFilter {
         request.setAttribute(LoggingConstants.API_EVENT_LOGGED_ATTRIBUTE, true);
     }
 
-    private String currentPrincipal() {
-        Authentication auth = SecurityContextHolder.getContext().getAuthentication();
-        if (auth == null || !auth.isAuthenticated()) return "anonymous";
-        try {
-            return String.valueOf(auth.getName());
-        } catch (Exception e) {
-            return "anonymous";
-        }
-    }
-
     private String headerOrGenerate(HttpServletRequest request, String name) {
         String v = request.getHeader(name);
-        if (v == null || v.isBlank()) return UUID.randomUUID().toString();
-        return v;
-    }
-
-    private String safeHeader(HttpServletRequest request, String name) {
-        if (name == null) {
-            return "";
-        }
-        String lower = name.toLowerCase();
-        if (lower.contains("authorization") || lower.contains("cookie") || lower.contains("token")) {
-            return "***";
-        }
-        String v = request.getHeader(name);
-        return v == null ? "" : shorten(v);
+        return (v == null || v.isBlank()) ? UUID.randomUUID().toString() : v;
     }
 
     private Map<String, String> collectSafeHeaders(HttpServletRequest request) {
         Map<String, String> headers = new HashMap<>();
         var names = request.getHeaderNames();
-        if (names == null) {
-            return headers;
-        }
+        if (names == null) return headers;
+
         while (names.hasMoreElements()) {
             String header = names.nextElement();
-            headers.put(header, safeHeader(request, header));
+            String lower = header.toLowerCase();
+            if (lower.contains("authorization") || lower.contains("cookie") || lower.contains("token")) {
+                headers.put(header, "***");
+            } else {
+                String v = request.getHeader(header);
+                headers.put(header, v != null && v.length() > 200 ? v.substring(0, 200) + "..." : v);
+            }
         }
         return headers;
-    }
-
-    private String shorten(String s) {
-        if (s == null) return "";
-        return s.length() > 200 ? s.substring(0, 200) + "..." : s;
-    }
-
-    private String getStatusText(int status) {
-        if (status >= 200 && status < 300) return "SUCCESS"; // Success
-        if (status >= 300 && status < 400) return "REDIRECT"; // Redirect
-        if (status >= 400 && status < 500) return "CLIENT_ERROR"; // Client Error
-        if (status >= 500) return "SERVER_ERROR"; // Server Error
-        return "UNKNOWN"; // Unknown
-    }
-    
-    /**
-     * Determine request type based on the request path
-     */
-    private String determineRequestType(String path) {
-        if (path == null) return "EXTERNAL";
-
-        // Internal requests: actuator endpoints for health checks and monitoring
-        if (path.startsWith("/actuator/")) {
-            return "INTERNAL";
-        }
-        
-        // All other requests are considered external
-        return "EXTERNAL";
     }
 
     private StatusAwareResponseWrapper wrapResponse(HttpServletResponse response) {

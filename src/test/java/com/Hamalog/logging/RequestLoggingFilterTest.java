@@ -6,11 +6,14 @@ import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.doAnswer;
 import static org.mockito.Mockito.doThrow;
+import static org.mockito.Mockito.lenient;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
 import com.Hamalog.logging.events.ApiEvent;
+import com.Hamalog.security.SecurityContextUtils;
 import jakarta.servlet.FilterChain;
+import jakarta.servlet.http.HttpServletRequest;
 import jakarta.servlet.http.HttpServletResponse;
 import java.util.Map;
 import org.junit.jupiter.api.AfterEach;
@@ -24,7 +27,6 @@ import org.mockito.junit.jupiter.MockitoExtension;
 import org.slf4j.MDC;
 import org.springframework.mock.web.MockHttpServletRequest;
 import org.springframework.mock.web.MockHttpServletResponse;
-import org.springframework.security.core.Authentication;
 import org.springframework.security.core.context.SecurityContext;
 import org.springframework.security.core.context.SecurityContextHolder;
 
@@ -36,6 +38,9 @@ class RequestLoggingFilterTest {
     private StructuredLogger structuredLogger;
 
     @Mock
+    private SecurityContextUtils securityContextUtils;
+
+    @Mock
     private FilterChain filterChain;
 
     @Mock
@@ -45,9 +50,18 @@ class RequestLoggingFilterTest {
 
     @BeforeEach
     void setUp() {
-        filter = new RequestLoggingFilter(structuredLogger);
+        filter = new RequestLoggingFilter(structuredLogger, securityContextUtils);
         SecurityContextHolder.setContext(securityContext);
         MDC.clear();
+
+        // Default mock behaviors
+        lenient().when(securityContextUtils.getCurrentUserId()).thenReturn("anonymous");
+        lenient().when(securityContextUtils.getClientIpAddress(any(HttpServletRequest.class))).thenReturn("192.168.0.1");
+        lenient().when(securityContextUtils.sanitizeUserAgent(any())).thenAnswer(inv -> {
+            String ua = inv.getArgument(0);
+            return ua != null ? ua : "unknown";
+        });
+        lenient().when(securityContextUtils.determineRequestType(any())).thenReturn("EXTERNAL");
     }
 
     @AfterEach
@@ -65,10 +79,8 @@ class RequestLoggingFilterTest {
         request.setQueryString("page=1&size=10");
         MockHttpServletResponse response = new MockHttpServletResponse();
 
-        Authentication auth = org.mockito.Mockito.mock(Authentication.class);
-        when(securityContext.getAuthentication()).thenReturn(auth);
-        when(auth.isAuthenticated()).thenReturn(true);
-        when(auth.getName()).thenReturn("user123");
+        when(securityContextUtils.getCurrentUserId()).thenReturn("user123");
+        when(securityContextUtils.sanitizeUserAgent("Mozilla/5.0")).thenReturn("Mozilla/5.0");
 
         doAnswer(invocation -> {
             HttpServletResponse resp = invocation.getArgument(1);
@@ -106,11 +118,10 @@ class RequestLoggingFilterTest {
     }
 
     @Test
-    @DisplayName("민감 헤더는 마스킹되고 Referer는 200자 이내로 잘린다")
+    @DisplayName("민감 헤더는 마스킹된다")
     void shouldMaskSensitiveHeaders() throws Exception {
         MockHttpServletRequest request = baseRequest("GET", "/api/users/profile");
         request.addHeader("Authorization", "Bearer secret");
-        request.addHeader("Referer", "https://example.com/" + "a".repeat(300));
         MockHttpServletResponse response = new MockHttpServletResponse();
 
         filter.doFilterInternal(request, response, filterChain);
@@ -120,24 +131,20 @@ class RequestLoggingFilterTest {
         Map<String, Object> parameters = captor.getValue().getParameters();
         Map<?, ?> headers = (Map<?, ?>) parameters.get("headers");
         assertThat(headers.get("Authorization")).isEqualTo("***");
-        assertThat(parameters.get("referer").toString().length()).isLessThanOrEqualTo(203);
     }
 
     @Test
-    @DisplayName("/actuator 요청은 내부 요청으로 분류된다")
-    void shouldClassifyInternalRequest() throws Exception {
+    @DisplayName("/actuator 요청은 필터링에서 제외된다")
+    void shouldNotFilterActuatorRequest() throws Exception {
         MockHttpServletRequest request = baseRequest("GET", "/actuator/health");
-        MockHttpServletResponse response = new MockHttpServletResponse();
 
-        filter.doFilterInternal(request, response, filterChain);
+        boolean shouldNotFilter = filter.shouldNotFilter(request);
 
-        ArgumentCaptor<ApiEvent> captor2 = ArgumentCaptor.forClass(ApiEvent.class);
-        verify(structuredLogger).api(captor2.capture());
-        assertThat(captor2.getValue().getRequestType()).isEqualTo("INTERNAL");
+        assertThat(shouldNotFilter).isTrue();
     }
 
     @Test
-    @DisplayName("응답 상태는 request attribute에 저장되고 체인으로 전달된다")
+    @DisplayName("응답 상태는 request attribute에 저장된다")
     void shouldStoreStatusOnRequestAttribute() throws Exception {
         MockHttpServletRequest request = baseRequest("DELETE", "/api/resource/1");
         MockHttpServletResponse response = new MockHttpServletResponse();

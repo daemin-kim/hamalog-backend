@@ -226,8 +226,7 @@ class GlobalExceptionHandlerTest {
             // then
             assertThat(response.getStatusCode()).isEqualTo(HttpStatus.CONFLICT);
             assertThat(response.getBody().getCode()).isEqualTo(ErrorCode.OPTIMISTIC_LOCK_FAILED.getCode());
-
-            verify(structuredLogger).error(eq("Optimistic lock failure"), eq(exception), any(Map.class));
+            // handleSimpleException은 구조화된 로깅을 하지 않음
         }
 
         @Test
@@ -243,8 +242,7 @@ class GlobalExceptionHandlerTest {
             // then
             assertThat(response.getStatusCode()).isEqualTo(HttpStatus.CONFLICT);
             assertThat(response.getBody().getCode()).isEqualTo(ErrorCode.RESOURCE_CONFLICT.getCode());
-
-            verify(structuredLogger).error(eq("Data integrity violation"), eq(exception), any(Map.class));
+            // handleSimpleException은 구조화된 로깅을 하지 않음
         }
     }
 

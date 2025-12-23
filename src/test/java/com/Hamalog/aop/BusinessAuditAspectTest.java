@@ -8,8 +8,7 @@ import static org.mockito.Mockito.*;
 import com.Hamalog.logging.StructuredLogger;
 import com.Hamalog.logging.events.AuditEvent;
 import com.Hamalog.logging.events.SecurityEvent;
-import com.Hamalog.security.filter.TrustedProxyService;
-import com.fasterxml.jackson.databind.ObjectMapper;
+import com.Hamalog.security.SecurityContextUtils;
 import jakarta.servlet.http.HttpServletRequest;
 import java.lang.reflect.Method;
 import org.aspectj.lang.JoinPoint;
@@ -21,25 +20,19 @@ import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.InjectMocks;
 import org.mockito.Mock;
-import org.mockito.MockedStatic;
 import org.mockito.junit.jupiter.MockitoExtension;
 import org.slf4j.MDC;
-import org.springframework.security.core.Authentication;
-import org.springframework.security.core.context.SecurityContext;
-import org.springframework.security.core.context.SecurityContextHolder;
-import org.springframework.web.context.request.RequestContextHolder;
-import org.springframework.web.context.request.ServletRequestAttributes;
 
 @ExtendWith(MockitoExtension.class)
 @DisplayName("BusinessAuditAspect Tests")
 class BusinessAuditAspectTest {
 
     @Mock
-    private ObjectMapper objectMapper;
-    
-    @Mock
     private StructuredLogger structuredLogger;
     
+    @Mock
+    private SecurityContextUtils securityContextUtils;
+
     @Mock
     private ProceedingJoinPoint proceedingJoinPoint;
     
@@ -54,18 +47,6 @@ class BusinessAuditAspectTest {
     
     @Mock
     private HttpServletRequest request;
-    
-    @Mock
-    private ServletRequestAttributes requestAttributes;
-    
-    @Mock
-    private SecurityContext securityContext;
-    
-    @Mock
-    private Authentication authentication;
-
-    @Mock
-    private TrustedProxyService trustedProxyService;
 
     @InjectMocks
     private BusinessAuditAspect businessAuditAspect;
@@ -78,62 +59,47 @@ class BusinessAuditAspectTest {
         lenient().when(methodSignature.getName()).thenReturn("testMethod");
         lenient().when(methodSignature.getDeclaringType()).thenReturn(BusinessAuditAspectTest.class);
         lenient().when(methodSignature.getParameterNames()).thenReturn(new String[]{"param1", "param2"});
+
+        // Setup SecurityContextUtils mocks
+        lenient().when(securityContextUtils.getCurrentUserId()).thenReturn("testUser");
+        lenient().when(securityContextUtils.getClientIpAddress()).thenReturn("127.0.0.1");
+        lenient().when(securityContextUtils.getCurrentUserAgent()).thenReturn("Mozilla/5.0 TestBrowser");
     }
 
     @Test
-    @DisplayName("Should audit successful business operation")
-    void auditBusinessOperation_WithSuccessfulOperation_ShouldLogSuccess() throws Throwable {
+    @DisplayName("Should audit successful auth operation")
+    void auditAuthOperation_WithSuccessfulOperation_ShouldLogSuccess() throws Throwable {
         // given
         String expectedResult = "success";
         when(proceedingJoinPoint.getSignature()).thenReturn(methodSignature);
-        lenient().when(methodSignature.getMethod()).thenReturn(method);
-        lenient().when(method.getName()).thenReturn("createUser");
-        when(methodSignature.getName()).thenReturn("createUser");
+        when(methodSignature.getName()).thenReturn("registerMember");
         when(proceedingJoinPoint.proceed()).thenReturn(expectedResult);
-        when(proceedingJoinPoint.getArgs()).thenReturn(new Object[]{"testArg"});
 
-        try (MockedStatic<SecurityContextHolder> securityMock = mockStatic(SecurityContextHolder.class);
-             MockedStatic<RequestContextHolder> requestMock = mockStatic(RequestContextHolder.class)) {
-            
-            setupSecurityContext(securityMock, "testUser");
-            setupRequestContext(requestMock);
+        // when
+        Object result = businessAuditAspect.auditAuthOperation(proceedingJoinPoint);
 
-            // when
-            Object result = businessAuditAspect.auditBusinessOperation(proceedingJoinPoint);
-
-            // then
-            assertThat(result).isEqualTo(expectedResult);
-            verify(structuredLogger).audit(any(AuditEvent.class));
-            verify(proceedingJoinPoint).proceed();
-        }
+        // then
+        assertThat(result).isEqualTo(expectedResult);
+        verify(structuredLogger).audit(any(AuditEvent.class));
+        verify(proceedingJoinPoint).proceed();
     }
 
     @Test
-    @DisplayName("Should audit failed business operation")
-    void auditBusinessOperation_WithFailedOperation_ShouldLogFailure() throws Throwable {
+    @DisplayName("Should audit failed auth operation")
+    void auditAuthOperation_WithFailedOperation_ShouldLogFailure() throws Throwable {
         // given
         RuntimeException expectedException = new RuntimeException("Test error");
         when(proceedingJoinPoint.getSignature()).thenReturn(methodSignature);
-        lenient().when(methodSignature.getMethod()).thenReturn(method);
-        lenient().when(method.getName()).thenReturn("createUser");
-        when(methodSignature.getName()).thenReturn("createUser");
+        when(methodSignature.getName()).thenReturn("registerMember");
         when(proceedingJoinPoint.proceed()).thenThrow(expectedException);
-        when(proceedingJoinPoint.getArgs()).thenReturn(new Object[]{"testArg"});
 
-        try (MockedStatic<SecurityContextHolder> securityMock = mockStatic(SecurityContextHolder.class);
-             MockedStatic<RequestContextHolder> requestMock = mockStatic(RequestContextHolder.class)) {
-            
-            setupSecurityContext(securityMock, "testUser");
-            setupRequestContext(requestMock);
+        // when & then
+        assertThatThrownBy(() -> businessAuditAspect.auditAuthOperation(proceedingJoinPoint))
+                .isInstanceOf(RuntimeException.class)
+                .hasMessage("Test error");
 
-            // when & then
-            assertThatThrownBy(() -> businessAuditAspect.auditBusinessOperation(proceedingJoinPoint))
-                    .isInstanceOf(RuntimeException.class)
-                    .hasMessage("Test error");
-            
-            verify(structuredLogger).audit(any(AuditEvent.class));
-            verify(proceedingJoinPoint).proceed();
-        }
+        verify(structuredLogger).audit(any(AuditEvent.class));
+        verify(proceedingJoinPoint).proceed();
     }
 
     @Test
@@ -143,18 +109,11 @@ class BusinessAuditAspectTest {
         Object loginResult = "loginSuccess";
         lenient().when(joinPoint.getArgs()).thenReturn(new Object[]{"testUser", "password"});
 
-        try (MockedStatic<SecurityContextHolder> securityMock = mockStatic(SecurityContextHolder.class);
-             MockedStatic<RequestContextHolder> requestMock = mockStatic(RequestContextHolder.class)) {
-            
-            setupSecurityContext(securityMock, "testUser");
-            setupRequestContext(requestMock);
+        // when
+        businessAuditAspect.auditLoginSuccess(joinPoint, loginResult);
 
-            // when
-            businessAuditAspect.auditLoginSuccess(joinPoint, loginResult);
-
-            // then
-            verify(structuredLogger).security(any(SecurityEvent.class));
-        }
+        // then
+        verify(structuredLogger).security(any(SecurityEvent.class));
     }
 
     @Test
@@ -164,111 +123,61 @@ class BusinessAuditAspectTest {
         Exception loginException = new RuntimeException("Invalid credentials");
         when(joinPoint.getArgs()).thenReturn(new Object[]{"testUser", "wrongPassword"});
 
-        try (MockedStatic<SecurityContextHolder> securityMock = mockStatic(SecurityContextHolder.class);
-             MockedStatic<RequestContextHolder> requestMock = mockStatic(RequestContextHolder.class)) {
-            
-            setupSecurityContext(securityMock, null); // No authenticated user on failure
-            setupRequestContext(requestMock);
+        // when
+        businessAuditAspect.auditLoginFailure(joinPoint, loginException);
 
-            // when
-            businessAuditAspect.auditLoginFailure(joinPoint, loginException);
-
-            // then
-            verify(structuredLogger).security(any(SecurityEvent.class));
-        }
+        // then
+        verify(structuredLogger).security(any(SecurityEvent.class));
     }
 
     @Test
-    @DisplayName("Should audit medication record changes")
-    void auditMedicationRecordChanges_WithValidOperation_ShouldDelegate() throws Throwable {
+    @DisplayName("Should determine CREATE operation type correctly")
+    void auditAuthOperation_WithCreateMethod_ShouldIdentifyAsCreate() throws Throwable {
         // given
-        String expectedResult = "recordUpdated";
         when(proceedingJoinPoint.getSignature()).thenReturn(methodSignature);
-        lenient().when(methodSignature.getMethod()).thenReturn(method);
-        lenient().when(method.getName()).thenReturn("updateMedicationRecord");
-        when(proceedingJoinPoint.proceed()).thenReturn(expectedResult);
-        lenient().when(proceedingJoinPoint.getArgs()).thenReturn(new Object[]{1L, "updateData"});
+        when(methodSignature.getName()).thenReturn("createMember");
+        when(proceedingJoinPoint.proceed()).thenReturn("created");
 
-        try (MockedStatic<SecurityContextHolder> securityMock = mockStatic(SecurityContextHolder.class);
-             MockedStatic<RequestContextHolder> requestMock = mockStatic(RequestContextHolder.class)) {
-            
-            setupSecurityContext(securityMock, "testUser");
-            setupRequestContext(requestMock);
+        // when
+        businessAuditAspect.auditAuthOperation(proceedingJoinPoint);
 
-            // when
-            Object result = businessAuditAspect.auditMedicationRecordChanges(proceedingJoinPoint);
-
-            // then
-            assertThat(result).isEqualTo(expectedResult);
-        }
+        // then
+        verify(structuredLogger).audit(argThat(event ->
+            event.getOperation().equals("CREATE")
+        ));
     }
 
     @Test
-    @DisplayName("Should audit medication record updates")
-    void auditMedicationRecordUpdates_WithValidOperation_ShouldDelegate() throws Throwable {
+    @DisplayName("Should determine DELETE operation type correctly")
+    void auditAuthOperation_WithDeleteMethod_ShouldIdentifyAsDelete() throws Throwable {
         // given
-        String expectedResult = "recordUpdated";
         when(proceedingJoinPoint.getSignature()).thenReturn(methodSignature);
-        lenient().when(methodSignature.getMethod()).thenReturn(method);
-        lenient().when(method.getName()).thenReturn("updateMedicationRecord");
-        when(proceedingJoinPoint.proceed()).thenReturn(expectedResult);
-        lenient().when(proceedingJoinPoint.getArgs()).thenReturn(new Object[]{1L, "updateData"});
+        when(methodSignature.getName()).thenReturn("deleteMember");
+        when(proceedingJoinPoint.proceed()).thenReturn(null);
 
-        try (MockedStatic<SecurityContextHolder> securityMock = mockStatic(SecurityContextHolder.class);
-             MockedStatic<RequestContextHolder> requestMock = mockStatic(RequestContextHolder.class)) {
-            
-            setupSecurityContext(securityMock, "testUser");
-            setupRequestContext(requestMock);
+        // when
+        businessAuditAspect.auditAuthOperation(proceedingJoinPoint);
 
-            // when
-            Object result = businessAuditAspect.auditMedicationRecordUpdates(proceedingJoinPoint);
-
-            // then
-            assertThat(result).isEqualTo(expectedResult);
-        }
+        // then
+        verify(structuredLogger).audit(argThat(event ->
+            event.getOperation().equals("DELETE")
+        ));
     }
 
     @Test
-    @DisplayName("Should audit medication record deletes")
-    void auditMedicationRecordDeletes_WithValidOperation_ShouldDelegate() throws Throwable {
+    @DisplayName("Should determine LOGIN operation type correctly")
+    void auditAuthOperation_WithLoginMethod_ShouldIdentifyAsLogin() throws Throwable {
         // given
-        String expectedResult = "recordDeleted";
         when(proceedingJoinPoint.getSignature()).thenReturn(methodSignature);
-        lenient().when(methodSignature.getMethod()).thenReturn(method);
-        lenient().when(method.getName()).thenReturn("deleteMedicationRecord");
-        when(proceedingJoinPoint.proceed()).thenReturn(expectedResult);
-        lenient().when(proceedingJoinPoint.getArgs()).thenReturn(new Object[]{1L});
+        when(methodSignature.getName()).thenReturn("authenticateAndGenerateToken");
+        when(proceedingJoinPoint.proceed()).thenReturn("token");
 
-        try (MockedStatic<SecurityContextHolder> securityMock = mockStatic(SecurityContextHolder.class);
-             MockedStatic<RequestContextHolder> requestMock = mockStatic(RequestContextHolder.class)) {
-            
-            setupSecurityContext(securityMock, "testUser");
-            setupRequestContext(requestMock);
+        // when
+        businessAuditAspect.auditAuthOperation(proceedingJoinPoint);
 
-            // when
-            Object result = businessAuditAspect.auditMedicationRecordDeletes(proceedingJoinPoint);
-
-            // then
-            assertThat(result).isEqualTo(expectedResult);
-        }
-    }
-
-    private void setupSecurityContext(MockedStatic<SecurityContextHolder> securityMock, String username) {
-        securityMock.when(SecurityContextHolder::getContext).thenReturn(securityContext);
-        if (username != null) {
-            lenient().when(securityContext.getAuthentication()).thenReturn(authentication);
-            lenient().when(authentication.getName()).thenReturn(username);
-        } else {
-            lenient().when(securityContext.getAuthentication()).thenReturn(null);
-        }
-    }
-
-    private void setupRequestContext(MockedStatic<RequestContextHolder> requestMock) {
-        requestMock.when(RequestContextHolder::getRequestAttributes).thenReturn(requestAttributes);
-        lenient().when(requestAttributes.getRequest()).thenReturn(request);
-        lenient().when(request.getHeader("User-Agent")).thenReturn("Mozilla/5.0 TestBrowser");
-        lenient().when(request.getHeader("X-Forwarded-For")).thenReturn(null);
-        lenient().when(request.getHeader("X-Real-IP")).thenReturn(null);
-        lenient().when(request.getRemoteAddr()).thenReturn("127.0.0.1");
+        // then
+        verify(structuredLogger).audit(argThat(event ->
+            event.getOperation().equals("LOGIN")
+        ));
     }
 }

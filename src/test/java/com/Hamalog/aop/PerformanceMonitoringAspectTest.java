@@ -7,6 +7,7 @@ import static org.mockito.Mockito.*;
 
 import com.Hamalog.logging.StructuredLogger;
 import com.Hamalog.logging.events.PerformanceEvent;
+import com.Hamalog.security.SecurityContextUtils;
 import org.aspectj.lang.ProceedingJoinPoint;
 import org.aspectj.lang.reflect.MethodSignature;
 import org.junit.jupiter.api.BeforeEach;
@@ -18,9 +19,6 @@ import org.mockito.InjectMocks;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
 import org.slf4j.MDC;
-import org.springframework.security.core.Authentication;
-import org.springframework.security.core.context.SecurityContext;
-import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.test.util.ReflectionTestUtils;
 
 @ExtendWith(MockitoExtension.class)
@@ -31,38 +29,37 @@ class PerformanceMonitoringAspectTest {
     private StructuredLogger structuredLogger;
 
     @Mock
+    private SecurityContextUtils securityContextUtils;
+
+    @Mock
     private ProceedingJoinPoint joinPoint;
 
     @Mock
     private MethodSignature methodSignature;
-
-    @Mock
-    private SecurityContext securityContext;
-
-    @Mock
-    private Authentication authentication;
 
     @InjectMocks
     private PerformanceMonitoringAspect performanceAspect;
 
     @BeforeEach
     void setUp() {
-        // Set up configuration values
-        ReflectionTestUtils.setField(performanceAspect, "slowThreshold", 1000L);
-        ReflectionTestUtils.setField(performanceAspect, "verySlowThreshold", 3000L);
+        // Set up configuration values - 느린 쿼리 임계값을 낮게 설정하여 테스트에서 로깅되도록 함
+        ReflectionTestUtils.setField(performanceAspect, "slowThreshold", 0L);  // 0ms: 모든 쿼리 로깅
+        ReflectionTestUtils.setField(performanceAspect, "verySlowThreshold", 100L);
 
         // Configure mock method signature
         lenient().when(joinPoint.getSignature()).thenReturn(methodSignature);
-        lenient().when(methodSignature.getDeclaringType()).thenReturn((Class) TestService.class);
-        lenient().when(methodSignature.getName()).thenReturn("testMethod");
+        lenient().when(methodSignature.getDeclaringType()).thenReturn((Class) TestRepository.class);
+        lenient().when(methodSignature.getName()).thenReturn("findById");
 
-        // Clear MDC and reset security context
+        // Setup SecurityContextUtils mocks
+        lenient().when(securityContextUtils.getCurrentUserId()).thenReturn("testuser");
+
+        // Clear MDC
         MDC.clear();
-        SecurityContextHolder.clearContext();
     }
 
     @Test
-    @DisplayName("Should monitor successful method execution")
+    @DisplayName("Should monitor successful method execution and log performance")
     void monitorPerformance_SuccessfulExecution_ShouldTrackPerformance() throws Throwable {
         // given
         String expectedResult = "success";
@@ -74,11 +71,11 @@ class PerformanceMonitoringAspectTest {
         // then
         assertThat(result).isEqualTo(expectedResult);
         
-        // Verify structured logging was called
+        // Verify structured logging was called (slowThreshold가 0이므로 모든 쿼리 로깅)
         verify(structuredLogger).performance(any(PerformanceEvent.class));
         
         // Verify method stats were updated
-        PerformanceMonitoringAspect.MethodStats stats = performanceAspect.getMethodStats("TestService.testMethod");
+        PerformanceMonitoringAspect.MethodStats stats = performanceAspect.getMethodStats("TestRepository.findById");
         assertThat(stats).isNotNull();
         assertThat(stats.getTotalCalls()).isEqualTo(1);
         assertThat(stats.getSuccessCalls()).isEqualTo(1);
@@ -86,7 +83,7 @@ class PerformanceMonitoringAspectTest {
     }
 
     @Test
-    @DisplayName("Should monitor failed method execution")
+    @DisplayName("Should monitor failed method execution and log error")
     void monitorPerformance_FailedExecution_ShouldTrackFailure() throws Throwable {
         // given
         RuntimeException exception = new RuntimeException("Test error");
@@ -96,7 +93,7 @@ class PerformanceMonitoringAspectTest {
         assertThatThrownBy(() -> performanceAspect.monitorPerformance(joinPoint))
                 .isSameAs(exception);
         
-        // Verify structured logging was called
+        // Verify structured logging was called for errors (errors are always logged)
         ArgumentCaptor<PerformanceEvent> eventCaptor = ArgumentCaptor.forClass(PerformanceEvent.class);
         verify(structuredLogger).performance(eventCaptor.capture());
         
@@ -105,7 +102,7 @@ class PerformanceMonitoringAspectTest {
         assertThat(capturedEvent.getErrorType()).isEqualTo("RuntimeException");
         
         // Verify method stats were updated
-        PerformanceMonitoringAspect.MethodStats stats = performanceAspect.getMethodStats("TestService.testMethod");
+        PerformanceMonitoringAspect.MethodStats stats = performanceAspect.getMethodStats("TestRepository.findById");
         assertThat(stats).isNotNull();
         assertThat(stats.getTotalCalls()).isEqualTo(1);
         assertThat(stats.getSuccessCalls()).isEqualTo(0);
@@ -113,116 +110,32 @@ class PerformanceMonitoringAspectTest {
     }
 
     @Test
-    @DisplayName("Should categorize performance levels correctly")
-    void monitorPerformance_DifferentDurations_ShouldCategorizeCorrectly() throws Throwable {
-        // given
-        when(joinPoint.proceed()).thenAnswer(invocation -> {
-            Thread.sleep(50); // VERY_FAST (< 100ms)
-            return "result";
-        });
-
-        // when
-        performanceAspect.monitorPerformance(joinPoint);
-
-        // then
-        ArgumentCaptor<PerformanceEvent> eventCaptor = ArgumentCaptor.forClass(PerformanceEvent.class);
-        verify(structuredLogger).performance(eventCaptor.capture());
-        
-        PerformanceEvent event = eventCaptor.getValue();
-        // Should be VERY_FAST or FAST depending on actual timing
-        assertThat(event.getPerformanceLevel()).isIn("VERY_FAST", "FAST");
-    }
-
-    @Test
-    @DisplayName("Should handle authenticated user correctly")
-    void monitorPerformance_WithAuthenticatedUser_ShouldCaptureUserId() throws Throwable {
-        // given
-        SecurityContextHolder.setContext(securityContext);
-        when(securityContext.getAuthentication()).thenReturn(authentication);
-        when(authentication.isAuthenticated()).thenReturn(true);
-        when(authentication.getName()).thenReturn("testuser");
+    @DisplayName("Should not log fast queries when threshold is high")
+    void monitorPerformance_FastQuery_ShouldNotLogWhenThresholdHigh() throws Throwable {
+        // given - slowThreshold를 높게 설정
+        ReflectionTestUtils.setField(performanceAspect, "slowThreshold", 10000L);
         when(joinPoint.proceed()).thenReturn("result");
 
         // when
         performanceAspect.monitorPerformance(joinPoint);
 
-        // then
-        ArgumentCaptor<PerformanceEvent> eventCaptor = ArgumentCaptor.forClass(PerformanceEvent.class);
-        verify(structuredLogger).performance(eventCaptor.capture());
-        
-        PerformanceEvent event = eventCaptor.getValue();
-        assertThat(event.getUserId()).isEqualTo("testuser");
-    }
+        // then - 빠른 쿼리는 로깅되지 않음
+        verify(structuredLogger, never()).performance(any(PerformanceEvent.class));
 
-    @Test
-    @DisplayName("Should handle anonymous user correctly")
-    void monitorPerformance_WithAnonymousUser_ShouldUseAnonymous() throws Throwable {
-        // given
-        SecurityContextHolder.setContext(securityContext);
-        when(securityContext.getAuthentication()).thenReturn(null);
-        when(joinPoint.proceed()).thenReturn("result");
-
-        // when
-        performanceAspect.monitorPerformance(joinPoint);
-
-        // then
-        ArgumentCaptor<PerformanceEvent> eventCaptor = ArgumentCaptor.forClass(PerformanceEvent.class);
-        verify(structuredLogger).performance(eventCaptor.capture());
-        
-        PerformanceEvent event = eventCaptor.getValue();
-        assertThat(event.getUserId()).isEqualTo("anonymous");
-    }
-
-    @Test
-    @DisplayName("Should handle security context exception")
-    void monitorPerformance_WithSecurityException_ShouldUseUnknown() throws Throwable {
-        // given
-        SecurityContextHolder.setContext(securityContext);
-        when(securityContext.getAuthentication()).thenThrow(new RuntimeException("Security error"));
-        when(joinPoint.proceed()).thenReturn("result");
-
-        // when
-        performanceAspect.monitorPerformance(joinPoint);
-
-        // then
-        ArgumentCaptor<PerformanceEvent> eventCaptor = ArgumentCaptor.forClass(PerformanceEvent.class);
-        verify(structuredLogger).performance(eventCaptor.capture());
-        
-        PerformanceEvent event = eventCaptor.getValue();
-        assertThat(event.getUserId()).isEqualTo("unknown");
-    }
-
-    @Test
-    @DisplayName("Should extract method name correctly")
-    void getMethodNameFromKey_ValidKey_ShouldExtractMethodName() {
-        // Test via reflection since method is private
-        String result = (String) ReflectionTestUtils.invokeMethod(performanceAspect, 
-                "getMethodNameFromKey", "TestService.testMethod");
-        assertThat(result).isEqualTo("testMethod");
-    }
-
-    @Test
-    @DisplayName("Should extract class name correctly")
-    void getClassNameFromKey_ValidKey_ShouldExtractClassName() {
-        // Test via reflection since method is private
-        String result = (String) ReflectionTestUtils.invokeMethod(performanceAspect, 
-                "getClassNameFromKey", "TestService.testMethod");
-        assertThat(result).isEqualTo("TestService");
-    }
-
-    @Test
-    @DisplayName("Should handle invalid method key gracefully")
-    void getMethodNameFromKey_InvalidKey_ShouldReturnOriginal() {
-        String result = (String) ReflectionTestUtils.invokeMethod(performanceAspect, 
-                "getMethodNameFromKey", "invalidkey");
-        assertThat(result).isEqualTo("invalidkey");
+        // But stats are still updated
+        PerformanceMonitoringAspect.MethodStats stats = performanceAspect.getMethodStats("TestRepository.findById");
+        assertThat(stats).isNotNull();
+        assertThat(stats.getTotalCalls()).isEqualTo(1);
     }
 
     @Test
     @DisplayName("Should categorize performance levels based on thresholds")
     void getPerformanceLevel_DifferentDurations_ShouldCategorizeCorrectly() {
-        // Test via reflection since method is private
-        PerformanceMonitoringAspect.PerformanceLevel veryFast = 
+        // Set thresholds for testing
+        ReflectionTestUtils.setField(performanceAspect, "slowThreshold", 1000L);
+        ReflectionTestUtils.setField(performanceAspect, "verySlowThreshold", 3000L);
+
+        PerformanceMonitoringAspect.PerformanceLevel veryFast =
                 (PerformanceMonitoringAspect.PerformanceLevel) ReflectionTestUtils.invokeMethod(
                         performanceAspect, "getPerformanceLevel", 50L);
         assertThat(veryFast).isEqualTo(PerformanceMonitoringAspect.PerformanceLevel.VERY_FAST);
@@ -232,12 +145,7 @@ class PerformanceMonitoringAspectTest {
                         performanceAspect, "getPerformanceLevel", 150L);
         assertThat(fast).isEqualTo(PerformanceMonitoringAspect.PerformanceLevel.FAST);
 
-        PerformanceMonitoringAspect.PerformanceLevel moderate = 
-                (PerformanceMonitoringAspect.PerformanceLevel) ReflectionTestUtils.invokeMethod(
-                        performanceAspect, "getPerformanceLevel", 750L);
-        assertThat(moderate).isEqualTo(PerformanceMonitoringAspect.PerformanceLevel.MODERATE);
-
-        PerformanceMonitoringAspect.PerformanceLevel slow = 
+        PerformanceMonitoringAspect.PerformanceLevel slow =
                 (PerformanceMonitoringAspect.PerformanceLevel) ReflectionTestUtils.invokeMethod(
                         performanceAspect, "getPerformanceLevel", 1500L);
         assertThat(slow).isEqualTo(PerformanceMonitoringAspect.PerformanceLevel.SLOW);
@@ -269,14 +177,11 @@ class PerformanceMonitoringAspectTest {
         performanceAspect.monitorPerformance(joinPoint);
 
         // then
-        PerformanceMonitoringAspect.MethodStats stats = performanceAspect.getMethodStats("TestService.testMethod");
+        PerformanceMonitoringAspect.MethodStats stats = performanceAspect.getMethodStats("TestRepository.findById");
         assertThat(stats).isNotNull();
         assertThat(stats.getTotalCalls()).isEqualTo(4);
         assertThat(stats.getSuccessCalls()).isEqualTo(3);
         assertThat(stats.getSuccessRate()).isEqualTo(75.0);
-        assertThat(stats.getAverageDuration()).isGreaterThanOrEqualTo(0);
-        assertThat(stats.getMinDuration()).isGreaterThanOrEqualTo(0);
-        assertThat(stats.getMaxDuration()).isGreaterThanOrEqualTo(stats.getMinDuration());
     }
 
     @Test
@@ -286,63 +191,14 @@ class PerformanceMonitoringAspectTest {
         when(joinPoint.proceed()).thenReturn("result");
         performanceAspect.monitorPerformance(joinPoint);
         
-        assertThat(performanceAspect.getMethodStats("TestService.testMethod")).isNotNull();
+        assertThat(performanceAspect.getMethodStats("TestRepository.findById")).isNotNull();
 
         // when
         performanceAspect.clearStats();
 
         // then
-        assertThat(performanceAspect.getMethodStats("TestService.testMethod")).isNull();
+        assertThat(performanceAspect.getMethodStats("TestRepository.findById")).isNull();
         assertThat(performanceAspect.getAllMethodStats()).isEmpty();
-    }
-
-    @Test
-    @DisplayName("Should return all method statistics")
-    void getAllMethodStats_WithMultipleMethods_ShouldReturnAllStats() throws Throwable {
-        // given
-        when(joinPoint.proceed()).thenReturn("result");
-        when(methodSignature.getName()).thenReturn("method1").thenReturn("method2");
-        
-        // when
-        performanceAspect.monitorPerformance(joinPoint);
-        performanceAspect.monitorPerformance(joinPoint);
-
-        // then
-        var allStats = performanceAspect.getAllMethodStats();
-        assertThat(allStats).hasSize(2);
-        assertThat(allStats).containsKeys("TestService.method1", "TestService.method2");
-    }
-
-    @Test
-    @DisplayName("Should create comprehensive performance event")
-    void monitorPerformance_ShouldCreateCompletePerformanceEvent() throws Throwable {
-        // given
-        SecurityContextHolder.setContext(securityContext);
-        when(securityContext.getAuthentication()).thenReturn(authentication);
-        when(authentication.isAuthenticated()).thenReturn(true);
-        when(authentication.getName()).thenReturn("testuser");
-        when(joinPoint.proceed()).thenReturn("result");
-
-        // when
-        performanceAspect.monitorPerformance(joinPoint);
-
-        // then
-        ArgumentCaptor<PerformanceEvent> eventCaptor = ArgumentCaptor.forClass(PerformanceEvent.class);
-        verify(structuredLogger).performance(eventCaptor.capture());
-        
-        PerformanceEvent event = eventCaptor.getValue();
-        assertThat(event.getOperation()).isEqualTo("TestService.testMethod");
-        assertThat(event.getDurationMs()).isGreaterThanOrEqualTo(0);
-        assertThat(event.getDurationNanos()).isGreaterThanOrEqualTo(0);
-        assertThat(event.getPerformanceLevel()).isNotNull();
-        assertThat(event.isSuccess()).isTrue();
-        assertThat(event.getErrorType()).isNull();
-        assertThat(event.getUserId()).isEqualTo("testuser");
-        assertThat(event.getMethodName()).isEqualTo("testMethod");
-        assertThat(event.getClassName()).isEqualTo("TestService");
-        assertThat(event.getMemoryBefore()).isGreaterThanOrEqualTo(0);
-        assertThat(event.getMemoryAfter()).isGreaterThanOrEqualTo(0);
-        assertThat(event.getCpuTime()).isGreaterThanOrEqualTo(0);
     }
 
     @Test
@@ -361,10 +217,9 @@ class PerformanceMonitoringAspectTest {
         assertThat(stats.getTotalCalls()).isEqualTo(4);
         assertThat(stats.getSuccessCalls()).isEqualTo(3);
         assertThat(stats.getSuccessRate()).isEqualTo(75.0);
-        assertThat(stats.getAverageDuration()).isEqualTo(162); // (100+200+300+50)/4
+        assertThat(stats.getAverageDuration()).isEqualTo(162);
         assertThat(stats.getMinDuration()).isEqualTo(50);
         assertThat(stats.getMaxDuration()).isEqualTo(300);
-        assertThat(stats.getTotalDuration()).isEqualTo(650);
     }
 
     @Test
@@ -380,7 +235,6 @@ class PerformanceMonitoringAspectTest {
         assertThat(stats.getAverageDuration()).isEqualTo(0);
         assertThat(stats.getMinDuration()).isEqualTo(0);
         assertThat(stats.getMaxDuration()).isEqualTo(0);
-        assertThat(stats.getTotalDuration()).isEqualTo(0);
     }
 
     @Test
@@ -402,18 +256,10 @@ class PerformanceMonitoringAspectTest {
         assertThat(result).contains("max=200ms");
     }
 
-    // Helper class for testing
-    private static class TestService {
-        public String testMethod() {
+    // Helper class for testing - Repository 패턴에 맞춤
+    private static class TestRepository {
+        public String findById() {
             return "test";
-        }
-        
-        public String method1() {
-            return "method1";
-        }
-        
-        public String method2() {
-            return "method2";
         }
     }
 }

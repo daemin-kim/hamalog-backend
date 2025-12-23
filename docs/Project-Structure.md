@@ -78,16 +78,18 @@ HTTP 요청을 처리하는 REST API 컨트롤러 계층입니다.
 
 | 패키지 | 파일 | 설명 |
 |--------|------|------|
-| `controller/auth/` | `AuthController.java` | 회원가입, 로그인, 로그아웃, 토큰 갱신, 회원 탈퇴 |
+| `controller/auth/` | `AuthController.java` | 회원가입, 로그인, 로그아웃, 토큰 갱신, 회원 탈퇴, 로그인 이력, 세션 관리 |
 | | `CsrfController.java` | CSRF 토큰 발급 및 상태 확인 |
-| | `MemberController.java` | 회원 프로필 조회/수정, 비밀번호 변경 **(신규)** |
+| | `MemberController.java` | 회원 프로필 조회/수정, 비밀번호 변경 |
 | `controller/diary/` | `MoodDiaryController.java` | 마음 일기 CRUD, 통계, 캘린더, 검색 |
-| `controller/medication/` | `MedicationScheduleController.java` | 복약 스케줄 관리, 검색 |
-| | `MedicationRecordController.java` | 복약 기록 관리 |
-| | `MedicationStatsController.java` | 복약 통계 (이행률, 요약) **(신규)** |
-| | `MedicationTimeController.java` | 복약 알림 시간 CRUD **(신규)** |
+| `controller/medication/` | `MedicationScheduleController.java` | 복약 스케줄 관리, 검색, 이미지 관리, 필터링 |
+| | `MedicationRecordController.java` | 복약 기록 관리, 배치 작업 |
+| | `MedicationStatsController.java` | 복약 통계 (이행률, 요약) |
+| | `MedicationTimeController.java` | 복약 알림 시간 CRUD |
+| | `MedicationScheduleGroupController.java` | 복약 스케줄 그룹 관리 **(신규)** |
 | `controller/oauth2/` | `OAuth2Controller.java` | 카카오 OAuth2 로그인 처리 |
 | `controller/sideEffect/` | `SideEffectController.java` | 부작용 기록 CRUD, 목록 조회 |
+| `controller/export/` | `ExportController.java` | 데이터 내보내기 (JSON/CSV) **(신규)** |
 
 ---
 
@@ -102,15 +104,17 @@ HTTP 요청을 처리하는 REST API 컨트롤러 계층입니다.
 | | `MemberDeletionService.java` | 회원 탈퇴 및 관련 데이터 삭제 |
 | | `KakaoOAuth2AuthService.java` | 카카오 OAuth2 인증 처리 |
 | | `MemberCacheService.java` | 회원 정보 캐싱 서비스 |
-| | `MemberProfileService.java` | 회원 프로필 조회/수정, 비밀번호 변경 **(신규)** |
+| | `MemberProfileService.java` | 회원 프로필 조회/수정, 비밀번호 변경 |
 | | `MemberDeletedEventHandler.java` | 회원 탈퇴 이벤트 처리 |
+| | `LoginHistoryService.java` | 로그인 이력 및 세션 관리 **(신규)** |
 | `service/diary/` | `MoodDiaryService.java` | 마음 일기 비즈니스 로직 |
-| | `MoodDiaryStatsService.java` | 마음 일기 통계 및 캘린더 **(신규)** |
-| `service/medication/` | `MedicationScheduleService.java` | 복약 스케줄 비즈니스 로직 |
-| | `MedicationRecordService.java` | 복약 기록 비즈니스 로직 |
-| | `MedicationStatsService.java` | 복약 이행률 및 통계 **(신규)** |
-| | `MedicationTimeService.java` | 복약 알림 시간 관리 **(신규)** |
-| | `FileStorageService.java` | 파일 저장 서비스 |
+| | `MoodDiaryStatsService.java` | 마음 일기 통계 및 캘린더 |
+| `service/medication/` | `MedicationScheduleService.java` | 복약 스케줄 비즈니스 로직, 이미지 관리 |
+| | `MedicationRecordService.java` | 복약 기록 비즈니스 로직, 배치 작업 |
+| | `MedicationStatsService.java` | 복약 이행률 및 통계 |
+| | `MedicationTimeService.java` | 복약 알림 시간 관리 |
+| | `MedicationScheduleGroupService.java` | 복약 스케줄 그룹 관리 **(신규)** |
+| | `FileStorageService.java` | 파일 저장/조회/삭제 서비스 |
 | | `SecureFileStorageService.java` | 보안 파일 저장 서비스 |
 | | `MedicationScheduleEventHandler.java` | 복약 스케줄 이벤트 처리 |
 | `service/sideEffect/` | `SideEffectService.java` | 부작용 비즈니스 로직 |
@@ -121,6 +125,7 @@ HTTP 요청을 처리하는 REST API 컨트롤러 계층입니다.
 | | `RefreshTokenService.java` | 리프레시 토큰 관리 |
 | `service/i18n/` | `MessageService.java` | 다국어 메시지 서비스 |
 | `service/monitoring/` | `TransactionMetricsService.java` | 트랜잭션 메트릭 서비스 |
+| `service/export/` | `ExportService.java` | 데이터 내보내기 서비스 **(신규)** |
 
 ---
 
@@ -145,6 +150,7 @@ JPA 엔티티 및 도메인 모델을 정의합니다.
 | | `SideEffectSideEffectRecord.java` | 부작용-기록 연결 테이블 |
 | | `SideEffectDegree.java` | 부작용 정도 Enum |
 | `domain/security/` | `RefreshToken.java` | 리프레시 토큰 엔티티 |
+| | `LoginHistory.java` | 로그인 이력 엔티티 **(신규)** |
 | `domain/events/` | `DomainEvent.java` | 도메인 이벤트 인터페이스 |
 | | `DomainEventPublisher.java` | 도메인 이벤트 발행자 |
 | `domain/idClass/` | `MedicationScheduleMedicationScheduleGroupId.java` | 복합 키 클래스 |
@@ -163,10 +169,12 @@ JPA 엔티티 및 도메인 모델을 정의합니다.
 | `repository/medication/` | `MedicationScheduleRepository.java` | 복약 스케줄 데이터 접근 |
 | | `MedicationRecordRepository.java` | 복약 기록 데이터 접근 |
 | | `MedicationTimeRepository.java` | 복약 시간 데이터 접근 |
+| | `MedicationScheduleGroupRepository.java` | 복약 그룹 데이터 접근 **(신규)** |
 | `repository/sideEffect/` | `SideEffectRepository.java` | 부작용 데이터 접근 |
 | | `SideEffectRecordRepository.java` | 부작용 기록 데이터 접근 |
 | | `SideEffectSideEffectRecordRepository.java` | 부작용-기록 연결 데이터 접근 |
 | `repository/security/` | `RefreshTokenRepository.java` | 리프레시 토큰 데이터 접근 |
+| | `LoginHistoryRepository.java` | 로그인 이력 데이터 접근 **(신규)** |
 
 ---
 

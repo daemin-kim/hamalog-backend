@@ -69,4 +69,13 @@ public interface MoodDiaryRepository extends JpaRepository<MoodDiary, Long> {
             @Param("keyword") String keyword,
             Pageable pageable
     );
+
+    // 기분 타입별 필터링
+    @Query("SELECT m FROM MoodDiary m WHERE m.member.memberId = :memberId " +
+           "AND m.moodType = :moodType ORDER BY m.diaryDate DESC")
+    Page<MoodDiary> findByMemberIdAndMoodType(
+            @Param("memberId") Long memberId,
+            @Param("moodType") com.Hamalog.domain.diary.MoodType moodType,
+            Pageable pageable
+    );
 }

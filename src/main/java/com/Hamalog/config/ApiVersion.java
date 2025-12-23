@@ -48,4 +48,19 @@ public final class ApiVersion {
      * 회원 프로필 API 경로
      */
     public static final String MEMBER = "/member";
+
+    /**
+     * 복약 그룹 API 경로
+     */
+    public static final String MEDICATION_GROUP = "/medication-group";
+
+    /**
+     * 데이터 내보내기 API 경로
+     */
+    public static final String EXPORT = "/export";
+
+    /**
+     * 복약 통계 API 경로
+     */
+    public static final String MEDICATION_STATS = "/medication-stats";
 }

@@ -44,4 +44,8 @@ public interface MedicationScheduleRepository extends JpaRepository<MedicationSc
             @Param("keyword") String keyword,
             Pageable pageable
     );
+
+    // 활성 상태로 필터링
+    @EntityGraph(attributePaths = {"member"})
+    Page<MedicationSchedule> findByMember_MemberIdAndIsActive(Long memberId, Boolean isActive, Pageable pageable);
 }

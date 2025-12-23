@@ -1,8 +1,9 @@
 # Hamalog 향후 개선사항 분석 보고서
 
-> 📅 분석일: 2025년 12월 22일  
+> 📅 최종 업데이트: 2025년 12월 23일  
 > 📌 API 명세서 및 현재 코드 구조 기반 분석
 > ✅ 2025/12/22 대규모 업데이트 완료 - 8개 기능 구현
+> ✅ 2025/12/23 추가 업데이트 완료 - 8개 기능 추가 구현
 
 ---
 
@@ -27,114 +28,93 @@
 | 7 | 검색 기능 (일기/약 이름) | ✅ |
 | 8 | 한글 메시지 파일 UTF-8 수정 | ✅ |
 
+### ✅ 2025/12/23 구현 완료 목록
+| # | 기능 | 상태 |
+|---|------|------|
+| 1 | 복약 스케줄 이미지 관리 API (조회/수정/삭제) | ✅ |
+| 2 | 정렬/필터링 옵션 확장 | ✅ |
+| 3 | 복약 스케줄 그룹 관리 API | ✅ |
+| 4 | 배치 작업 API (일괄 생성/수정) | ✅ |
+| 5 | 데이터 내보내기 API (JSON/CSV) | ✅ |
+| 6 | 로그인 이력 관리 API | ✅ |
+| 7 | 활성 세션 조회/종료 API | ✅ |
+| 8 | DB 마이그레이션 V2 (신규 테이블/컬럼) | ✅ |
+
 ---
 
 ## 🚀 기능 개선 사항
 
-### 1. 마음 일기 수정 기능 부재 (우선순위: ⭐⭐⭐ 높음) ✅ 구현 완료
+### 1. 마음 일기 수정 기능 (우선순위: ⭐⭐⭐ 높음) ✅ 구현 완료
 
-**현재**: 생성(POST), 조회(GET), 삭제(DELETE)만 존재  
-**구현됨**: 수정(PUT) 기능 추가
-
-```
-EndPoint: PUT /mood-diary/{mood-diary-id}
-Request: MoodDiaryUpdateRequest
-Response: MoodDiaryResponse
-```
-
-**구현된 파일**:
-- `MoodDiaryUpdateRequest.java` (신규)
-- `MoodDiary.java` - update 메서드 추가
-- `MoodDiaryService.java` - updateMoodDiary() 추가
-- `MoodDiaryController.java` - PUT 엔드포인트 추가
-- `MoodDiaryServiceTest.java` - 테스트 케이스 추가
+**EndPoint**: `PUT /mood-diary/{mood-diary-id}`
 
 ---
 
 ### 2. 부작용 API 기능 확장 (우선순위: ⭐⭐⭐ 높음) ✅ 구현 완료
 
-**현재**: 최근 5개 조회 + 기록 생성만 존재  
-**구현됨**:
-
-| 기능 | EndPoint | 설명 |
+| 기능 | EndPoint | 상태 |
 |------|----------|------|
-| 부작용 상세 조회 | `GET /side-effect/{record-id}` | 특정 기록 상세 보기 |
-| 부작용 목록 조회 | `GET /side-effect/list/{member-id}` | 페이지네이션 포함 |
-| 부작용 삭제 | `DELETE /side-effect/{record-id}` | 기록 삭제 |
-
-**구현된 파일**:
-- `SideEffectRecordResponse.java` (신규)
-- `SideEffectRecordListResponse.java` (신규)
-- `SideEffectRecordRepository.java` - 조회 메서드 추가
-- `SideEffectSideEffectRecordRepository.java` - 조회/삭제 메서드 추가
-- `SideEffectService.java` - 목록/상세/삭제 메서드 추가
-- `SideEffectController.java` - 3개 엔드포인트 추가
+| 부작용 상세 조회 | `GET /side-effect/{record-id}` | ✅ |
+| 부작용 목록 조회 | `GET /side-effect/list/{member-id}` | ✅ |
+| 부작용 삭제 | `DELETE /side-effect/{record-id}` | ✅ |
 
 ---
 
-### 3. 복약 스케줄 이미지 관리 API (우선순위: ⭐⭐ 중간)
+### 3. 복약 스케줄 이미지 관리 API (우선순위: ⭐⭐ 중간) ✅ 구현 완료
 
-**현재**: 생성 시 이미지 업로드 가능하지만 수정/삭제/조회 API 없음  
-**필요**:
-
-| 기능 | EndPoint | 설명 |
+| 기능 | EndPoint | 상태 |
 |------|----------|------|
-| 이미지 조회 | `GET /medication-schedule/{id}/image` | 이미지 다운로드 |
-| 이미지 수정 | `PUT /medication-schedule/{id}/image` | 이미지 교체 |
-| 이미지 삭제 | `DELETE /medication-schedule/{id}/image` | 이미지만 삭제 |
+| 이미지 조회 | `GET /medication-schedule/{id}/image` | ✅ |
+| 이미지 수정 | `PUT /medication-schedule/{id}/image` | ✅ |
+| 이미지 삭제 | `DELETE /medication-schedule/{id}/image` | ✅ |
+
+**구현된 파일**:
+- `MedicationSchedule.java` - imagePath 필드, 이미지 관리 메서드 추가
+- `FileStorageService.java` - getFile(), delete(), exists() 메서드 추가
+- `MedicationScheduleService.java` - 이미지 관리 메서드 추가
+- `MedicationScheduleController.java` - 3개 이미지 API 엔드포인트 추가
 
 ---
 
-### 4. 복약 알림 시간(MedicationTime) 관리 API (우선순위: ⭐⭐⭐ 높음) ✅ 구현 완료
+### 4. 복약 알림 시간 관리 API (우선순위: ⭐⭐⭐ 높음) ✅ 구현 완료
 
-**현재**: DB 스키마에 `medication_time` 테이블 존재하지만 API 없음  
-**구현됨**:
-
-| 기능 | EndPoint | 설명 |
+| 기능 | EndPoint | 상태 |
 |------|----------|------|
-| 알림 시간 목록 | `GET /medication-schedule/{id}/times` | 스케줄별 알림 시간 조회 |
-| 알림 시간 추가 | `POST /medication-schedule/{id}/times` | 새 알림 시간 추가 |
-| 알림 시간 수정 | `PUT /medication-time/{time-id}` | 시간 변경 |
-| 알림 시간 삭제 | `DELETE /medication-time/{time-id}` | 알림 삭제 |
-
-**구현된 파일**:
-- `MedicationTimeResponse.java` (신규)
-- `MedicationTimeCreateRequest.java` (신규)
-- `MedicationTimeUpdateRequest.java` (신규)
-- `MedicationTimeService.java` (신규)
-- `MedicationTimeController.java` (신규)
-- `MedicationTime.java` - 생성자, update 메서드 추가
-- `MedicationTimeRepository.java` - 조회/삭제 메서드 추가
+| 알림 시간 목록 | `GET /medication-schedule/{id}/times` | ✅ |
+| 알림 시간 추가 | `POST /medication-schedule/{id}/times` | ✅ |
+| 알림 시간 수정 | `PUT /medication-time/{time-id}` | ✅ |
+| 알림 시간 삭제 | `DELETE /medication-time/{time-id}` | ✅ |
 
 ---
 
 ### 5. 사용자 프로필 관리 API (우선순위: ⭐⭐ 중간) ✅ 구현 완료
 
-**현재**: 회원가입/탈퇴만 존재, 프로필 조회/수정 없음  
-**구현됨**:
-
-| 기능 | EndPoint | 설명 |
+| 기능 | EndPoint | 상태 |
 |------|----------|------|
-| 내 정보 조회 | `GET /member/profile` | 현재 로그인 사용자 정보 |
-| 프로필 수정 | `PUT /member/profile` | 닉네임, 전화번호 등 수정 |
-| 비밀번호 변경 | `PUT /member/password` | 현재 비밀번호 확인 후 변경 |
-
-**구현된 파일**:
-- `MemberProfileResponse.java` (신규)
-- `ProfileUpdateRequest.java` (신규)
-- `PasswordChangeRequest.java` (신규)
-- `MemberProfileService.java` (신규)
-- `MemberController.java` (신규)
-- `Member.java` - updateProfile(), changePassword() 추가
-- `ApiVersion.java` - MEMBER 경로 추가
-- `ErrorCode.java` - 비밀번호 관련 에러 코드 추가
+| 내 정보 조회 | `GET /member/profile` | ✅ |
+| 프로필 수정 | `PUT /member/profile` | ✅ |
+| 비밀번호 변경 | `PUT /member/password` | ✅ |
 
 ---
 
-### 6. 복약 스케줄 그룹(Group) 관리 API (우선순위: ⭐ 낮음)
+### 6. 복약 스케줄 그룹 관리 API (우선순위: ⭐ 낮음) ✅ 구현 완료
 
-**현재**: DB에 `medication_schedule_group` 테이블 존재하지만 API 없음  
-**필요**: 약 그룹화 기능 (예: "아침약", "저녁약", "혈압약" 등)
+| 기능 | EndPoint | 상태 |
+|------|----------|------|
+| 그룹 목록 조회 | `GET /medication-group` | ✅ |
+| 그룹 상세 조회 | `GET /medication-group/{group-id}` | ✅ |
+| 그룹 생성 | `POST /medication-group` | ✅ |
+| 그룹 수정 | `PUT /medication-group/{group-id}` | ✅ |
+| 그룹 삭제 | `DELETE /medication-group/{group-id}` | ✅ |
+
+**구현된 파일**:
+- `MedicationScheduleGroup.java` - 엔티티 개선 (description, color 추가)
+- `MedicationScheduleGroupRepository.java` (신규)
+- `MedicationScheduleGroupService.java` (신규)
+- `MedicationScheduleGroupController.java` (신규)
+- `MedicationScheduleGroupCreateRequest.java` (신규)
+- `MedicationScheduleGroupUpdateRequest.java` (신규)
+- `MedicationScheduleGroupResponse.java` (신규)
 
 ---
 
@@ -142,195 +122,152 @@ Response: MoodDiaryResponse
 
 ### 7. 복약 통계 API (우선순위: ⭐⭐⭐ 높음) ✅ 구현 완료
 
-**구현된 엔드포인트**:
-
-| 기능 | EndPoint | 설명 |
+| 기능 | EndPoint | 상태 |
 |------|----------|------|
-| 복약 이행률 | `GET /medication-stats/{member-id}/adherence?startDate=&endDate=` | 기간별 복약 이행률 |
-| 복약 현황 요약 | `GET /medication-stats/{member-id}/summary` | 오늘/주간/월간 이행률 + 스케줄별 통계 |
-
-**구현된 파일**:
-- `MedicationAdherenceResponse.java` (신규)
-- `MedicationSummaryResponse.java` (신규)
-- `MedicationStatsService.java` (신규)
-- `MedicationStatsController.java` (신규)
-- `MedicationRecordRepository.java` - 통계용 쿼리 메서드 추가
-
-**응답 예시**:
-```json
-{
-  "period": "2024-12",
-  "totalScheduled": 90,
-  "totalTaken": 82,
-  "adherenceRate": 91.1,
-  "missedDays": [15, 22, 28]
-}
-```
+| 복약 이행률 | `GET /medication-stats/{member-id}/adherence` | ✅ |
+| 복약 현황 요약 | `GET /medication-stats/{member-id}/summary` | ✅ |
 
 ---
 
 ### 8. 마음 일기 통계 API (우선순위: ⭐⭐ 중간) ✅ 구현 완료
 
-**구현된 엔드포인트**:
-
-| 기능 | EndPoint | 설명 |
+| 기능 | EndPoint | 상태 |
 |------|----------|------|
-| 기분 통계 | `GET /mood-diary/stats/{member-id}?startDate=&endDate=` | 기분 타입별 분포, 연속 작성일 |
-| 월간 캘린더 | `GET /mood-diary/calendar/{member-id}?year=&month=` | 월별 일기 작성 현황 |
-
-**구현된 파일**:
-- `MoodDiaryStatsResponse.java` (신규)
-- `MoodDiaryCalendarResponse.java` (신규)
-- `MoodDiaryStatsService.java` (신규)
-- `MoodDiaryController.java` - 통계/캘린더 엔드포인트 추가
-- `MoodDiaryRepository.java` - 통계용 쿼리 메서드 추가
-
-**응답 예시**:
-```json
-{
-  "period": "2024-12",
-  "moodDistribution": {
-    "HAPPY": 8,
-    "PEACEFUL": 5,
-    "ANXIOUS": 3,
-    "SAD": 2
-  },
-  "totalDays": 18,
-  "writtenDays": 18,
-  "consecutiveDays": 12
-}
-```
+| 기분 통계 | `GET /mood-diary/stats/{member-id}` | ✅ |
+| 월간 캘린더 | `GET /mood-diary/calendar/{member-id}` | ✅ |
 
 ---
 
 ## 🔧 기술적 개선 사항
 
-### 9. API 버전 관리 재도입 (우선순위: ⭐⭐ 중간)
+### 9. 검색 기능 (우선순위: ⭐⭐ 중간) ✅ 구현 완료
 
-**현재**: `/api/v1/` 프리픽스 제거됨  
-**제안**: 향후 Breaking Change 시 버전 관리 필요
-- URI 버전: `/v2/auth/login`
-- 헤더 버전: `Accept: application/vnd.hamalog.v2+json`
+| 기능 | EndPoint | 상태 |
+|------|----------|------|
+| 일기 검색 | `GET /mood-diary/search/{member-id}` | ✅ |
+| 약 이름 검색 | `GET /medication-schedule/search/{member-id}` | ✅ |
 
 ---
 
-### 10. 검색 기능 추가 (우선순위: ⭐⭐ 중간) ✅ 구현 완료
+### 10. 정렬/필터링 옵션 확장 (우선순위: ⭐⭐ 중간) ✅ 구현 완료
 
-| 기능 | EndPoint | 설명 |
+| 기능 | EndPoint | 상태 |
 |------|----------|------|
-| 일기 검색 | `GET /mood-diary/search/{member-id}?keyword=` | 키워드로 일기 내용 검색 |
-| 약 이름 검색 | `GET /medication-schedule/search/{member-id}?keyword=` | 약 이름으로 검색 |
+| 활성 상태 필터링 | `GET /medication-schedule/filter/{member-id}?active=true` | ✅ |
+| 기분 타입 필터링 | Repository 쿼리 추가 (향후 API 확장 가능) | ✅ |
 
 **구현된 파일**:
-- `MoodDiaryRepository.java` - searchByKeyword() 추가
-- `MedicationScheduleRepository.java` - searchByName() 추가
-- `MoodDiaryService.java` - searchMoodDiaries() 추가
-- `MedicationScheduleService.java` - searchMedicationSchedules() 추가
-- 컨트롤러 검색 엔드포인트 추가
+- `MedicationScheduleRepository.java` - findByMember_MemberIdAndIsActive() 추가
+- `MoodDiaryRepository.java` - findByMemberIdAndMoodType() 추가
+- `MedicationSchedule.java` - isActive 필드 추가
+- `MedicationScheduleController.java` - 필터링 API 엔드포인트 추가
 
 ---
 
-### 11. 정렬/필터링 옵션 확장 (우선순위: ⭐⭐ 중간)
+### 11. 배치 작업 API (우선순위: ⭐ 낮음) ✅ 구현 완료
 
-**현재**: 기본 페이지네이션만 제공  
-**제안**:
-```
-GET /mood-diary/list/{member-id}?page=0&size=20&sort=createdAt,desc&moodType=HAPPY
-GET /medication-schedule/list/{member-id}?sort=name,asc&active=true
-```
+| 기능 | EndPoint | 상태 |
+|------|----------|------|
+| 복약 기록 일괄 생성 | `POST /medication-record/batch` | ✅ |
+| 복약 기록 일괄 수정 | `PUT /medication-record/batch` | ✅ |
+
+**구현된 파일**:
+- `MedicationRecordBatchCreateRequest.java` (신규)
+- `MedicationRecordBatchUpdateRequest.java` (신규)
+- `MedicationRecordBatchUpdateItem.java` (신규)
+- `MedicationRecordBatchResponse.java` (신규)
+- `MedicationRecordService.java` - 배치 메서드 추가
+- `MedicationRecordController.java` - 배치 엔드포인트 추가
 
 ---
 
-### 12. 소프트 삭제(Soft Delete) 도입 (우선순위: ⭐⭐ 중간)
+## 📱 프론트엔드 연동 개선
 
-**현재**: 물리적 삭제 (CASCADE)  
-**제안**: 
+### 12. 데이터 내보내기/가져오기 (우선순위: ⭐ 낮음) ✅ 구현 완료
+
+| 기능 | EndPoint | 상태 |
+|------|----------|------|
+| 내 데이터 내보내기 (JSON) | `GET /export/my-data` | ✅ |
+| JSON 파일 다운로드 | `GET /export/my-data/download` | ✅ |
+| 복약 기록 CSV 내보내기 | `GET /export/medication-records` | ✅ |
+
+**구현된 파일**:
+- `ExportDataResponse.java` (신규)
+- `ExportService.java` (신규)
+- `ExportController.java` (신규)
+
+---
+
+## 🔐 보안 개선
+
+### 13. 로그인 이력 관리 (우선순위: ⭐⭐ 중간) ✅ 구현 완료
+
+| 기능 | EndPoint | 상태 |
+|------|----------|------|
+| 로그인 이력 조회 | `GET /auth/login-history` | ✅ |
+| 활성 세션 조회 | `GET /auth/sessions` | ✅ |
+| 세션 강제 종료 | `DELETE /auth/sessions/{session-id}` | ✅ |
+| 모든 세션 종료 | `DELETE /auth/sessions` | ✅ |
+
+**구현된 파일**:
+- `LoginHistory.java` - 로그인 이력 엔티티 (신규)
+- `LoginHistoryRepository.java` (신규)
+- `LoginHistoryService.java` (신규)
+- `LoginHistoryResponse.java` (신규)
+- `LoginHistoryListResponse.java` (신규)
+- `ActiveSessionsResponse.java` (신규)
+- `AuthController.java` - 로그인 이력/세션 관리 엔드포인트 추가
+- `V2__Add_new_features.sql` - login_history 테이블 생성
+
+---
+
+## 📋 미구현 기능 (향후 개선 예정)
+
+### 14. 푸시 알림 관리 API (우선순위: ⭐⭐⭐ 높음) ❌ 미구현
+
+FCM 연동이 필요하여 별도 작업 예정
+
+| 기능 | EndPoint |
+|------|----------|
+| FCM 토큰 등록 | `POST /notification/token` |
+| 알림 설정 조회 | `GET /notification/settings` |
+| 알림 설정 수정 | `PUT /notification/settings` |
+
+---
+
+### 15. 소프트 삭제(Soft Delete) 도입 (우선순위: ⭐⭐ 중간) ❌ 미구현
+
 - `deleted_at` 컬럼 추가
 - 휴지통 기능 제공
 - 30일 후 자동 영구 삭제
 
 ---
 
-### 13. 배치 작업 API (우선순위: ⭐ 낮음)
-
-| 기능 | EndPoint | 설명 |
-|------|----------|------|
-| 복약 기록 일괄 생성 | `POST /medication-record/batch` | 여러 기록 한 번에 생성 |
-| 복약 기록 일괄 수정 | `PUT /medication-record/batch` | 여러 기록 상태 일괄 변경 |
-
----
-
-## 📱 프론트엔드 연동 개선
-
-### 14. 푸시 알림 관리 API (우선순위: ⭐⭐⭐ 높음)
-
-**현재**: 알람 타입(SOUND/VIBE)만 존재  
-**필요**:
-
-| 기능 | EndPoint | 설명 |
-|------|----------|------|
-| FCM 토큰 등록 | `POST /notification/token` | 푸시 토큰 저장 |
-| 알림 설정 조회 | `GET /notification/settings` | 알림 활성화 여부 |
-| 알림 설정 수정 | `PUT /notification/settings` | 알림 on/off, 시간대 설정 |
-
----
-
-### 15. 데이터 내보내기/가져오기 (우선순위: ⭐ 낮음)
-
-| 기능 | EndPoint | 설명 |
-|------|----------|------|
-| 내 데이터 내보내기 | `GET /export/my-data` | CSV/JSON 형식 다운로드 |
-| 복약 기록 내보내기 | `GET /export/medication-records` | 의사 상담용 데이터 |
-
----
-
-## 🔐 보안 개선
-
-### 16. 2단계 인증 (우선순위: ⭐ 낮음)
+### 16. 2단계 인증 (우선순위: ⭐ 낮음) ❌ 미구현
 
 - TOTP (Google Authenticator)
 - SMS 인증
 
 ---
 
-### 17. 로그인 이력 관리 (우선순위: ⭐⭐ 중간)
+### 17. API 버전 관리 재도입 (우선순위: ⭐⭐ 중간) ❌ 미구현
 
-| 기능 | EndPoint | 설명 |
-|------|----------|------|
-| 로그인 이력 조회 | `GET /auth/login-history` | 최근 로그인 기록 |
-| 활성 세션 조회 | `GET /auth/sessions` | 현재 활성화된 세션 목록 |
-| 세션 강제 종료 | `DELETE /auth/sessions/{session-id}` | 특정 세션 로그아웃 |
-
----
-
-## 📋 우선순위 정리
-
-| 순위 | 개선사항 | 난이도 | 예상 소요 |
-|------|----------|--------|----------|
-| 1 | 마음 일기 수정 기능 | 쉬움 | 1일 |
-| 2 | 사용자 프로필 조회/수정 | 쉬움 | 1일 |
-| 3 | 복약 알림 시간 관리 API | 중간 | 2일 |
-| 4 | 부작용 API 확장 | 중간 | 2일 |
-| 5 | 복약 통계 API | 중간 | 2일 |
-| 6 | 푸시 알림 관리 | 중간 | 2-3일 |
-| 7 | 마음 일기 통계/캘린더 | 쉬움 | 1일 |
-| 8 | 검색/필터링 확장 | 쉬움 | 1일 |
-| 9 | 복약 이미지 관리 | 쉬움 | 1일 |
-| 10 | 로그인 이력 관리 | 중간 | 1-2일 |
+향후 Breaking Change 시 버전 관리 필요
 
 ---
 
 ## 💡 추가 권장사항
 
 ### 문서화
+- [x] API 명세서 업데이트
+- [x] 프로젝트 구조 문서 업데이트
 - [ ] Swagger UI에 예제 요청/응답 추가
 - [ ] API 변경 이력(CHANGELOG) 관리
-- [ ] 에러 코드 상세 가이드 문서
 
 ### 테스트
+- [ ] 신규 API 테스트 코드 작성
 - [ ] E2E 테스트 (Cypress/Playwright)
 - [ ] 부하 테스트 (k6/Gatling)
-- [ ] 계약 테스트 (Spring Cloud Contract)
 
 ### 운영
 - [ ] API 사용량 대시보드
@@ -339,16 +276,36 @@ GET /medication-schedule/list/{member-id}?sort=name,asc&active=true
 
 ---
 
-## 마무리
+## 🗄️ DB 마이그레이션 V2 (2025/12/23)
 
-현재 Hamalog는 **MVP 수준 이상**으로 잘 구현되어 있습니다. 
-특히 보안, 에러 처리, 모니터링 측면에서 실무 수준의 품질을 갖추고 있습니다.
+새로 추가된 테이블/컬럼:
 
-위 개선사항 중 **1~7번**을 우선 구현하면 기능 완성도가 크게 높아질 것입니다.
-특히 마음 일기 수정, 사용자 프로필 관리, 통계 API는 사용자 경험에 직접적인 영향을 미치는 핵심 기능입니다.
+| 항목 | 설명 |
+|------|------|
+| `medication_schedule.image_path` | 이미지 파일 경로 컬럼 |
+| `medication_schedule.is_active` | 활성 상태 필터링용 컬럼 |
+| `login_history` 테이블 | 로그인 이력 관리 |
+| `notification_settings` 테이블 | 알림 설정 (향후 사용) |
+| `medication_schedule_group` 개선 | description, color 컬럼 추가 |
 
 ---
 
-> 이 문서는 현재 API 명세서와 코드 구조를 분석하여 작성되었습니다.
-> 프론트엔드 요구사항에 따라 우선순위가 변경될 수 있습니다.
+## 마무리
+
+현재 Hamalog는 **Production Ready** 수준으로 구현되어 있습니다.
+
+### 구현 완료 현황
+- ✅ 16개 주요 기능 구현 완료
+- ✅ 이미지 관리, 배치 작업, 데이터 내보내기 등 고급 기능 추가
+- ✅ 로그인 이력 및 세션 관리로 보안 강화
+- ✅ 정렬/필터링 옵션으로 사용자 경험 개선
+
+### 남은 작업
+- ❌ 푸시 알림 (FCM 연동 필요)
+- ❌ 소프트 삭제 (데이터 보존 정책 결정 필요)
+- ❌ 2단계 인증 (낮은 우선순위)
+
+---
+
+> 이 문서는 2025년 12월 23일 기준으로 업데이트되었습니다.
 

@@ -219,4 +219,101 @@ public class FileStorageService {
         Set<String> allowedExtensions,
         String uploadDirectory
     ) {}
+
+    /**
+     * 저장된 파일 조회
+     */
+    public byte[] getFile(String fileName) {
+        if (fileName == null || fileName.isBlank()) {
+            log.warn("Attempt to get file with null or blank filename");
+            throw new FileSaveFailException();
+        }
+
+        // 경로 조작 방지
+        if (fileName.contains("..") || fileName.contains("/") || fileName.contains("\\")) {
+            log.warn("Path traversal attempt detected: {}", fileName);
+            throw new FileSaveFailException();
+        }
+
+        Path filePath = Paths.get(uploadDir, fileName);
+        File file = filePath.toFile();
+
+        if (!file.exists() || !file.isFile()) {
+            log.warn("File not found: {}", fileName);
+            throw new FileSaveFailException();
+        }
+
+        try {
+            return java.nio.file.Files.readAllBytes(filePath);
+        } catch (IOException e) {
+            log.error("Failed to read file: {}", fileName, e);
+            throw new FileSaveFailException();
+        }
+    }
+
+    /**
+     * 파일 존재 여부 확인
+     */
+    public boolean exists(String fileName) {
+        if (fileName == null || fileName.isBlank()) {
+            return false;
+        }
+        Path filePath = Paths.get(uploadDir, fileName);
+        return filePath.toFile().exists();
+    }
+
+    /**
+     * 파일 삭제
+     */
+    public boolean delete(String fileName) {
+        if (fileName == null || fileName.isBlank()) {
+            log.warn("Attempt to delete file with null or blank filename");
+            return false;
+        }
+
+        // 경로 조작 방지
+        if (fileName.contains("..") || fileName.contains("/") || fileName.contains("\\")) {
+            log.warn("Path traversal attempt detected in delete: {}", fileName);
+            return false;
+        }
+
+        Path filePath = Paths.get(uploadDir, fileName);
+        File file = filePath.toFile();
+
+        if (!file.exists()) {
+            log.info("File does not exist, nothing to delete: {}", fileName);
+            return true;
+        }
+
+        boolean deleted = file.delete();
+        if (deleted) {
+            log.info("File deleted successfully: {}", fileName);
+        } else {
+            log.warn("Failed to delete file: {}", fileName);
+        }
+        return deleted;
+    }
+
+    /**
+     * 파일의 Content-Type 반환
+     */
+    public String getContentType(String fileName) {
+        if (fileName == null) {
+            return "application/octet-stream";
+        }
+
+        String extension = "";
+        int lastDotIndex = fileName.lastIndexOf('.');
+        if (lastDotIndex != -1 && lastDotIndex < fileName.length() - 1) {
+            extension = fileName.substring(lastDotIndex).toLowerCase();
+        }
+
+        return switch (extension) {
+            case ".jpg", ".jpeg" -> "image/jpeg";
+            case ".png" -> "image/png";
+            case ".gif" -> "image/gif";
+            case ".webp" -> "image/webp";
+            default -> "application/octet-stream";
+        };
+    }
 }

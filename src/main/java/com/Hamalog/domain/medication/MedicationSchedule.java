@@ -44,6 +44,12 @@ public class MedicationSchedule {
     @Column(name = "alarm_type", nullable = false)
     private AlarmType alarmType;
 
+    @Column(name = "image_path", length = 500)
+    private String imagePath;
+
+    @Column(name = "is_active")
+    private Boolean isActive = true;
+
     @Version
     @Column(name = "version")
     private Long version;
@@ -88,5 +94,21 @@ public class MedicationSchedule {
         this.prescriptionDays = prescriptionDays;
         this.perDay = perDay;
         this.alarmType = alarmType;
+    }
+
+    public void updateImagePath(String imagePath) {
+        this.imagePath = imagePath;
+    }
+
+    public void removeImage() {
+        this.imagePath = null;
+    }
+
+    public void setActive(boolean isActive) {
+        this.isActive = isActive;
+    }
+
+    public boolean hasImage() {
+        return this.imagePath != null && !this.imagePath.isBlank();
     }
 }

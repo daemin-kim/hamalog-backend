@@ -2,8 +2,11 @@ package com.Hamalog.controller.medication;
 
 import com.Hamalog.config.ApiVersion;
 import com.Hamalog.domain.medication.MedicationRecord;
+import com.Hamalog.dto.medication.request.MedicationRecordBatchCreateRequest;
+import com.Hamalog.dto.medication.request.MedicationRecordBatchUpdateRequest;
 import com.Hamalog.dto.medication.request.MedicationRecordCreateRequest;
 import com.Hamalog.dto.medication.request.MedicationRecordUpdateRequest;
+import com.Hamalog.dto.medication.response.MedicationRecordBatchResponse;
 import com.Hamalog.dto.medication.response.MedicationRecordResponse;
 import com.Hamalog.security.annotation.RequireResourceOwnership;
 import com.Hamalog.service.medication.MedicationRecordService;
@@ -165,5 +168,53 @@ public class MedicationRecordController {
     ) {
         medicationRecordService.deleteMedicationRecord(medicationRecordId);
         return ResponseEntity.noContent().build();
+    }
+
+    // ========== Batch APIs ==========
+
+    @Operation(
+            summary = "복약 기록 일괄 생성",
+            description = "여러 복약 기록을 한 번에 생성합니다. 최대 100개까지 가능합니다."
+    )
+    @ApiResponses({
+            @ApiResponse(responseCode = "201", description = "일괄 생성 성공",
+                    content = @Content(mediaType = "application/json",
+                            schema = @Schema(implementation = MedicationRecordBatchResponse.class))),
+            @ApiResponse(responseCode = "400", description = "잘못된 요청 데이터", content = @Content)
+    })
+    @PostMapping("/batch")
+    public ResponseEntity<MedicationRecordBatchResponse> createMedicationRecordsBatch(
+            @Parameter(description = "복약 기록 일괄 생성 요청 데이터", required = true)
+            @Valid @RequestBody MedicationRecordBatchCreateRequest request,
+            @AuthenticationPrincipal UserDetails userDetails
+    ) {
+        List<MedicationRecord> createdRecords = medicationRecordService.createMedicationRecordsBatch(request.records());
+        List<MedicationRecordResponse> responses = createdRecords.stream()
+                .map(MedicationRecordResponse::from)
+                .toList();
+        return ResponseEntity.status(HttpStatus.CREATED).body(MedicationRecordBatchResponse.success(responses));
+    }
+
+    @Operation(
+            summary = "복약 기록 일괄 수정",
+            description = "여러 복약 기록의 상태를 한 번에 수정합니다. 최대 100개까지 가능합니다."
+    )
+    @ApiResponses({
+            @ApiResponse(responseCode = "200", description = "일괄 수정 성공",
+                    content = @Content(mediaType = "application/json",
+                            schema = @Schema(implementation = MedicationRecordBatchResponse.class))),
+            @ApiResponse(responseCode = "400", description = "잘못된 요청 데이터", content = @Content)
+    })
+    @PutMapping("/batch")
+    public ResponseEntity<MedicationRecordBatchResponse> updateMedicationRecordsBatch(
+            @Parameter(description = "복약 기록 일괄 수정 요청 데이터", required = true)
+            @Valid @RequestBody MedicationRecordBatchUpdateRequest request,
+            @AuthenticationPrincipal UserDetails userDetails
+    ) {
+        List<MedicationRecord> updatedRecords = medicationRecordService.updateMedicationRecordsBatch(request.records());
+        List<MedicationRecordResponse> responses = updatedRecords.stream()
+                .map(MedicationRecordResponse::from)
+                .toList();
+        return ResponseEntity.ok(MedicationRecordBatchResponse.success(responses));
     }
 }

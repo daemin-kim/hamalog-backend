@@ -218,4 +218,56 @@ public class MedicationRecordService {
             throw new InvalidInputException(ErrorCode.INVALID_DATE_RANGE);
         }
     }
+
+    // ========== Batch Methods ==========
+
+    /**
+     * 복약 기록 일괄 생성
+     */
+    @Transactional(rollbackFor = {Exception.class})
+    public List<MedicationRecord> createMedicationRecordsBatch(List<MedicationRecordCreateRequest> requests) {
+        return requests.stream()
+                .map(this::createMedicationRecordInternal)
+                .toList();
+    }
+
+    /**
+     * 복약 기록 일괄 수정
+     */
+    @Transactional(rollbackFor = {Exception.class})
+    public List<MedicationRecord> updateMedicationRecordsBatch(
+            List<com.Hamalog.dto.medication.request.MedicationRecordBatchUpdateItem> items
+    ) {
+        return items.stream()
+                .map(item -> {
+                    MedicationRecord record = medicationRecordRepository.findById(item.medicationRecordId())
+                            .orElseThrow(MedicationRecordNotFoundException::new);
+
+                    if (item.isTakeMedication() != null) {
+                        record.update(item.isTakeMedication(), item.realTakeTime());
+                    }
+
+                    return medicationRecordRepository.save(record);
+                })
+                .toList();
+    }
+
+    private MedicationRecord createMedicationRecordInternal(MedicationRecordCreateRequest request) {
+        MedicationSchedule medicationSchedule = medicationScheduleRepository.findById(request.medicationScheduleId())
+                .orElseThrow(MedicationScheduleNotFoundException::new);
+
+        MedicationTime medicationTime = medicationTimeRepository.findById(request.medicationTimeId())
+                .orElseThrow(MedicationTimeNotFoundException::new);
+
+        validateMedicationTimeBelongsToSchedule(medicationTime, medicationSchedule);
+
+        MedicationRecord medicationRecord = new MedicationRecord(
+                medicationSchedule,
+                medicationTime,
+                request.isTakeMedication(),
+                request.realTakeTime()
+        );
+
+        return medicationRecordRepository.save(medicationRecord);
+    }
 }

@@ -324,4 +324,54 @@ public class MedicationScheduleService {
 
         return medicationScheduleRepository.searchByName(memberId, keyword, pageable);
     }
+
+    // ========== Image Management Methods ==========
+
+    /**
+     * 복약 스케줄 이미지 조회
+     */
+    @Transactional(readOnly = true)
+    public String getScheduleImagePath(Long scheduleId) {
+        MedicationSchedule schedule = getMedicationSchedule(scheduleId);
+        return schedule.getImagePath();
+    }
+
+    /**
+     * 복약 스케줄 이미지 업데이트
+     */
+    @Transactional(rollbackFor = {Exception.class})
+    public MedicationSchedule updateScheduleImage(Long scheduleId, String imagePath) {
+        MedicationSchedule schedule = getMedicationSchedule(scheduleId);
+        schedule.updateImagePath(imagePath);
+        return medicationScheduleRepository.save(schedule);
+    }
+
+    /**
+     * 복약 스케줄 이미지 삭제
+     */
+    @Transactional(rollbackFor = {Exception.class})
+    public MedicationSchedule removeScheduleImage(Long scheduleId) {
+        MedicationSchedule schedule = getMedicationSchedule(scheduleId);
+        schedule.removeImage();
+        return medicationScheduleRepository.save(schedule);
+    }
+
+    /**
+     * 필터링과 정렬을 지원하는 목록 조회
+     */
+    @Transactional(readOnly = true)
+    public org.springframework.data.domain.Page<MedicationSchedule> getMedicationSchedulesWithFilter(
+            Long memberId, Boolean active, org.springframework.data.domain.Pageable pageable) {
+
+        if (!memberRepository.existsById(memberId)) {
+            throw new MemberNotFoundException();
+        }
+
+        validatePaginationParams(pageable);
+
+        if (active != null) {
+            return medicationScheduleRepository.findByMember_MemberIdAndIsActive(memberId, active, pageable);
+        }
+        return medicationScheduleRepository.findByMember_MemberId(memberId, pageable);
+    }
 }

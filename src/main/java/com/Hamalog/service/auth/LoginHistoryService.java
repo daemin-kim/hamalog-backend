@@ -178,4 +178,3 @@ public class LoginHistoryService {
         return userAgent.length() > 500 ? userAgent.substring(0, 500) : userAgent;
     }
 }
-

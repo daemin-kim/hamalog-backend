@@ -290,23 +290,6 @@ class MedicationTimeRepositoryTest {
     }
 
     private MedicationTime createTestMedicationTime(MedicationSchedule schedule, LocalTime takeTime) {
-        // Since MedicationTime only has @Getter, we need to use reflection or create a test constructor
-        // For now, I'll use a simple approach with entity manager
-        MedicationTime medicationTime = new MedicationTime();
-        
-        // Use reflection to set the fields since there are no setters
-        try {
-            java.lang.reflect.Field scheduleField = MedicationTime.class.getDeclaredField("medicationSchedule");
-            scheduleField.setAccessible(true);
-            scheduleField.set(medicationTime, schedule);
-            
-            java.lang.reflect.Field timeField = MedicationTime.class.getDeclaredField("takeTime");
-            timeField.setAccessible(true);
-            timeField.set(medicationTime, takeTime);
-        } catch (Exception e) {
-            throw new RuntimeException("Failed to create test MedicationTime", e);
-        }
-        
-        return medicationTime;
+        return new MedicationTime(schedule, takeTime);
     }
 }

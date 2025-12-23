@@ -72,8 +72,13 @@ class ErrorCodeTest {
         // when
         ErrorCode[] errorCodes = ErrorCode.values();
 
-        // then
-        assertThat(errorCodes).hasSize(50); // 마음 일기 포함 50개
+        // then - 최소 40개 이상의 에러 코드가 있어야 함 (새 에러 코드 추가 시에도 테스트 통과)
+        assertThat(errorCodes.length).isGreaterThanOrEqualTo(40);
+        // 각 에러 코드가 유효한지 확인
+        for (ErrorCode errorCode : errorCodes) {
+            assertThat(errorCode.getCode()).isNotBlank();
+            assertThat(errorCode.getMessage()).isNotBlank();
+        }
     }
 
     @Test

@@ -71,7 +71,7 @@ Internet → Cloudflare Edge (DDoS/WAF) → Cloudflare Tunnel → Nginx → Spri
 ## 데이터베이스 스키마
 
 ### ERD 개요
-Hamalog 시스템은 총 12개의 테이블로 구성되어 있으며, 회원 관리, 복약 스케줄 관리, 복약 기록, 부작용 관리, 인증 토큰 관리, 마음 일기 도메인으로 나뉩니다.
+Hamalog 시스템은 총 14개의 테이블로 구성되어 있으며, 회원 관리, 복약 스케줄 관리, 복약 기록, 부작용 관리, 인증 토큰 관리, 마음 일기, 로그인 이력 도메인으로 나뉩니다.
 
 ### 테이블 목록
 1. `member` - 회원 정보
@@ -86,6 +86,8 @@ Hamalog 시스템은 총 12개의 테이블로 구성되어 있으며, 회원 �
 10. `side_effect_degree` - 부작용 정도 (deprecated)
 11. `refresh_tokens` - Refresh Token 저장
 12. `mood_diary` - 마음 일기
+13. `login_history` - 로그인 이력 **(신규)**
+14. `notification_settings` - 알림 설정 **(신규)**
 
 ---
 
@@ -246,6 +248,29 @@ CREATE TABLE mood_diary (
     INDEX idx_diary_date (diary_date)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci COMMENT='마음 일기';
 
+-- 13. 로그인 이력 테이블 (신규)
+CREATE TABLE login_history (
+    login_history_id BIGINT AUTO_INCREMENT PRIMARY KEY COMMENT '로그인 이력 고유 ID',
+    member_id BIGINT NOT NULL COMMENT '회원 ID',
+    login_time DATETIME NOT NULL COMMENT '로그인 일시',
+    ip_address VARCHAR(45) COMMENT '로그인 IP 주소',
+    user_agent TEXT COMMENT '사용자 에이전트',
+    success BOOLEAN NOT NULL COMMENT '로그인 성공 여부',
+    FOREIGN KEY (member_id) REFERENCES member(member_id) ON DELETE CASCADE,
+    INDEX idx_member_id (member_id),
+    INDEX idx_login_time (login_time)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci COMMENT='로그인 이력';
+
+-- 14. 알림 설정 테이블 (신규)
+CREATE TABLE notification_settings (
+    member_id BIGINT NOT NULL COMMENT '회원 ID',
+    email_notifications BOOLEAN NOT NULL DEFAULT TRUE COMMENT '이메일 알림 수신 여부',
+    sms_notifications BOOLEAN NOT NULL DEFAULT FALSE COMMENT 'SMS 알림 수신 여부',
+    push_notifications BOOLEAN NOT NULL DEFAULT FALSE COMMENT '푸시 알림 수신 여부',
+    FOREIGN KEY (member_id) REFERENCES member(member_id) ON DELETE CASCADE,
+    PRIMARY KEY (member_id)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci COMMENT='알림 설정';
+
 -- =====================================================
 -- 초기 데이터 (부작용 목록)
 -- =====================================================
@@ -319,7 +344,7 @@ INSERT INTO side_effect (type, name) VALUES
     - **프로젝트 정보 업데이트**: Base URL을 localhost:8080으로 변경, AOP 기반 기능들 명시
     - **인증 API 정확성 검증**: AuthController와 OAuth2Controller의 실제 구현과 완전 일치 확인
     - **미구현 기능 제거**: Report API 섹션 제거 (실제 컨트롤러 미존재)
-    - **종합 검토 완료**: 6개 컨트롤러(Auth, CSRF, OAuth2, MedicationSchedule, MedicationRecord, SideEffect, MoodDiary) 모든 엔드포인트가 실제 구현과 정확히 일치함을 재확인
+    - **종합 검토 완료**: 6개 컨트롤러(Auth, CSRF, OAuth2, MedicationSchedule, MedicationRecord, SideEffect) 모든 엔드포인트가 실제 구현과 정확히 일치함을 재확인
 - **2025/11/17**: **API 명세 최종 동기화**
     - **복약 스케줄 목록 응답 구조 업데이트**: `content` 필드 → `schedules`, 페이지네이션 필드 정규화
     - **회원가입 요청 데이터 정확화**: nickName 예시 업데이트 및 검증 규칙 명시
@@ -431,5 +456,38 @@ INSERT INTO side_effect (type, name) VALUES
     - **검색 기능 추가**:
         - `GET /medication-schedule/search/{member-id}` - 약 이름 검색
     - **국제화 개선**: `messages_ko.properties` UTF-8 인코딩 수정
-    - **신규 DTO 24개, 서비스 4개, 컨트롤러 3개 추가**
+    - **신규 DTO 24개, 서비스 4개, 컨트롤러 3개 추가
     - **DDL 스키마 버전**: 2025-12-22로 갱신
+- **2025/12/23**: **추가 기능 확장 및 보안 강화**
+    - **복약 스케줄 이미지 관리 API 추가**:
+        - `GET /medication-schedule/{id}/image` - 이미지 조회
+        - `PUT /medication-schedule/{id}/image` - 이미지 수정
+        - `DELETE /medication-schedule/{id}/image` - 이미지 삭제
+    - **복약 스케줄 필터링 API 추가**:
+        - `GET /medication-schedule/filter/{member-id}` - 활성 상태 필터링
+    - **복약 스케줄 그룹 관리 API 신규 추가**:
+        - `GET /medication-group` - 그룹 목록 조회
+        - `GET /medication-group/{group-id}` - 그룹 상세 조회
+        - `POST /medication-group` - 그룹 생성
+        - `PUT /medication-group/{group-id}` - 그룹 수정
+        - `DELETE /medication-group/{group-id}` - 그룹 삭제
+    - **배치 작업 API 추가**:
+        - `POST /medication-record/batch` - 복약 기록 일괄 생성 (최대 100개)
+        - `PUT /medication-record/batch` - 복약 기록 일괄 수정 (최대 100개)
+    - **데이터 내보내기 API 신규 추가**:
+        - `GET /export/my-data` - 전체 데이터 JSON 내보내기
+        - `GET /export/my-data/download` - JSON 파일 다운로드
+        - `GET /export/medication-records` - 복약 기록 CSV 내보내기 (의사 상담용)
+    - **로그인 이력/세션 관리 API 추가**:
+        - `GET /auth/login-history` - 로그인 이력 조회 (페이지네이션)
+        - `GET /auth/sessions` - 활성 세션 목록 조회
+        - `DELETE /auth/sessions/{session-id}` - 특정 세션 강제 종료
+        - `DELETE /auth/sessions` - 모든 세션 종료
+    - **DB 마이그레이션 V2 추가**:
+        - `login_history` 테이블 신규 생성
+        - `medication_schedule.image_path` 컬럼 추가
+        - `medication_schedule.is_active` 컬럼 추가
+        - `medication_schedule_group` 테이블 개선 (description, color 컬럼)
+        - `notification_settings` 테이블 추가 (푸시 알림용)
+    - **신규 파일**: 엔티티 1개, Repository 2개, Service 3개, Controller 2개, DTO 12개 추가
+    - **DDL 스키마 버전**: 2025-12-23으로 갱신

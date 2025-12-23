@@ -21,4 +21,3 @@ public record ActiveSessionsResponse(
         return new ActiveSessionsResponse(total, sessions);
     }
 }
-

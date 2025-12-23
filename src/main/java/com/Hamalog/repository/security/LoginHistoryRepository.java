@@ -55,4 +55,3 @@ public interface LoginHistoryRepository extends JpaRepository<LoginHistory, Long
     @Query("DELETE FROM LoginHistory lh WHERE lh.loginTime < :before")
     int deleteOldHistory(@Param("before") LocalDateTime before);
 }
-

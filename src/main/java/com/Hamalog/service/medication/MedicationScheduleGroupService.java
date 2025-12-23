@@ -104,4 +104,3 @@ public class MedicationScheduleGroupService {
         log.info("복약 그룹 삭제 - memberId: {}, groupId: {}", memberId, groupId);
     }
 }
-

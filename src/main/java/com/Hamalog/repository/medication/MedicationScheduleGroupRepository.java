@@ -39,4 +39,3 @@ public interface MedicationScheduleGroupRepository extends JpaRepository<Medicat
            "AND LOWER(g.name) LIKE LOWER(CONCAT('%', :keyword, '%'))")
     List<MedicationScheduleGroup> searchByName(@Param("memberId") Long memberId, @Param("keyword") String keyword);
 }
-

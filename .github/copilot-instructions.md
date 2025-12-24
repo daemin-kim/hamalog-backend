@@ -174,4 +174,18 @@ public record XxxRequest(
 Hamalog는 Spring Boot 3.4.5 기반의 헬스케어 백엔드 시스템입니다.
 ## 프로젝트 개요
 
+## 📚 필독 문서
+코드 생성 전 반드시 참고해야 할 문서입니다:
+- `docs/patterns/ANNOTATION-GUIDE.md` - 커스텀 어노테이션 사용법
+- `docs/patterns/ERROR-HANDLING.md` - 에러 처리 패턴
+- `docs/patterns/SECURITY-PATTERNS.md` - 보안 패턴
+- `docs/patterns/CACHING-PATTERNS.md` - 캐싱 패턴
+- `docs/CODING-CONVENTIONS.md` - 코딩 컨벤션
+
+## 🛠️ 도구
+- CRUD 스캐폴딩: `./scripts/generate-crud.sh --domain <Name> --fields "<fields>"`
+- 코드 포맷팅: `./gradlew spotlessApply`
+- 테스트 실행: `./gradlew test`
+- CHANGELOG: `git-cliff -o CHANGELOG.md`
+
 

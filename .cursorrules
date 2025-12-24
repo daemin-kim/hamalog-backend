@@ -187,8 +187,34 @@ class MoodDiaryServiceTest {
 4. **테스트 커버리지 유지** (현재 1,400+ 테스트)
 5. **Spotless 포맷팅 준수** (`./gradlew spotlessApply`)
 
-## API 문서
+## 📚 참고 문서
+| 문서 | 경로 | 용도 |
+|------|------|------|
+| API 명세서 | `docs/API-specification.md` | REST API 상세 |
+| 프로젝트 구조 | `docs/Project-Structure.md` | 디렉토리 구조 |
+| 코딩 컨벤션 | `docs/CODING-CONVENTIONS.md` | 코드 스타일 가이드 |
+| 바이브 코딩 가이드 | `docs/VIBE-CODING-GUIDE.md` | AI 협업 가이드 |
+
+### 선언적 패턴 문서 (⭐ AI 필독)
+| 문서 | 경로 | 내용 |
+|------|------|------|
+| 어노테이션 가이드 | `docs/patterns/ANNOTATION-GUIDE.md` | 커스텀 어노테이션 사용법 |
+| 에러 처리 | `docs/patterns/ERROR-HANDLING.md` | ErrorCode, BusinessException |
+| 보안 패턴 | `docs/patterns/SECURITY-PATTERNS.md` | JWT, CSRF, 소유권 검증 |
+| 캐싱 패턴 | `docs/patterns/CACHING-PATTERNS.md` | Redis 캐시 전략 |
+
+### ADR (Architecture Decision Records)
+| ADR | 제목 |
+|-----|------|
+| 0002 | JWT + CSRF 이중 보호 |
+| 0003 | AOP 기반 횡단 관심사 |
+| 0004 | Domain Event 패턴 |
+| 0005 | Redis 캐시 전략 |
+| 0006 | 민감 데이터 암호화 |
+
+## 🛠️ 도구
 - Swagger UI: `http://localhost:8080/swagger-ui.html`
-- API 명세서: `docs/API-specification.md`
-- 프로젝트 구조: `docs/Project-Structure.md`
+- CRUD 스캐폴딩: `./scripts/generate-crud.sh --domain <Name> --fields "<fields>"`
+- 코드 포맷팅: `./gradlew spotlessApply`
+- CHANGELOG 생성: `git-cliff -o CHANGELOG.md`
 

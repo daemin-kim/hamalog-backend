@@ -58,7 +58,7 @@ public class SecurityConfig {
             OAuth2AuthenticationSuccessHandler oAuth2AuthenticationSuccessHandler,
             @Autowired(required = false) RateLimitingFilter rateLimitingFilter,
             RequestSizeMonitoringFilter requestSizeMonitoringFilter,
-            CsrfValidationFilter csrfValidationFilter,
+            @Autowired(required = false) CsrfValidationFilter csrfValidationFilter,
             BotProtectionFilter botProtectionFilter,
             TrustedProxyService trustedProxyService,
             org.springframework.core.env.Environment environment
@@ -155,8 +155,11 @@ public class SecurityConfig {
             http.addFilterBefore(rateLimitingFilter, UsernamePasswordAuthenticationFilter.class);
         }
         
-        http.addFilterBefore(csrfValidationFilter, UsernamePasswordAuthenticationFilter.class)
-            .addFilterBefore(
+        if (csrfValidationFilter != null) {
+            http.addFilterBefore(csrfValidationFilter, UsernamePasswordAuthenticationFilter.class);
+        }
+
+        http.addFilterBefore(
                 new JwtAuthenticationFilter(jwtTokenProvider, customUserDetailsService, trustedProxyService),
                 UsernamePasswordAuthenticationFilter.class
             );

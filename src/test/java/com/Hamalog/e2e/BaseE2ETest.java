@@ -40,9 +40,10 @@ import org.springframework.transaction.annotation.Transactional;
     "spring.flyway.enabled=false",
     "logging.level.org.hibernate.SQL=warn",
     "hamalog.encryption.key=+ZFRGoRl5CElrJfikdx1TmzQ3U8OJ+J6im5OMjuvsqE=",
-    "jwt.secret=test-secret-key-for-jwt-token-generation-must-be-at-least-256-bits-long-for-hs256",
+    "jwt.secret=dGVzdC1zZWNyZXQta2V5LWZvci1qd3QtdG9rZW4tZ2VuZXJhdGlvbi1tdXN0LWJlLWF0LWxlYXN0LTI1Ni1iaXRz",
     "jwt.access-token-validity=3600000",
-    "jwt.refresh-token-validity=86400000"
+    "jwt.refresh-token-validity=86400000",
+    "app.security.csrf.enabled=false"
 })
 @Transactional
 public abstract class BaseE2ETest {
@@ -59,8 +60,7 @@ public abstract class BaseE2ETest {
     @Autowired
     protected PasswordEncoder passwordEncoder;
 
-    // 테스트용 회원 정보
-    protected static final String TEST_LOGIN_ID = "testuser@hamalog.com";
+    // 테스트용 회원 정보 (기본값)
     protected static final String TEST_PASSWORD = "Test1234!";
     protected static final String TEST_NAME = "테스트유저";
     protected static final String TEST_NICKNAME = "테스트닉";
@@ -68,26 +68,32 @@ public abstract class BaseE2ETest {
     protected static final LocalDate TEST_BIRTH = LocalDate.of(1990, 1, 1);
 
     protected Member testMember;
+    protected String testLoginId;  // 각 테스트마다 고유
     protected String accessToken;
     protected String csrfToken;
 
     @BeforeEach
     void setUpBase() {
+        // 각 테스트마다 고유한 loginId 생성
+        testLoginId = "test" + java.util.UUID.randomUUID().toString().substring(0, 8) + "@hamalog.com";
         // 기본 테스트 회원 생성
-        testMember = createTestMember(TEST_LOGIN_ID, TEST_PASSWORD, TEST_NAME);
+        testMember = createTestMember(testLoginId, TEST_PASSWORD, TEST_NAME);
     }
 
     /**
-     * 테스트 회원 생성
+     * 테스트 회원 생성 (고유한 전화번호 자동 생성)
      */
     protected Member createTestMember(String loginId, String password, String name) {
+        // 전화번호도 고유하게 생성
+        String uniquePhone = "010" + String.format("%08d", Math.abs(loginId.hashCode()) % 100000000);
         Member member = Member.builder()
             .loginId(loginId)
             .password(passwordEncoder.encode(password))
             .name(name)
-            .nickName(TEST_NICKNAME)
-            .phoneNumber(TEST_PHONE)
+            .nickName(TEST_NICKNAME + loginId.substring(0, 4))
+            .phoneNumber(uniquePhone)
             .birth(TEST_BIRTH)
+            .createdAt(java.time.LocalDateTime.now())
             .build();
         return memberRepository.save(member);
     }
@@ -105,9 +111,8 @@ public abstract class BaseE2ETest {
             .andReturn();
 
         String csrfHeader = result.getResponse().getHeader("X-CSRF-TOKEN");
-        if (csrfHeader != null) {
-            this.csrfToken = csrfHeader;
-        }
+        // CSRF 토큰이 없으면 테스트용 더미 값 사용
+        this.csrfToken = (csrfHeader != null) ? csrfHeader : "test-csrf-token";
 
         LoginResponse response = objectMapper.readValue(
             result.getResponse().getContentAsString(),
@@ -122,7 +127,7 @@ public abstract class BaseE2ETest {
      * 기본 테스트 회원으로 로그인
      */
     protected void loginAsTestMember() throws Exception {
-        login(TEST_LOGIN_ID, TEST_PASSWORD);
+        login(testLoginId, TEST_PASSWORD);
     }
 
     /**

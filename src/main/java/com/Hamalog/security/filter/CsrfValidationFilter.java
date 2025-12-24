@@ -11,6 +11,7 @@ import java.util.Arrays;
 import java.util.List;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty;
 import org.springframework.stereotype.Component;
 import org.springframework.util.StringUtils;
 import org.springframework.web.filter.OncePerRequestFilter;
@@ -20,6 +21,7 @@ import org.springframework.web.filter.OncePerRequestFilter;
  * SPA 환경에서 상태 변경 작업에 대한 CSRF 보호 제공
  */
 @Component
+@ConditionalOnProperty(name = "app.security.csrf.enabled", havingValue = "true", matchIfMissing = true)
 public class CsrfValidationFilter extends OncePerRequestFilter {
 
     private static final Logger log = LoggerFactory.getLogger(CsrfValidationFilter.class);

@@ -125,7 +125,7 @@ public class AuthController {
 
         memberDeletionService.deleteMember(loginId, token);
 
-        return ResponseEntity.ok(messageService.getMessage("auth.account.deletion.success"));
+        return ResponseEntity.ok(messageService.getMessage("auth.account.deletion.scheduled"));
     }
 
     @GetMapping("/login-history")

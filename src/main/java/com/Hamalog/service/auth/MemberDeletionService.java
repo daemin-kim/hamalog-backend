@@ -10,13 +10,12 @@ import com.Hamalog.repository.medication.MedicationRecordRepository;
 import com.Hamalog.repository.medication.MedicationScheduleRepository;
 import com.Hamalog.repository.member.MemberRepository;
 import com.Hamalog.repository.sideEffect.SideEffectRecordRepository;
+import java.time.LocalDateTime;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.context.ApplicationEventPublisher;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
-
-import java.time.LocalDateTime;
 
 /**
  * 회원 탈퇴 관련 서비스

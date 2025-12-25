@@ -1,6 +1,7 @@
 package com.Hamalog.domain.sideEffect;
 
 import com.Hamalog.domain.member.Member;
+import com.Hamalog.security.encryption.EncryptedStringConverter;
 import jakarta.persistence.*;
 import java.time.LocalDateTime;
 import lombok.AccessLevel;
@@ -11,7 +12,7 @@ import lombok.NoArgsConstructor;
 
 @Entity
 @Getter
-@Builder
+@Builder(toBuilder = true)
 @NoArgsConstructor(access = AccessLevel.PROTECTED)
 @AllArgsConstructor
 public class SideEffectRecord {
@@ -28,4 +29,7 @@ public class SideEffectRecord {
     @Column(nullable = false)
     private LocalDateTime createdAt;
 
+    @Column(name = "description", columnDefinition = "TEXT")
+    @Convert(converter = EncryptedStringConverter.class)
+    private String description;
 }

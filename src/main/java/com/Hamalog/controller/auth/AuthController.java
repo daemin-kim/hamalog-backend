@@ -104,7 +104,7 @@ public class AuthController {
     @ApiResponses(value = {
             @ApiResponse(responseCode = "200", description = "회원 탈퇴 성공",
                     content = @Content(mediaType = "application/json",
-                            examples = @ExampleObject(value = "회원 탈퇴가 완료되었습니다"))),
+                            examples = @ExampleObject(value = "회원 탈퇴가 예약되었습니다. 30일 후 최종 삭제됩니다."))),
             @ApiResponse(responseCode = "401", description = "인증되지 않은 사용자"),
             @ApiResponse(responseCode = "404", description = "사용자를 찾을 수 없음")
     })

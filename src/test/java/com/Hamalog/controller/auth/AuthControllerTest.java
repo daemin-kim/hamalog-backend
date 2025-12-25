@@ -99,7 +99,8 @@ class AuthControllerTest {
         lenient().when(messageService.getMessage("auth.logout.success.simple")).thenReturn("로그아웃 성공");
         lenient().when(messageService.getMessage("auth.authentication.required")).thenReturn("인증이 필요합니다");
         lenient().when(messageService.getMessage("auth.account.deletion.success")).thenReturn("회원 탈퇴가 완료되었습니다");
-        
+        lenient().when(messageService.getMessage("auth.account.deletion.scheduled")).thenReturn("회원 탈퇴가 예약되었습니다. 30일 후 최종 삭제됩니다.");
+
         signupRequest = new SignupRequest(
                 "test@example.com",
                 "password123",
@@ -230,7 +231,7 @@ class AuthControllerTest {
         mockMvc.perform(delete("/auth/account")
                         .header("Authorization", "Bearer jwt.token.here"))
                 .andExpect(status().isOk())
-                .andExpect(content().string("회원 탈퇴가 완료되었습니다"));
+                .andExpect(content().string("회원 탈퇴가 예약되었습니다. 30일 후 최종 삭제됩니다."));
 
         verify(memberDeletionService).deleteMember("test@example.com", "jwt.token.here");
     }
@@ -274,3 +275,4 @@ class AuthControllerTest {
         verify(memberDeletionService, never()).deleteMember(anyString(), anyString());
     }
 }
+

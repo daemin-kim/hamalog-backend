@@ -233,14 +233,14 @@ class ResourceOwnershipAspectTest {
             RequireResourceOwnership.ResourceType.MEMBER, 
             "id"
         );
-        when(sideEffectService.isOwner(123L, "testUser")).thenReturn(true);
+        when(resourceOwnershipValidator.isOwnerByMemberId(123L, "testUser")).thenReturn(true);
         when(joinPoint.proceed()).thenReturn("success");
 
         // when
         resourceOwnershipAspect.checkResourceOwnership(joinPoint, annotation);
 
         // then
-        verify(sideEffectService).isOwner(123L, "testUser");
+        verify(resourceOwnershipValidator).isOwnerByMemberId(123L, "testUser");
     }
 
     @Test
@@ -487,3 +487,4 @@ class ResourceOwnershipAspectTest {
         public String name;
     }
 }
+

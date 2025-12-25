@@ -1,6 +1,7 @@
 package com.Hamalog.domain.diary;
 
 import com.Hamalog.domain.member.Member;
+import com.Hamalog.security.encryption.EncryptedStringConverter;
 import jakarta.persistence.*;
 import jakarta.validation.constraints.Size;
 import java.time.LocalDate;
@@ -9,7 +10,7 @@ import lombok.*;
 
 @Entity
 @Getter
-@Builder
+@Builder(toBuilder = true)
 @NoArgsConstructor(access = AccessLevel.PROTECTED)
 @AllArgsConstructor
 @EqualsAndHashCode(of = "moodDiaryId")
@@ -43,22 +44,27 @@ public class MoodDiary {
 
     @Column(name = "template_answer1", length = 500)
     @Size(max = 500, message = "{moodDiary.templateAnswer1.size}")
+    @Convert(converter = EncryptedStringConverter.class)
     private String templateAnswer1;
 
     @Column(name = "template_answer2", length = 500)
     @Size(max = 500, message = "{moodDiary.templateAnswer2.size}")
+    @Convert(converter = EncryptedStringConverter.class)
     private String templateAnswer2;
 
     @Column(name = "template_answer3", length = 500)
     @Size(max = 500, message = "{moodDiary.templateAnswer3.size}")
+    @Convert(converter = EncryptedStringConverter.class)
     private String templateAnswer3;
 
     @Column(name = "template_answer4", length = 500)
     @Size(max = 500, message = "{moodDiary.templateAnswer4.size}")
+    @Convert(converter = EncryptedStringConverter.class)
     private String templateAnswer4;
 
     @Column(name = "free_content", length = 1500)
     @Size(max = 1500, message = "{moodDiary.freeContent.size}")
+    @Convert(converter = EncryptedStringConverter.class)
     private String freeContent;
 
     @Column(name = "created_at", nullable = false, updatable = false)

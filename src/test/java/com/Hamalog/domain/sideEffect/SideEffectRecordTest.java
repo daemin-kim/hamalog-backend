@@ -49,13 +49,15 @@ class SideEffectRecordTest {
         Long id = 1L;
         Member mockMember = mock(Member.class);
         LocalDateTime now = LocalDateTime.now();
+        String desc = "test";
 
         // when
-        SideEffectRecord sideEffectRecord = new SideEffectRecord(id, mockMember, now);
+        SideEffectRecord sideEffectRecord = new SideEffectRecord(id, mockMember, now, desc);
 
         // then
         assertThat(sideEffectRecord.getSideEffectRecordId()).isEqualTo(id);
         assertThat(sideEffectRecord.getMember()).isEqualTo(mockMember);
         assertThat(sideEffectRecord.getCreatedAt()).isEqualTo(now);
+        assertThat(sideEffectRecord.getDescription()).isEqualTo(desc);
     }
 }

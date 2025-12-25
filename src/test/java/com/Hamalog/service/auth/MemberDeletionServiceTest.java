@@ -93,37 +93,19 @@ class MemberDeletionServiceTest {
             String loginId = "test@example.com";
             String token = "valid-jwt-token";
 
-            MedicationSchedule schedule1 = mock(MedicationSchedule.class);
-            MedicationSchedule schedule2 = mock(MedicationSchedule.class);
-            given(schedule1.getMedicationScheduleId()).willReturn(1L);
-            given(schedule2.getMedicationScheduleId()).willReturn(2L);
-            List<MedicationSchedule> schedules = Arrays.asList(schedule1, schedule2);
-
             given(authenticationService.isValidTokenFormat(token)).willReturn(true);
             given(memberRepository.findByLoginId(loginId)).willReturn(Optional.of(testMember));
-            given(medicationScheduleRepository.findAllByMember_MemberId(testMember.getMemberId()))
-                .willReturn(schedules);
 
             // when
             memberDeletionService.deleteMember(loginId, token);
 
             // then
             verify(authenticationService).blacklistToken(token);
-            verify(sideEffectRecordRepository).deleteByMemberId(testMember.getMemberId());
-            verify(moodDiaryRepository).deleteByMember_MemberId(testMember.getMemberId());
-            verify(medicationRecordRepository).deleteByScheduleIds(Arrays.asList(1L, 2L));
-            verify(medicationScheduleRepository).deleteByMemberId(testMember.getMemberId());
-            verify(memberRepository).delete(testMember);
             verify(memberCacheService).evictByLoginId(loginId, testMember.getMemberId());
             verify(memberCacheService).evictByMemberId(testMember.getMemberId());
-
-            ArgumentCaptor<MemberDeletedEvent> eventCaptor = ArgumentCaptor.forClass(MemberDeletedEvent.class);
-            verify(eventPublisher).publishEvent(eventCaptor.capture());
-
-            MemberDeletedEvent capturedEvent = eventCaptor.getValue();
-            assertThat(capturedEvent.getLoginId()).isEqualTo(loginId);
-            assertThat(capturedEvent.getToken()).isEqualTo(token);
-            assertThat(capturedEvent.getMemberId()).isEqualTo(testMember.getMemberId());
+            verify(memberRepository, never()).delete(testMember);
+            verify(eventPublisher).publishEvent(any(MemberDeletedEvent.class));
+            assertThat(testMember.isDeletionScheduled()).isTrue();
         }
 
         @Test
@@ -154,16 +136,15 @@ class MemberDeletionServiceTest {
 
             given(authenticationService.isValidTokenFormat(token)).willReturn(false);
             given(memberRepository.findByLoginId(loginId)).willReturn(Optional.of(testMember));
-            given(medicationScheduleRepository.findAllByMember_MemberId(anyLong()))
-                .willReturn(Collections.emptyList());
 
             // when
             memberDeletionService.deleteMember(loginId, token);
 
             // then
             verify(authenticationService, never()).blacklistToken(anyString());
-            verify(memberRepository).delete(testMember);
+            verify(memberRepository, never()).delete(testMember);
             verify(eventPublisher).publishEvent(any(MemberDeletedEvent.class));
+            assertThat(testMember.isDeletionScheduled()).isTrue();
         }
 
         @Test
@@ -175,16 +156,13 @@ class MemberDeletionServiceTest {
 
             given(authenticationService.isValidTokenFormat(token)).willReturn(true);
             given(memberRepository.findByLoginId(loginId)).willReturn(Optional.of(testMember));
-            given(medicationScheduleRepository.findAllByMember_MemberId(testMember.getMemberId()))
-                .willReturn(Collections.emptyList());
 
             // when
             memberDeletionService.deleteMember(loginId, token);
 
             // then
-            verify(medicationRecordRepository, never()).deleteByScheduleIds(anyList());
-            verify(medicationScheduleRepository).deleteByMemberId(testMember.getMemberId());
-            verify(memberRepository).delete(testMember);
+            verify(memberRepository, never()).delete(testMember);
+            assertThat(testMember.isDeletionScheduled()).isTrue();
         }
 
         @Test
@@ -196,28 +174,14 @@ class MemberDeletionServiceTest {
 
             given(authenticationService.isValidTokenFormat(token)).willReturn(true);
             given(memberRepository.findByLoginId(loginId)).willReturn(Optional.of(testMember));
-            given(medicationScheduleRepository.findAllByMember_MemberId(testMember.getMemberId()))
-                .willReturn(Collections.emptyList());
 
             // when
             memberDeletionService.deleteMember(loginId, token);
 
-            // then - 삭제 순서 검증
-            var inOrder = inOrder(
-                authenticationService,
-                sideEffectRecordRepository,
-                moodDiaryRepository,
-                medicationScheduleRepository,
-                memberRepository,
-                eventPublisher
-            );
-
-            inOrder.verify(authenticationService).blacklistToken(token);
-            inOrder.verify(sideEffectRecordRepository).deleteByMemberId(testMember.getMemberId());
-            inOrder.verify(moodDiaryRepository).deleteByMember_MemberId(testMember.getMemberId());
-            inOrder.verify(medicationScheduleRepository).deleteByMemberId(testMember.getMemberId());
-            inOrder.verify(memberRepository).delete(testMember);
-            inOrder.verify(eventPublisher).publishEvent(any(MemberDeletedEvent.class));
+            // then - 삭제 순서 검증 대신 예약 상태 확인
+            verify(authenticationService).blacklistToken(token);
+            verify(memberRepository, never()).delete(testMember);
+            assertThat(testMember.isDeletionScheduled()).isTrue();
         }
     }
 
@@ -234,8 +198,6 @@ class MemberDeletionServiceTest {
 
             given(authenticationService.isValidTokenFormat(token)).willReturn(false);
             given(memberRepository.findByLoginId(loginId)).willReturn(Optional.of(testMember));
-            given(medicationScheduleRepository.findAllByMember_MemberId(anyLong()))
-                .willReturn(Collections.emptyList());
 
             // when
             memberDeletionService.deleteMember(loginId, token);
@@ -253,8 +215,6 @@ class MemberDeletionServiceTest {
 
             given(authenticationService.isValidTokenFormat(token)).willReturn(false);
             given(memberRepository.findByLoginId(loginId)).willReturn(Optional.of(testMember));
-            given(medicationScheduleRepository.findAllByMember_MemberId(anyLong()))
-                .willReturn(Collections.emptyList());
 
             // when
             memberDeletionService.deleteMember(loginId, token);
@@ -277,8 +237,6 @@ class MemberDeletionServiceTest {
 
             given(authenticationService.isValidTokenFormat(token)).willReturn(true);
             given(memberRepository.findByLoginId(loginId)).willReturn(Optional.of(testMember));
-            given(medicationScheduleRepository.findAllByMember_MemberId(anyLong()))
-                .willReturn(Collections.emptyList());
 
             // when
             memberDeletionService.deleteMember(loginId, token);
@@ -302,8 +260,6 @@ class MemberDeletionServiceTest {
 
             given(authenticationService.isValidTokenFormat(token)).willReturn(false);
             given(memberRepository.findByLoginId(loginId)).willReturn(Optional.of(testMember));
-            given(medicationScheduleRepository.findAllByMember_MemberId(anyLong()))
-                .willReturn(Collections.emptyList());
 
             // when
             memberDeletionService.deleteMember(loginId, token);

@@ -275,4 +275,3 @@ class AuthControllerTest {
         verify(memberDeletionService, never()).deleteMember(anyString(), anyString());
     }
 }
-

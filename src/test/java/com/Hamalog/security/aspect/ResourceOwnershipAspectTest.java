@@ -487,4 +487,3 @@ class ResourceOwnershipAspectTest {
         public String name;
     }
 }
-

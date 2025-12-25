@@ -35,6 +35,12 @@ public enum ErrorCode {
     TEMPLATE_ANSWER_REQUIRED("TEMPLATE_ANSWER_REQUIRED", "템플릿 형식에서는 모든 질문에 답변이 필요합니다."),
     FREE_CONTENT_REQUIRED("FREE_CONTENT_REQUIRED", "자유 형식에서는 내용이 필요합니다."),
 
+    // Business Logic Errors - Notification
+    NOTIFICATION_SETTINGS_NOT_FOUND("NOTIFICATION_SETTINGS_NOT_FOUND", "알림 설정을 찾을 수 없습니다."),
+    FCM_TOKEN_NOT_FOUND("FCM_TOKEN_NOT_FOUND", "FCM 토큰을 찾을 수 없습니다."),
+    FCM_SEND_FAILED("FCM_SEND_FAILED", "푸시 알림 전송에 실패했습니다."),
+    INVALID_DEVICE_TYPE("INVALID_DEVICE_TYPE", "유효하지 않은 디바이스 타입입니다."),
+
     // Authorization and Security Errors
     UNAUTHORIZED("UNAUTHORIZED", "인증이 필요합니다."),
     FORBIDDEN("FORBIDDEN", "접근 권한이 없습니다."),
@@ -87,5 +93,12 @@ public enum ErrorCode {
     ErrorCode(String code, String message) {
         this.code = code;
         this.message = message;
+    }
+
+    /**
+     * CustomException으로 변환
+     */
+    public CustomException toException() {
+        return new CustomException(this);
     }
 }

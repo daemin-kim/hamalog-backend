@@ -75,7 +75,7 @@ Internet → Cloudflare Edge (DDoS/WAF) → Cloudflare Tunnel → Nginx → Spri
 ## 데이터베이스 스키마
 
 ### ERD 개요
-Hamalog 시스템은 총 14개의 테이블로 구성되어 있으며, 회원 관리, 복약 스케줄 관리, 복약 기록, 부작용 관리, 인증 토큰 관리, 마음 일기, 로그인 이력 도메인으로 나뉩니다.
+Hamalog 시스템은 총 16개의 테이블로 구성되어 있으며, 회원 관리, 복약 스케줄 관리, 복약 기록, 부작용 관리, 인증 토큰 관리, 마음 일기, 로그인 이력, 알림 관리 도메인으로 나뉩니다.
 
 ### 테이블 목록
 1. `member` - 회원 정보
@@ -90,8 +90,9 @@ Hamalog 시스템은 총 14개의 테이블로 구성되어 있으며, 회원 �
 10. `side_effect_degree` - 부작용 정도 (deprecated)
 11. `refresh_tokens` - Refresh Token 저장
 12. `mood_diary` - 마음 일기
-13. `login_history` - 로그인 이력 **(신규)**
-14. `notification_settings` - 알림 설정 **(신규)**
+13. `login_history` - 로그인 이력
+14. `notification_settings` - 알림 설정 **(확장)**
+15. `fcm_device_token` - FCM 디바이스 토큰 **(신규)**
 
 ---
 
@@ -100,7 +101,7 @@ Hamalog 시스템은 총 14개의 테이블로 구성되어 있으며, 회원 �
 ```sql
 -- =====================================================
 -- Hamalog Database Schema
--- Version: 2025-12-22
+-- Version: 2025-12-25
 -- Description: 복약 관리 시스템 데이터베이스 스키마
 -- =====================================================
 
@@ -265,15 +266,40 @@ CREATE TABLE login_history (
     INDEX idx_login_time (login_time)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci COMMENT='로그인 이력';
 
--- 14. 알림 설정 테이블 (신규)
+-- 14. 알림 설정 테이블 (확장)
 CREATE TABLE notification_settings (
-    member_id BIGINT NOT NULL COMMENT '회원 ID',
-    email_notifications BOOLEAN NOT NULL DEFAULT TRUE COMMENT '이메일 알림 수신 여부',
-    sms_notifications BOOLEAN NOT NULL DEFAULT FALSE COMMENT 'SMS 알림 수신 여부',
-    push_notifications BOOLEAN NOT NULL DEFAULT FALSE COMMENT '푸시 알림 수신 여부',
-    FOREIGN KEY (member_id) REFERENCES member(member_id) ON DELETE CASCADE,
-    PRIMARY KEY (member_id)
+    notification_settings_id BIGINT AUTO_INCREMENT PRIMARY KEY COMMENT '알림 설정 고유 ID',
+    member_id BIGINT NOT NULL UNIQUE COMMENT '회원 ID',
+    push_enabled BOOLEAN NOT NULL DEFAULT TRUE COMMENT '전체 푸시 알림 활성화',
+    medication_reminder_enabled BOOLEAN NOT NULL DEFAULT TRUE COMMENT '복약 알림 활성화',
+    medication_reminder_minutes_before INT DEFAULT 10 COMMENT '사전 알림 시간(분)',
+    diary_reminder_enabled BOOLEAN NOT NULL DEFAULT FALSE COMMENT '일기 작성 리마인더 활성화',
+    diary_reminder_time TIME DEFAULT '21:00:00' COMMENT '일기 리마인더 시간',
+    quiet_hours_enabled BOOLEAN NOT NULL DEFAULT FALSE COMMENT '방해 금지 모드 활성화',
+    quiet_hours_start TIME DEFAULT '23:00:00' COMMENT '방해 금지 시작 시간',
+    quiet_hours_end TIME DEFAULT '07:00:00' COMMENT '방해 금지 종료 시간',
+    created_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP COMMENT '생성일시',
+    updated_at DATETIME COMMENT '수정일시',
+    version BIGINT DEFAULT 0 COMMENT '낙관적 락 버전',
+    FOREIGN KEY (member_id) REFERENCES member(member_id) ON DELETE CASCADE
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci COMMENT='알림 설정';
+
+-- 15. FCM 디바이스 토큰 테이블 (신규)
+CREATE TABLE fcm_device_token (
+    fcm_device_token_id BIGINT AUTO_INCREMENT PRIMARY KEY COMMENT 'FCM 토큰 고유 ID',
+    member_id BIGINT NOT NULL COMMENT '회원 ID',
+    token VARCHAR(500) NOT NULL COMMENT 'FCM 토큰 값',
+    device_type VARCHAR(20) NOT NULL COMMENT '디바이스 타입 (ANDROID, IOS, WEB)',
+    device_name VARCHAR(100) COMMENT '디바이스 이름',
+    is_active BOOLEAN NOT NULL DEFAULT TRUE COMMENT '토큰 활성화 상태',
+    last_used_at DATETIME COMMENT '마지막 사용 시간',
+    created_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP COMMENT '생성일시',
+    updated_at DATETIME COMMENT '수정일시',
+    FOREIGN KEY (member_id) REFERENCES member(member_id) ON DELETE CASCADE,
+    INDEX idx_fcm_device_token_member (member_id),
+    INDEX idx_fcm_device_token_token (token),
+    INDEX idx_fcm_device_token_active (member_id, is_active)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci COMMENT='FCM 디바이스 토큰';
 
 -- =====================================================
 -- 초기 데이터 (부작용 목록)
@@ -495,3 +521,17 @@ INSERT INTO side_effect (type, name) VALUES
         - `notification_settings` 테이블 추가 (푸시 알림용)
     - **신규 파일**: 엔티티 1개, Repository 2개, Service 3개, Controller 2개, DTO 12개 추가
     - **DDL 스키마 버전**: 2025-12-23으로 갱신
+- **2025/12/25**: **푸시 알림 시스템 구현**
+    - **알림 설정 API 신규 추가**:
+        - `GET /notification/settings` - 알림 설정 조회
+        - `PUT /notification/settings` - 알림 설정 수정
+    - **FCM 토큰 관리 API 신규 추가**:
+        - `POST /notification/token` - FCM 토큰 등록
+        - `GET /notification/devices` - 등록 디바이스 목록 조회
+        - `DELETE /notification/devices/{tokenId}` - 디바이스 토큰 삭제
+        - `DELETE /notification/token` - 현재 토큰 비활성화
+    - **DB 마이그레이션 V3 추가**:
+        - `notification_settings` 테이블 확장 (복약/일기 알림, 방해 금지 설정)
+        - `fcm_device_token` 테이블 신규 생성
+    - **신규 파일**: 엔티티 4개, Repository 2개, Service 1개, Controller 1개, DTO 5개, 테스트 1개 추가
+    - **DDL 스키마 버전**: 2025-12-25로 갱신

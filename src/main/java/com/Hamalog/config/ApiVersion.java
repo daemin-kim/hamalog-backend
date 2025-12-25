@@ -63,4 +63,9 @@ public final class ApiVersion {
      * 복약 통계 API 경로
      */
     public static final String MEDICATION_STATS = "/medication-stats";
+
+    /**
+     * 알림 설정 API 경로
+     */
+    public static final String NOTIFICATION = "/notification";
 }

@@ -234,15 +234,29 @@
 
 ## 📋 미구현 기능 (향후 개선 예정)
 
-### 14. 푸시 알림 관리 API (우선순위: ⭐⭐⭐ 높음) ❌ 미구현
+### 14. 푸시 알림 관리 API (우선순위: ⭐⭐⭐ 높음) ✅ 구현 완료
 
-FCM 연동이 필요하여 별도 작업 예정
+| 기능 | EndPoint | 상태 |
+|------|----------|------|
+| FCM 토큰 등록 | `POST /notification/token` | ✅ |
+| 알림 설정 조회 | `GET /notification/settings` | ✅ |
+| 알림 설정 수정 | `PUT /notification/settings` | ✅ |
+| 등록 디바이스 목록 | `GET /notification/devices` | ✅ |
+| 디바이스 토큰 삭제 | `DELETE /notification/devices/{tokenId}` | ✅ |
+| 현재 토큰 비활성화 | `DELETE /notification/token` | ✅ |
 
-| 기능 | EndPoint |
-|------|----------|
-| FCM 토큰 등록 | `POST /notification/token` |
-| 알림 설정 조회 | `GET /notification/settings` |
-| 알림 설정 수정 | `PUT /notification/settings` |
+**구현된 파일**:
+- `NotificationSettings.java` - 알림 설정 엔티티 (신규)
+- `FcmDeviceToken.java` - FCM 디바이스 토큰 엔티티 (신규)
+- `DeviceType.java` - 디바이스 타입 열거형 (신규)
+- `NotificationType.java` - 알림 타입 열거형 (신규)
+- `NotificationSettingsRepository.java` (신규)
+- `FcmDeviceTokenRepository.java` (신규)
+- `NotificationSettingsService.java` (신규)
+- `NotificationController.java` (신규)
+- `V3__Add_notification_tables.sql` - Flyway 마이그레이션 (신규)
+
+**참고**: FCM 실제 전송 기능은 Firebase 프로젝트 설정 필요
 
 ---
 

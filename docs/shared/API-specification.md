@@ -557,6 +557,89 @@ formData.append('image', imageFile); // 선택
 
 ---
 
+### 알림 설정 API (`/notification`)
+
+| 기능 | EndPoint | Method | 비고 |
+|------|----------|--------|------|
+| 알림 설정 조회 | `/notification/settings` | `GET` | 없으면 기본값 생성 |
+| 알림 설정 수정 | `/notification/settings` | `PUT` | 변경할 필드만 전송 |
+| FCM 토큰 등록 | `/notification/token` | `POST` | 디바이스 푸시 토큰 |
+| 등록 디바이스 목록 | `/notification/devices` | `GET` | 모든 등록 디바이스 |
+| 디바이스 토큰 삭제 | `/notification/devices/{tokenId}` | `DELETE` | 특정 디바이스 삭제 |
+| 현재 토큰 비활성화 | `/notification/token` | `DELETE` | 로그아웃 시 호출 |
+
+#### 알림 설정 데이터 구조
+
+##### 알림 설정 응답
+```json
+{
+  "notificationSettingsId": 1,
+  "memberId": 1,
+  "pushEnabled": true,
+  "medicationReminderEnabled": true,
+  "medicationReminderMinutesBefore": 10,
+  "diaryReminderEnabled": false,
+  "diaryReminderTime": "21:00:00",
+  "quietHoursEnabled": false,
+  "quietHoursStart": "23:00:00",
+  "quietHoursEnd": "07:00:00",
+  "createdAt": "2025-12-25T10:00:00",
+  "updatedAt": null
+}
+```
+
+##### 알림 설정 수정 요청
+```json
+{
+  "pushEnabled": true,
+  "medicationReminderEnabled": true,
+  "medicationReminderMinutesBefore": 15,
+  "diaryReminderEnabled": true,
+  "diaryReminderTime": "20:00",
+  "quietHoursEnabled": true,
+  "quietHoursStart": "22:00",
+  "quietHoursEnd": "08:00"
+}
+```
+
+##### FCM 토큰 등록 요청
+```json
+{
+  "token": "fcm-token-string...",
+  "deviceType": "ANDROID",
+  "deviceName": "Galaxy S24"
+}
+```
+
+**디바이스 타입 (DeviceType):**
+| 값 | 의미 |
+|----|------|
+| `ANDROID` | 안드로이드 기기 |
+| `IOS` | iOS 기기 |
+| `WEB` | 웹 브라우저 |
+
+##### 등록 디바이스 목록 응답
+```json
+{
+  "memberId": 1,
+  "totalDevices": 2,
+  "activeDevices": 2,
+  "devices": [
+    {
+      "fcmDeviceTokenId": 1,
+      "tokenPrefix": "fcm-token-12345678...",
+      "deviceType": "ANDROID",
+      "deviceName": "Galaxy S24",
+      "isActive": true,
+      "lastUsedAt": "2025-12-25T09:00:00",
+      "createdAt": "2025-12-20T10:00:00"
+    }
+  ]
+}
+```
+
+---
+
 ## 에러 코드 목록
 
 ### 인증 관련
@@ -594,6 +677,14 @@ formData.append('image', imageFile); // 선택
 | `FILE_SAVE_FAIL` | 파일 저장에 실패했습니다. | 500 |
 | `FILE_SIZE_EXCEEDED` | 파일 크기가 제한을 초과했습니다. | 413 |
 | `INVALID_FILE_TYPE` | 지원하지 않는 파일 형식입니다. | 400 |
+
+### 알림 관련
+| 에러 코드 | 메시지 | HTTP |
+|-----------|--------|------|
+| `NOTIFICATION_SETTINGS_NOT_FOUND` | 알림 설정을 찾을 수 없습니다. | 404 |
+| `FCM_TOKEN_NOT_FOUND` | FCM 토큰을 찾을 수 없습니다. | 404 |
+| `FCM_SEND_FAILED` | 푸시 알림 전송에 실패했습니다. | 500 |
+| `INVALID_DEVICE_TYPE` | 유효하지 않은 디바이스 타입입니다. | 400 |
 
 ---
 

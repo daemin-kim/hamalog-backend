@@ -106,6 +106,7 @@ HTTP 요청을 처리하는 REST API 컨트롤러 계층입니다.
 | `controller/oauth2/` | `OAuth2Controller.java` | 카카오 OAuth2 로그인 처리 |
 | `controller/sideEffect/` | `SideEffectController.java` | 부작용 기록 CRUD, 목록 조회 |
 | `controller/export/` | `ExportController.java` | 데이터 내보내기 (JSON/CSV) **(신규)** |
+| `controller/notification/` | `NotificationController.java` | 알림 설정 및 FCM 토큰 관리 **(신규)** |
 
 ---
 
@@ -142,6 +143,7 @@ HTTP 요청을 처리하는 REST API 컨트롤러 계층입니다.
 | `service/i18n/` | `MessageService.java` | 다국어 메시지 서비스 |
 | `service/monitoring/` | `TransactionMetricsService.java` | 트랜잭션 메트릭 서비스 |
 | `service/export/` | `ExportService.java` | 데이터 내보내기 서비스 **(신규)** |
+| `service/notification/` | `NotificationSettingsService.java` | 알림 설정 및 FCM 토큰 관리 **(신규)** |
 
 ---
 
@@ -167,6 +169,10 @@ JPA 엔티티 및 도메인 모델을 정의합니다.
 | | `SideEffectDegree.java` | 부작용 정도 Enum |
 | `domain/security/` | `RefreshToken.java` | 리프레시 토큰 엔티티 |
 | | `LoginHistory.java` | 로그인 이력 엔티티 **(신규)** |
+| `domain/notification/` | `NotificationSettings.java` | 알림 설정 엔티티 **(신규)** |
+| | `FcmDeviceToken.java` | FCM 디바이스 토큰 엔티티 **(신규)** |
+| | `DeviceType.java` | 디바이스 타입 Enum **(신규)** |
+| | `NotificationType.java` | 알림 타입 Enum **(신규)** |
 | `domain/events/` | `DomainEvent.java` | 도메인 이벤트 인터페이스 |
 | | `DomainEventPublisher.java` | 도메인 이벤트 발행자 |
 | `domain/idClass/` | `MedicationScheduleMedicationScheduleGroupId.java` | 복합 키 클래스 |
@@ -191,6 +197,8 @@ JPA 엔티티 및 도메인 모델을 정의합니다.
 | | `SideEffectSideEffectRecordRepository.java` | 부작용-기록 연결 데이터 접근 |
 | `repository/security/` | `RefreshTokenRepository.java` | 리프레시 토큰 데이터 접근 |
 | | `LoginHistoryRepository.java` | 로그인 이력 데이터 접근 **(신규)** |
+| `repository/notification/` | `NotificationSettingsRepository.java` | 알림 설정 데이터 접근 **(신규)** |
+| | `FcmDeviceTokenRepository.java` | FCM 토큰 데이터 접근 **(신규)** |
 
 ---
 
@@ -230,6 +238,11 @@ JPA 엔티티 및 도메인 모델을 정의합니다.
 | `dto/sideEffect/response/` | Response | `RecentSideEffectResponse.java` | 최근 부작용 응답 |
 | | | `SideEffectRecordResponse.java` | 부작용 기록 상세 응답 **(신규)** |
 | | | `SideEffectRecordListResponse.java` | 부작용 기록 목록 응답 **(신규)** |
+| `dto/notification/request/` | Request | `FcmTokenRegisterRequest.java` | FCM 토큰 등록 요청 **(신규)** |
+| | | `NotificationSettingsUpdateRequest.java` | 알림 설정 수정 요청 **(신규)** |
+| `dto/notification/response/` | Response | `NotificationSettingsResponse.java` | 알림 설정 응답 **(신규)** |
+| | | `FcmDeviceTokenResponse.java` | FCM 토큰 응답 **(신규)** |
+| | | `FcmDeviceTokenListResponse.java` | FCM 토큰 목록 응답 **(신규)** |
 
 ---
 

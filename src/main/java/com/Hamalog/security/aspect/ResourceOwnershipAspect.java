@@ -362,7 +362,7 @@ public class ResourceOwnershipAspect {
      * 멤버 소유권을 검증합니다.
      */
     private boolean checkMemberOwnership(Long resourceId, String loginId, RequireResourceOwnership.OwnershipStrategy strategy) {
-        return sideEffectService.isOwner(resourceId, loginId);
+        return resourceOwnershipValidator.isOwnerByMemberId(resourceId, loginId);
     }
 
     /**

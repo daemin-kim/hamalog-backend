@@ -16,6 +16,8 @@ import org.springframework.context.ApplicationEventPublisher;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
+import java.time.LocalDateTime;
+
 /**
  * 회원 탈퇴 관련 서비스
  * 회원 삭제 및 관련 데이터 정리의 책임을 담당합니다.
@@ -45,7 +47,7 @@ public class MemberDeletionService {
      */
     @Transactional(rollbackFor = {Exception.class})
     public void deleteMember(String loginId, String token) {
-        // 1. 즉시 토큰 무효화 (트랜잭션 내부에서 처리하여 동시성 문제 방지)
+        // 1. 즉시 토큰 무효화 (신청 시점 차단)
         if (authenticationService.isValidTokenFormat(token)) {
             authenticationService.blacklistToken(token);
             log.info("[AUTH] Token blacklisted immediately during member deletion - loginId: {}",
@@ -56,23 +58,26 @@ public class MemberDeletionService {
         Member member = memberRepository.findByLoginId(loginId)
                 .orElseThrow(() -> new CustomException(ErrorCode.MEMBER_NOT_FOUND));
 
+        if (member.isDeletionScheduled()) {
+            log.info("[AUTH] Member deletion already scheduled - loginId: {}", SensitiveDataMasker.maskEmail(loginId));
+            return;
+        }
+
+        // 3. 탈퇴 예약 (30일 후 삭제)
+        LocalDateTime now = LocalDateTime.now();
+        member.scheduleDeletion(now, 30);
+
+        // 4. 캐시 무효화
         Long memberId = member.getMemberId();
-
-        // 3. 관련 데이터 삭제 (cascade 순서 보장)
-        deleteMemberRelatedData(memberId);
-
-        // 4. 회원 완전 삭제
-        memberRepository.delete(member);
-
-        // 5. 캐시 무효화
         memberCacheService.evictByLoginId(loginId, memberId);
         memberCacheService.evictByMemberId(memberId);
 
-        log.info("[AUTH] Member deleted successfully - loginId: {}, memberId: {}",
+        log.info("[AUTH] Member deletion scheduled - loginId: {}, memberId: {}, dueAt: {}",
             SensitiveDataMasker.maskEmail(loginId),
-            SensitiveDataMasker.maskUserId(memberId));
+            SensitiveDataMasker.maskUserId(memberId),
+            member.getDeletionDueAt());
 
-        // 6. 이벤트 발행 (추가 후처리용)
+        // 5. 이벤트 발행 (추가 후처리용)
         eventPublisher.publishEvent(new MemberDeletedEvent(loginId, token, memberId));
     }
 
@@ -82,13 +87,10 @@ public class MemberDeletionService {
      * @param memberId 삭제할 회원의 ID
      */
     private void deleteMemberRelatedData(Long memberId) {
-        // 부작용 기록 삭제
+        // 기존 즉시 삭제 로직은 예약 삭제로 전환하며, 실제 삭제 스케줄러에서 실행 예정
         sideEffectRecordRepository.deleteByMemberId(memberId);
-
-        // 마음 일기 삭제
         moodDiaryRepository.deleteByMember_MemberId(memberId);
 
-        // 복약 기록 삭제 (스케줄 ID 조회 후 삭제)
         var medicationScheduleIds = medicationScheduleRepository.findAllByMember_MemberId(memberId)
                 .stream()
                 .map(com.Hamalog.domain.medication.MedicationSchedule::getMedicationScheduleId)
@@ -98,7 +100,6 @@ public class MemberDeletionService {
             medicationRecordRepository.deleteByScheduleIds(medicationScheduleIds);
         }
 
-        // 복약 스케줄 삭제
         medicationScheduleRepository.deleteByMemberId(memberId);
 
         log.debug("[DELETION] Member related data deleted - memberId: {}", memberId);

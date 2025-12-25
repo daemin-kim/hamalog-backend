@@ -51,6 +51,15 @@ public class Member {
     @Column(name = "created_at", nullable = false)
     private LocalDateTime createdAt;
 
+    @Column(name = "deletion_requested_at")
+    private LocalDateTime deletionRequestedAt;
+
+    @Column(name = "deletion_due_at")
+    private LocalDateTime deletionDueAt;
+
+    @Column(name = "deletion_scheduled", nullable = false)
+    private boolean deletionScheduled;
+
     @Version
     @Column(name = "version")
     private Long version;
@@ -78,5 +87,18 @@ public class Member {
      */
     public void changePassword(String encodedPassword) {
         this.password = encodedPassword;
+    }
+
+    public boolean isDeletionScheduled() {
+        return deletionScheduled;
+    }
+
+    public void scheduleDeletion(LocalDateTime now, int daysUntilDeletion) {
+        if (deletionScheduled) {
+            return;
+        }
+        this.deletionScheduled = true;
+        this.deletionRequestedAt = now;
+        this.deletionDueAt = now.plusDays(daysUntilDeletion);
     }
 }

@@ -19,10 +19,6 @@
 ```java
 ### 캐싱
 
-```
-@Retry(maxAttempts = 3, delay = 1000, retryFor = OptimisticLockException.class)
-```java
-### 재시도
 
 ```
 @RequireResourceOwnership(resourceType = "MEDICATION_SCHEDULE", idParam = "id")

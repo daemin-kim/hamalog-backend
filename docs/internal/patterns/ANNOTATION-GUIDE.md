@@ -8,9 +8,8 @@
 ## 📋 목차
 
 1. [@RequireResourceOwnership](#1-requireresourceownership)
-2. [@Retryable](#2-retryable)
-3. [@Cacheable / @CacheEvict](#3-cacheable--cacheevict)
-4. [로깅 어노테이션](#4-로깅-어노테이션)
+2. [@Cacheable / @CacheEvict](#2-cacheable--cacheevict)
+3. [새 어노테이션 추가 가이드](#3-새-어노테이션-추가-가이드)
 
 ---
 
@@ -118,91 +117,13 @@ public class SideEffectService {
 
 ---
 
-## 2. @Retryable
+## 2. @Cacheable / @CacheEvict
 
 ### 2.1 개요
 
-메서드 실행 중 예외 발생 시 자동으로 재시도하는 어노테이션입니다. 낙관적 락 충돌, 일시적인 네트워크 오류 등에 유용합니다.
-
-### 2.2 위치
-
-```
-src/main/java/com/Hamalog/aop/RetryAspect.java (내부 @Retryable 정의)
-```
-
-### 2.3 사용법
-
-#### 기본 사용
-
-```java
-@Retryable
-@Transactional
-public void updateWithRetry(Long id, UpdateRequest request) {
-    // 낙관적 락 충돌 시 자동 재시도 (기본 3회)
-    Entity entity = repository.findById(id)
-        .orElseThrow(ErrorCode.NOT_FOUND::toException);
-    entity.update(request);
-}
-```
-
-#### 상세 설정
-
-```java
-@Retryable(
-    maxAttempts = 5,
-    delay = 500,
-    backoffMultiplier = 2.0,
-    retryFor = { OptimisticLockException.class, DataAccessException.class }
-)
-@Transactional
-public void updateCriticalData(Long id, UpdateRequest request) {
-    // 최대 5회 재시도, 500ms → 1000ms → 2000ms... 지수 백오프
-}
-```
-
-### 2.4 속성
-
-| 속성 | 타입 | 기본값 | 설명 |
-|------|------|--------|------|
-| `maxAttempts` | int | 3 | 최대 재시도 횟수 |
-| `delay` | long | 1000 | 재시도 간격 (ms) |
-| `backoffMultiplier` | double | 1.5 | 지수 백오프 승수 |
-| `randomizeDelay` | boolean | false | 지연 시간 랜덤화 |
-| `retryFor` | Class[] | Exception.class | 재시도할 예외 타입 |
-
-### 2.5 로깅
-
-재시도 발생 시 자동으로 로깅됩니다:
-
-```
-RETRY_ATTEMPT: a1b2c3d4 | Method: updateWithRetry | Attempt: 2/3 | Delay: 1500ms
-RETRY_SUCCESS: a1b2c3d4 | Method: updateWithRetry | Succeeded on attempt: 2/3
-```
-
-### 2.6 설정
-
-`application.yml`에서 기본값 설정 가능:
-
-```yaml
-app:
-  aop:
-    retry:
-      enabled: true
-  retry:
-    default-attempts: 3
-    default-delay: 1000
-    max-delay: 10000
-```
-
----
-
-## 3. @Cacheable / @CacheEvict
-
-### 3.1 개요
-
 Spring Cache + Redis를 사용한 캐싱 어노테이션입니다. 메서드 결과를 캐시하거나 캐시를 무효화합니다.
 
-### 3.2 사용법
+### 2.2 사용법
 
 #### 캐시 저장
 
@@ -237,7 +158,7 @@ public MedicationStatsResponse getYearlyStats(Long memberId, int year) {
 }
 ```
 
-### 3.3 캐시 네이밍 규칙
+### 2.3 캐시 네이밍 규칙
 
 | 캐시명 | 용도 | TTL |
 |--------|------|-----|
@@ -246,7 +167,7 @@ public MedicationStatsResponse getYearlyStats(Long memberId, int year) {
 | `medicationStats` | 복약 통계 | 30분 |
 | `diaryStats` | 일기 통계 | 30분 |
 
-### 3.4 주의사항
+### 2.4 주의사항
 
 - ⚠️ 캐시 키는 고유해야 함 (memberId + 조건 조합)
 - ⚠️ 데이터 변경 시 반드시 `@CacheEvict` 적용
@@ -254,38 +175,9 @@ public MedicationStatsResponse getYearlyStats(Long memberId, int year) {
 
 ---
 
-## 4. 로깅 어노테이션
+## 3. 새 어노테이션 추가 가이드
 
-### 4.1 개요
-
-AOP 기반 자동 로깅 어노테이션입니다. 메서드 진입/종료, 실행 시간, 파라미터 등을 자동으로 로깅합니다.
-
-### 4.2 종류
-
-| 어노테이션 | 위치 | 로깅 내용 |
-|------------|------|-----------|
-| `@ApiLogging` | Controller | 요청/응답, 상태코드, 실행시간 |
-| `@ServiceLogging` | Service | 메서드 호출, 파라미터, 결과 |
-| `@PerformanceLogging` | 모든 레이어 | 실행 시간 측정 |
-
-### 4.3 사용법
-
-대부분 자동 적용됩니다. 패키지 기반 AOP로 `controller.*`, `service.*` 패키지의 public 메서드에 적용됩니다.
-
-명시적으로 끄려면:
-
-```java
-@NoLogging  // 민감한 데이터 처리 시
-public LoginResponse login(LoginRequest request) {
-    // 로깅 비활성화
-}
-```
-
----
-
-## 5. 새 어노테이션 추가 가이드
-
-### 5.1 어노테이션 정의
+### 3.1 어노테이션 정의
 
 ```java
 @Target(ElementType.METHOD)
@@ -296,7 +188,7 @@ public @interface MyCustomAnnotation {
 }
 ```
 
-### 5.2 Aspect 구현
+### 3.2 Aspect 구현
 
 ```java
 @Slf4j
@@ -325,7 +217,7 @@ public class MyCustomAspect {
 }
 ```
 
-### 5.3 테스트
+### 3.3 테스트
 
 ```java
 @SpringBootTest

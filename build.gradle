@@ -39,12 +39,7 @@ repositories {
 	mavenCentral()
 }
 
-dependencyManagement {
-    imports {
-        // Spring Cloud BOM for Vault/Config compatibility with Spring Boot 3.4.x
-        mavenBom "org.springframework.cloud:spring-cloud-dependencies:2024.0.3"
-    }
-}
+
 
 dependencies {
 	implementation 'org.springframework.boot:spring-boot-starter-data-jpa'
@@ -60,8 +55,6 @@ dependencies {
 	implementation 'org.flywaydb:flyway-core'
 	implementation 'org.flywaydb:flyway-mysql'
 
-	// Spring Cloud Vault (옵션) - 프로덕션 시크릿 외부화
-	implementation 'org.springframework.cloud:spring-cloud-starter-vault-config'
 
 	implementation 'org.springframework.boot:spring-boot-starter-webflux' // For WebClient functionality
 	

@@ -155,10 +155,6 @@ class MoodDiaryServiceTest {
 @RequireResourceOwnership(resourceType = "MEDICATION_SCHEDULE", idParam = "id")
 ```
 
-### 재시도
-```java
-@Retryable(maxAttempts = 3, delay = 1000, backoffMultiplier = 1.5)
-```
 
 ### 캐싱
 ```java

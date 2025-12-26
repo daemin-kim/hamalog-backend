@@ -35,6 +35,7 @@ public class JVMMetricsLogger {
     private static final long HIGH_GC_TIME_THRESHOLD = 1000; // 1 second
     private static final int HIGH_THREAD_COUNT_THRESHOLD = 500;
     private static final double HIGH_CPU_THRESHOLD = 0.80; // 80%
+    private static final long BYTES_IN_MB = 1024L * 1024L;
 
     // Previous metrics for calculating deltas
     private long previousGcTime = 0;
@@ -62,8 +63,8 @@ public class JVMMetricsLogger {
                     .userId("SYSTEM")
                     .methodName("collectJVMMetrics")
                     .className("JVMMetricsLogger")
-                    .memoryBefore((Long) metrics.get("heap_used"))
-                    .memoryAfter((Long) metrics.get("heap_max"))
+                    .memoryBefore((Long) metrics.get("heapUsedBytes"))
+                    .memoryAfter((Long) metrics.get("heapMaxBytes"))
                     .cpuTime(0L) // Not applicable
                     .build();
             
@@ -97,16 +98,18 @@ public class JVMMetricsLogger {
                 Map<String, Object> alertContext = new HashMap<>();
                 alertContext.put("alert_type", "CRITICAL_MEMORY_USAGE");
                 alertContext.put("heap_used_percent", heapUsedPercent * 100);
-                alertContext.put("heap_used_mb", heapUsage.getUsed() / 1024 / 1024);
-                alertContext.put("heap_max_mb", heapUsage.getMax() / 1024 / 1024);
+                alertContext.put("heap_used_mb", toMegabytes(heapUsage.getUsed()));
+                alertContext.put("heap_max_mb", toMegabytes(heapUsage.getMax()));
                 alertContext.put("severity", "CRITICAL");
                 
                 structuredLogger.error("Critical memory usage detected", new RuntimeException("Memory threshold exceeded"), alertContext);
                 
-                log.error("CRITICAL_ALERT: Memory usage at {:.1f}% ({} MB / {} MB)", 
-                    heapUsedPercent * 100, 
-                    heapUsage.getUsed() / 1024 / 1024, 
-                    heapUsage.getMax() / 1024 / 1024);
+                log.error(
+                    "CRITICAL_ALERT: Heap usage {}% ({} MB / {} MB)",
+                    String.format("%.1f", heapUsedPercent * 100),
+                    toMegabytes(heapUsage.getUsed()),
+                    toMegabytes(heapUsage.getMax())
+                );
             }
             
             // Check GC pressure
@@ -118,8 +121,8 @@ public class JVMMetricsLogger {
                 long uptimeDelta = currentUptime - previousUptime;
                 
                 if (gcTimeDelta > HIGH_GC_TIME_THRESHOLD && uptimeDelta > 0) {
-                    double gcPercent = (double) gcTimeDelta / uptimeDelta * 100;
-                    
+                    double gcPercent = percent(gcTimeDelta, uptimeDelta);
+
                     Map<String, Object> alertContext = new HashMap<>();
                     alertContext.put("alert_type", "HIGH_GC_PRESSURE");
                     alertContext.put("gc_time_delta_ms", gcTimeDelta);
@@ -128,8 +131,12 @@ public class JVMMetricsLogger {
                     
                     structuredLogger.error("High GC pressure detected", new RuntimeException("GC time threshold exceeded"), alertContext);
                     
-                    log.warn("HIGH_GC_PRESSURE: GC consumed {:.2f}% of time ({} ms in {} ms window)", 
-                        gcPercent, gcTimeDelta, uptimeDelta);
+                    log.warn(
+                        "HIGH_GC_PRESSURE: GC consumed {}% of time ({} ms in {} ms window)",
+                        String.format("%.2f", gcPercent),
+                        gcTimeDelta,
+                        uptimeDelta
+                    );
                 }
             }
             
@@ -153,6 +160,12 @@ public class JVMMetricsLogger {
         
         metrics.put("heapMemoryUsage", formatMemoryUsage(heapUsage));
         metrics.put("nonHeapMemoryUsage", formatMemoryUsage(nonHeapUsage));
+        metrics.put("heapUsedBytes", heapUsage.getUsed());
+        metrics.put("heapMaxBytes", heapUsage.getMax());
+        metrics.put("heapUsedPercent", percent(heapUsage.getUsed(), heapUsage.getMax()));
+        metrics.put("nonHeapUsedBytes", nonHeapUsage.getUsed());
+        metrics.put("nonHeapMaxBytes", nonHeapUsage.getMax());
+        metrics.put("nonHeapUsedPercent", percent(nonHeapUsage.getUsed(), nonHeapUsage.getMax()));
 
         double heapUsedPercent = (double) heapUsage.getUsed() / heapUsage.getMax();
         if (heapUsedPercent > HIGH_MEMORY_THRESHOLD) {
@@ -239,16 +252,45 @@ public class JVMMetricsLogger {
      * Format metrics for human-readable logging
      */
     private String formatMetrics(Map<String, Object> metrics) {
+        @SuppressWarnings("unchecked")
+        Map<String, Long> heapUsage = (Map<String, Long>) metrics.get("heapMemoryUsage");
+        @SuppressWarnings("unchecked")
+        Map<String, Long> nonHeapUsage = (Map<String, Long>) metrics.get("nonHeapMemoryUsage");
+
+        double heapUsedPercent = percent(heapUsage.get("used"), heapUsage.get("max"));
+        double nonHeapUsedPercent = percent(nonHeapUsage.get("used"), nonHeapUsage.get("max"));
+
         return String.format(
-            "Memory[Heap: %s, NonHeap: %s], Threads[Active: %d, Peak: %d], " +
-            "GC[Collections: %d, Time: %dms], CPU Load: %.2f",
-            metrics.get("heapMemoryUsage"),
-            metrics.get("nonHeapMemoryUsage"),
+            "Heap: used=%d MB / %d MB (%.1f%%), NonHeap: used=%d MB / %d MB (%.1f%%), " +
+            "Threads: active=%d, peak=%d, daemon=%d, GC: collections=%d, time=%d ms, " +
+            "Uptime=%d s, CPU load(avg1m)=%.2f",
+            toMegabytes(heapUsage.get("used")),
+            toMegabytes(heapUsage.get("max")),
+            heapUsedPercent,
+            toMegabytes(nonHeapUsage.get("used")),
+            toMegabytes(nonHeapUsage.get("max")),
+            nonHeapUsedPercent,
             metrics.get("threadCount"),
             metrics.get("peakThreadCount"),
+            metrics.get("daemonThreadCount"),
             metrics.get("gcCollectionCount"),
             metrics.get("gcCollectionTime"),
+            (Long) metrics.get("uptime") / 1000,
             metrics.get("cpuLoad")
         );
+    }
+
+    private double percent(long used, long max) {
+        if (max <= 0) {
+            return 0.0;
+        }
+        return ((double) used / max) * 100;
+    }
+
+    private long toMegabytes(long bytes) {
+        if (bytes <= 0) {
+            return 0;
+        }
+        return bytes / BYTES_IN_MB;
     }
 }

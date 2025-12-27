@@ -103,15 +103,32 @@ Hamalog는 높은 코드 품질을 위해 1,300개 이상의 테스트 케이스
 
 ## ⚙️ 주요 설정 (Environment Variables)
 
-주요 설정은 환경변수를 통해 조정할 수 있습니다. `.env.example` 파일을 참고하세요.
+주요 설정은 환경변수로 관리하며 `.env.example`를 참고하세요. 프로덕션에서는 **실제 비밀값을 환경변수/Secret Manager로만 주입**하고, 리포지토리에는 dummy 값만 남깁니다.
 
 | 변수명 | 기본값 | 설명 |
 |--------|--------|------|
-| `JWT_SECRET` | - | JWT 서명용 Base64 시크릿 키 |
-| `HAMALOG_ENCRYPTION_KEY` | - | 데이터 암호화용 시크릿 키 |
-| `RATE_LIMIT_API_PER_MINUTE` | 60 | 분당 일반 API 요청 제한 수 |
-| `RATE_LIMIT_AUTH_PER_MINUTE` | 5 | 분당 인증 요청 제한 수 |
-| `SPRING_PROFILES_ACTIVE` | default | 활성 프로파일 (local, prod, test) |
+| `SPRING_PROFILES_ACTIVE` | `prod` (예시) | 활성 프로파일 지정 |
+| `SPRING_DATASOURCE_URL` | - | DB JDBC URL |
+| `SPRING_DATASOURCE_USERNAME` | - | DB 계정 |
+| `SPRING_DATASOURCE_PASSWORD` | - | DB 비밀번호 |
+| `JWT_SECRET` | (필수) | JWT 서명용 Base64 256비트 키 |
+| `JWT_EXPIRY` | `900000` | 액세스 토큰 만료(ms) |
+| `JWT_REFRESH_TOKEN_EXPIRY` | `604800000` | 리프레시 토큰 만료(ms) |
+| `HAMALOG_ENCRYPTION_KEY` | (필수) | AES-256 암호화 키 (Base64) |
+| `KAKAO_CLIENT_ID` / `KAKAO_CLIENT_SECRET` | (필수) | 카카오 OAuth2 앱 크레덴셜 |
+| `KAKAO_REDIRECT_URI` | - | 카카오 OAuth2 리다이렉트 URI |
+| `FRONTEND_URL` | - | 프런트엔드 베이스 URL |
+| `ALLOWED_ORIGINS` | `https://api.hamalog.shop,http://localhost:3000` | CORS 허용 Origin |
+| `SPRING_DATA_REDIS_HOST` / `SPRING_DATA_REDIS_PORT` | `localhost` / `6379` | Redis 호스트/포트 |
+| `SPRING_DATA_REDIS_PASSWORD` | (선택) | Redis 비밀번호 |
+| `LOG_DIR` | `./logs` | 로그 출력 경로 |
+| `BOT_PROTECTION_ENABLED` | `true` | Bot 차단 기능 on/off |
+| `TRUSTED_PROXIES` | `127.0.0.1/32,::1/128,10.0.0.0/8,172.16.0.0/12,192.168.0.0/16` | 신뢰 프록시 대역 |
+| `RATE_LIMIT_API_PER_MINUTE` / `RATE_LIMIT_AUTH_PER_MINUTE` | `60` / `5` | 레이트리밋 설정 |
+
+- 샘플 값은 `.env.example`에 `dummy-...` 혹은 `<PLACEHOLDER>` 형태로 제공합니다.
+- 프로덕션 배포 시 `.env.prod`(또는 CI/CD 시크릿)로 실제 값을 주입하세요.
+- 민감정보는 절대 커밋하지 말고, 로그/프로파일 덤프에 포함되지 않도록 유의하세요.
 
 ---
 

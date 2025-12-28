@@ -1,6 +1,7 @@
 package com.Hamalog.repository.medication;
 
 import com.Hamalog.domain.medication.MedicationRecord;
+import com.Hamalog.dto.medication.projection.MedicationRecordProjection;
 import java.time.LocalDateTime;
 import java.util.List;
 import java.util.Optional;
@@ -34,6 +35,33 @@ public interface MedicationRecordRepository extends JpaRepository<MedicationReco
            "WHERE ms.medicationScheduleId = :scheduleId")
     List<MedicationRecord> findAllByScheduleIdWithJoinFetch(@Param("scheduleId") Long scheduleId);
     
+    // DTO Projection: 엔티티 전체가 아닌 필요한 필드만 조회하여 성능 최적화
+    @Query("SELECT new com.Hamalog.dto.medication.projection.MedicationRecordProjection(" +
+           "mr.medicationRecordId, ms.medicationScheduleId, ms.name, " +
+           "mt.medicationTimeId, mr.isTakeMedication, mr.realTakeTime) " +
+           "FROM MedicationRecord mr " +
+           "JOIN mr.medicationSchedule ms " +
+           "JOIN mr.medicationTime mt " +
+           "WHERE ms.medicationScheduleId = :scheduleId")
+    List<MedicationRecordProjection> findProjectionsByScheduleId(@Param("scheduleId") Long scheduleId);
+
+    // 배치 조회: 여러 스케줄의 복약 기록을 한 번에 조회 (ExportService 등에서 사용)
+    @Query("SELECT mr FROM MedicationRecord mr " +
+           "JOIN FETCH mr.medicationSchedule ms " +
+           "JOIN FETCH mr.medicationTime mt " +
+           "WHERE ms.medicationScheduleId IN :scheduleIds")
+    List<MedicationRecord> findAllByScheduleIds(@Param("scheduleIds") List<Long> scheduleIds);
+
+    // 배치 조회 with DTO Projection
+    @Query("SELECT new com.Hamalog.dto.medication.projection.MedicationRecordProjection(" +
+           "mr.medicationRecordId, ms.medicationScheduleId, ms.name, " +
+           "mt.medicationTimeId, mr.isTakeMedication, mr.realTakeTime) " +
+           "FROM MedicationRecord mr " +
+           "JOIN mr.medicationSchedule ms " +
+           "JOIN mr.medicationTime mt " +
+           "WHERE ms.medicationScheduleId IN :scheduleIds")
+    List<MedicationRecordProjection> findProjectionsByScheduleIds(@Param("scheduleIds") List<Long> scheduleIds);
+
     // Efficient batch delete for member deletion (by schedule IDs)
     @Modifying
     @Query("DELETE FROM MedicationRecord mr WHERE mr.medicationSchedule.medicationScheduleId IN :scheduleIds")

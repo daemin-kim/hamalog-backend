@@ -1,6 +1,7 @@
 package com.Hamalog.repository.medication;
 
 import com.Hamalog.domain.medication.MedicationSchedule;
+import com.Hamalog.dto.medication.projection.MedicationScheduleProjection;
 import java.util.List;
 import java.util.Optional;
 import org.springframework.data.domain.Page;
@@ -29,6 +30,22 @@ public interface MedicationScheduleRepository extends JpaRepository<MedicationSc
     @Query("SELECT ms FROM MedicationSchedule ms JOIN FETCH ms.member WHERE ms.member.memberId = :memberId")
     List<MedicationSchedule> findAllByMemberIdWithMember(@Param("memberId") Long memberId);
     
+    // DTO Projection: 엔티티 전체가 아닌 필요한 필드만 조회하여 성능 최적화
+    @Query("SELECT new com.Hamalog.dto.medication.projection.MedicationScheduleProjection(" +
+           "ms.medicationScheduleId, ms.member.memberId, ms.name, ms.hospitalName, " +
+           "ms.prescriptionDate, ms.memo, ms.startOfAd, ms.prescriptionDays, ms.perDay, " +
+           "ms.alarmType, ms.isActive) " +
+           "FROM MedicationSchedule ms WHERE ms.member.memberId = :memberId")
+    List<MedicationScheduleProjection> findProjectionsByMemberId(@Param("memberId") Long memberId);
+
+    // DTO Projection with Paging: 페이징 지원
+    @Query("SELECT new com.Hamalog.dto.medication.projection.MedicationScheduleProjection(" +
+           "ms.medicationScheduleId, ms.member.memberId, ms.name, ms.hospitalName, " +
+           "ms.prescriptionDate, ms.memo, ms.startOfAd, ms.prescriptionDays, ms.perDay, " +
+           "ms.alarmType, ms.isActive) " +
+           "FROM MedicationSchedule ms WHERE ms.member.memberId = :memberId")
+    Page<MedicationScheduleProjection> findProjectionsByMemberId(@Param("memberId") Long memberId, Pageable pageable);
+
     // Efficient batch delete for member deletion
     @Modifying
     @Query("DELETE FROM MedicationSchedule ms WHERE ms.member.memberId = :memberId")
@@ -45,7 +62,32 @@ public interface MedicationScheduleRepository extends JpaRepository<MedicationSc
             Pageable pageable
     );
 
+    // DTO Projection: 약 이름으로 검색 (성능 최적화)
+    @Query("SELECT new com.Hamalog.dto.medication.projection.MedicationScheduleProjection(" +
+           "ms.medicationScheduleId, ms.member.memberId, ms.name, ms.hospitalName, " +
+           "ms.prescriptionDate, ms.memo, ms.startOfAd, ms.prescriptionDays, ms.perDay, " +
+           "ms.alarmType, ms.isActive) " +
+           "FROM MedicationSchedule ms WHERE ms.member.memberId = :memberId " +
+           "AND LOWER(ms.name) LIKE LOWER(CONCAT('%', :keyword, '%'))")
+    Page<MedicationScheduleProjection> searchProjectionsByName(
+            @Param("memberId") Long memberId,
+            @Param("keyword") String keyword,
+            Pageable pageable
+    );
+
     // 활성 상태로 필터링
     @EntityGraph(attributePaths = {"member"})
     Page<MedicationSchedule> findByMember_MemberIdAndIsActive(Long memberId, Boolean isActive, Pageable pageable);
+
+    // DTO Projection: 활성 상태로 필터링 (성능 최적화)
+    @Query("SELECT new com.Hamalog.dto.medication.projection.MedicationScheduleProjection(" +
+           "ms.medicationScheduleId, ms.member.memberId, ms.name, ms.hospitalName, " +
+           "ms.prescriptionDate, ms.memo, ms.startOfAd, ms.prescriptionDays, ms.perDay, " +
+           "ms.alarmType, ms.isActive) " +
+           "FROM MedicationSchedule ms WHERE ms.member.memberId = :memberId AND ms.isActive = :isActive")
+    Page<MedicationScheduleProjection> findProjectionsByMemberIdAndIsActive(
+            @Param("memberId") Long memberId,
+            @Param("isActive") Boolean isActive,
+            Pageable pageable
+    );
 }

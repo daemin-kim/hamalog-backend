@@ -55,6 +55,12 @@ dependencies {
 	implementation 'org.flywaydb:flyway-core'
 	implementation 'org.flywaydb:flyway-mysql'
 
+	// QueryDSL - 타입 안전한 동적 쿼리 생성
+	implementation 'com.querydsl:querydsl-jpa:5.1.0:jakarta'
+	annotationProcessor 'com.querydsl:querydsl-apt:5.1.0:jakarta'
+	annotationProcessor 'jakarta.annotation:jakarta.annotation-api'
+	annotationProcessor 'jakarta.persistence:jakarta.persistence-api'
+
 
 	implementation 'org.springframework.boot:spring-boot-starter-webflux' // For WebClient functionality
 	
@@ -97,6 +103,21 @@ jacocoTestReport {
 
 jacoco {
 	toolVersion = "0.8.10"
+}
+
+// QueryDSL Q클래스 생성 경로 설정
+def querydslDir = "$buildDir/generated/querydsl"
+
+sourceSets {
+	main.java.srcDirs += querydslDir
+}
+
+tasks.withType(JavaCompile).configureEach {
+	options.getGeneratedSourceOutputDirectory().set(file(querydslDir))
+}
+
+clean.doLast {
+	file(querydslDir).deleteDir()
 }
 
 // OWASP Dependency Check 설정

@@ -77,17 +77,27 @@ public class ExportService {
                 ))
                 .toList();
 
-        // 복약 기록
-        List<MedicationRecordExportData> recordData = schedules.stream()
-                .flatMap(s -> recordRepository.findAllByMedicationSchedule_MedicationScheduleId(s.getMedicationScheduleId()).stream())
-                .map(r -> new MedicationRecordExportData(
-                        r.getMedicationRecordId(),
-                        r.getMedicationSchedule().getMedicationScheduleId(),
-                        r.getMedicationSchedule().getName(),
-                        r.getIsTakeMedication(),
-                        r.getRealTakeTime()
-                ))
+        // 복약 기록 - 배치 조회로 N+1 문제 해결
+        List<Long> scheduleIds = schedules.stream()
+                .map(MedicationSchedule::getMedicationScheduleId)
                 .toList();
+
+        List<MedicationRecordExportData> recordData;
+        if (scheduleIds.isEmpty()) {
+            recordData = List.of();
+        } else {
+            // 한 번의 쿼리로 모든 스케줄의 복약 기록을 조회
+            List<MedicationRecord> allRecords = recordRepository.findAllByScheduleIds(scheduleIds);
+            recordData = allRecords.stream()
+                    .map(r -> new MedicationRecordExportData(
+                            r.getMedicationRecordId(),
+                            r.getMedicationSchedule().getMedicationScheduleId(),
+                            r.getMedicationSchedule().getName(),
+                            r.getIsTakeMedication(),
+                            r.getRealTakeTime()
+                    ))
+                    .toList();
+        }
 
         // 마음 일기 (최근 1년)
         LocalDate endDate = LocalDate.now();
@@ -149,21 +159,28 @@ public class ExportService {
         StringBuilder csv = new StringBuilder();
         csv.append("날짜,약 이름,복용 여부,복용 시간\n");
 
-        for (MedicationSchedule schedule : schedules) {
-            List<MedicationRecord> records = recordRepository.findAllByMedicationSchedule_MedicationScheduleId(
-                    schedule.getMedicationScheduleId());
+        // 배치 조회로 N+1 문제 해결
+        List<Long> scheduleIds = schedules.stream()
+                .map(MedicationSchedule::getMedicationScheduleId)
+                .toList();
 
-            for (MedicationRecord record : records) {
-                if (record.getRealTakeTime() != null) {
-                    LocalDate recordDate = record.getRealTakeTime().toLocalDate();
-                    if (!recordDate.isBefore(startDate) && !recordDate.isAfter(endDate)) {
-                        csv.append(String.format("%s,%s,%s,%s\n",
-                                recordDate,
-                                escapeCsv(schedule.getName()),
-                                record.getIsTakeMedication() ? "복용" : "미복용",
-                                record.getRealTakeTime().toLocalTime()
-                        ));
-                    }
+        if (scheduleIds.isEmpty()) {
+            return csv.toString();
+        }
+
+        // 한 번의 쿼리로 모든 스케줄의 복약 기록을 조회
+        List<MedicationRecord> allRecords = recordRepository.findAllByScheduleIds(scheduleIds);
+
+        for (MedicationRecord record : allRecords) {
+            if (record.getRealTakeTime() != null) {
+                LocalDate recordDate = record.getRealTakeTime().toLocalDate();
+                if (!recordDate.isBefore(startDate) && !recordDate.isAfter(endDate)) {
+                    csv.append(String.format("%s,%s,%s,%s\n",
+                            recordDate,
+                            escapeCsv(record.getMedicationSchedule().getName()),
+                            record.getIsTakeMedication() ? "복용" : "미복용",
+                            record.getRealTakeTime().toLocalTime()
+                    ));
                 }
             }
         }

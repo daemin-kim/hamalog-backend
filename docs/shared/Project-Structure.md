@@ -132,7 +132,6 @@ HTTP 요청을 처리하는 REST API 컨트롤러 계층입니다.
 | | `MedicationTimeService.java` | 복약 알림 시간 관리 |
 | | `MedicationScheduleGroupService.java` | 복약 스케줄 그룹 관리 **(신규)** |
 | | `FileStorageService.java` | 파일 저장/조회/삭제 서비스 |
-| | `SecureFileStorageService.java` | 보안 파일 저장 서비스 |
 | | `MedicationScheduleEventHandler.java` | 복약 스케줄 이벤트 처리 |
 | `service/sideEffect/` | `SideEffectService.java` | 부작용 비즈니스 로직 |
 | | `RecentSideEffectCacheService.java` | 최근 부작용 캐싱 서비스 |
@@ -268,7 +267,6 @@ JPA 엔티티 및 도메인 모델을 정의합니다.
 | | `EncryptedStringConverter.java` | 암호화된 문자열 변환기 |
 | | `EncryptedLocalDateConverter.java` | 암호화된 날짜 변환기 |
 | `security/authorization/` | `ResourceOwnershipValidator.java` | 리소스 소유권 검증 |
-| `security/ssrf/` | `SafeHttpClientUtil.java` | SSRF 방지 HTTP 클라이언트 |
 | `security/validation/` | `InputValidationUtil.java` | 입력 검증 유틸리티 |
 | `security/annotation/` | `RequireResourceOwnership.java` | 리소스 소유권 어노테이션 |
 | `security/aspect/` | `ResourceOwnershipAspect.java` | 리소스 소유권 AOP |
@@ -352,7 +350,6 @@ JPA 엔티티 및 도메인 모델을 정의합니다.
 | | `TokenExpiredException.java` | 토큰 만료 예외 |
 | | `RefreshTokenException.java` | 리프레시 토큰 예외 |
 | `exception/oauth2/` | `OAuth2Exception.java` | OAuth2 예외 |
-| | `OAuth2StateValidationException.java` | OAuth2 State 검증 예외 |
 | | `OAuth2TokenExchangeException.java` | OAuth2 토큰 교환 예외 |
 | `exception/file/` | `FileSaveFailException.java` | 파일 저장 실패 예외 |
 | `exception/validation/` | `InvalidInputException.java` | 잘못된 입력 예외 |
@@ -365,8 +362,10 @@ JPA 엔티티 및 도메인 모델을 정의합니다.
 
 | 파일 | 설명 |
 |------|------|
-| `GlobalExceptionHandler.java` | 전역 예외 처리기 |
-| `SecureErrorHandler.java` | 보안 에러 처리기 |
+| `GlobalExceptionHandler.java` | 전역 예외 처리기 (보안 기능 통합) |
+| `ExceptionHandlerUtils.java` | 예외 처리 유틸리티 |
+| `ErrorResponse.java` | 에러 응답 DTO |
+| `ErrorSeverity.java` | 에러 심각도 Enum |
 
 ---
 
@@ -836,6 +835,6 @@ src/test/java/com/Hamalog/
 ## 참고 문서
 
 - [API 명세서](./API-specification.md) - 프론트엔드 개발자용 REST API 엔드포인트 명세
-- [API 참고 문서](./API-reference.md) - 인프라 구성, DB 스키마, 변경 이력
-- [README](./README.md)
+- [API 참고 문서](../internal/API-reference.md) - 인프라 구성, DB 스키마, 변경 이력
+- [README](../README.md)
 

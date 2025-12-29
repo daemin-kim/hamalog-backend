@@ -53,7 +53,7 @@ public class MedicationScheduleGroupService {
 
         // 그룹명 중복 확인
         if (groupRepository.existsByMember_MemberIdAndName(memberId, request.name())) {
-            throw new CustomException(ErrorCode.DUPLICATE_MEMBER); // TODO: 별도 에러 코드 추가 필요
+            throw new CustomException(ErrorCode.DUPLICATE_GROUP_NAME);
         }
 
         MedicationScheduleGroup group = MedicationScheduleGroup.builder()

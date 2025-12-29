@@ -25,6 +25,7 @@ public class NotificationSettingsEventHandler {
 
     private final RedisTemplate<String, Object> redisTemplate;
     private final StructuredLogger structuredLogger;
+    private final NotificationSchedulerService notificationSchedulerService;
 
     /**
      * 알림 설정 변경 시 캐시 무효화 (동기 처리)
@@ -91,14 +92,18 @@ public class NotificationSettingsEventHandler {
             if (event.isPushDisabled()) {
                 log.info("Push disabled for memberId: {} - Cancelling scheduled notifications",
                         event.getMemberId());
-                // TODO: 예약된 알림 취소 로직
+                notificationSchedulerService.cancelAllScheduledNotifications(event.getMemberId());
             }
 
             // 일기 알림 시간 변경 시 스케줄러 재등록
             if (event.isDiaryReminderActive() && event.getDiaryReminderTime() != null) {
                 log.info("Diary reminder updated for memberId: {} at {}",
                         event.getMemberId(), event.getDiaryReminderTime());
-                // TODO: 일기 알림 스케줄러 재등록
+                notificationSchedulerService.scheduleDiaryReminder(
+                        event.getMemberId(), event.getDiaryReminderTime());
+            } else if (!event.isDiaryReminderActive()) {
+                // 일기 알림 비활성화 시 스케줄 취소
+                notificationSchedulerService.cancelDiaryReminder(event.getMemberId());
             }
 
             log.info("Completed async processing for NotificationSettingsUpdated: memberId={}",

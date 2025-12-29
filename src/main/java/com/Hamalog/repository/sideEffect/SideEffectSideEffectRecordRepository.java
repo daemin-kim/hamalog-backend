@@ -20,4 +20,10 @@ public interface SideEffectSideEffectRecordRepository extends JpaRepository<Side
     @Modifying
     @Query("DELETE FROM SideEffectSideEffectRecord ssr WHERE ssr.sideEffectRecord.sideEffectRecordId = :recordId")
     void deleteBySideEffectRecordId(@Param("recordId") Long recordId);
+
+    // 여러 부작용 기록 ID로 연관된 모든 부작용 배치 조회 (N+1 문제 해결)
+    @Query("SELECT ssr FROM SideEffectSideEffectRecord ssr " +
+           "JOIN FETCH ssr.sideEffect " +
+           "WHERE ssr.sideEffectRecord.sideEffectRecordId IN :recordIds")
+    List<SideEffectSideEffectRecord> findByRecordIdsWithSideEffect(@Param("recordIds") List<Long> recordIds);
 }

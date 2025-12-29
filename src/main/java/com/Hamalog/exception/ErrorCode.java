@@ -21,6 +21,7 @@ public enum ErrorCode {
     INVALID_PRESCRIPTION_DAYS("INVALID_PRESCRIPTION_DAYS", "처방 일수는 1일 이상이어야 합니다."),
     INVALID_PER_DAY("INVALID_PER_DAY", "1일 복용 횟수는 1회 이상이어야 합니다."),
     INVALID_DATE_RANGE("INVALID_DATE_RANGE", "시작일은 처방일 이후여야 합니다."),
+    DUPLICATE_GROUP_NAME("DUPLICATE_GROUP_NAME", "이미 존재하는 그룹 이름입니다."),
 
     // Business Logic Errors - Side Effect
     SIDE_EFFECT_NOT_FOUND("SIDE_EFFECT_NOT_FOUND", "부작용 정보를 찾을 수 없습니다."),

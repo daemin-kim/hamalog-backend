@@ -5,6 +5,7 @@ import com.Hamalog.domain.medication.MedicationRecord;
 import com.Hamalog.domain.medication.MedicationSchedule;
 import com.Hamalog.domain.member.Member;
 import com.Hamalog.domain.sideEffect.SideEffectRecord;
+import com.Hamalog.domain.sideEffect.SideEffectSideEffectRecord;
 import com.Hamalog.dto.export.ExportDataResponse;
 import com.Hamalog.dto.export.ExportDataResponse.*;
 import com.Hamalog.exception.CustomException;
@@ -14,6 +15,7 @@ import com.Hamalog.repository.medication.MedicationRecordRepository;
 import com.Hamalog.repository.medication.MedicationScheduleRepository;
 import com.Hamalog.repository.member.MemberRepository;
 import com.Hamalog.repository.sideEffect.SideEffectRecordRepository;
+import com.Hamalog.repository.sideEffect.SideEffectSideEffectRecordRepository;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.datatype.jsr310.JavaTimeModule;
 import java.time.LocalDate;
@@ -36,6 +38,7 @@ public class ExportService {
     private final MedicationRecordRepository recordRepository;
     private final MoodDiaryRepository moodDiaryRepository;
     private final SideEffectRecordRepository sideEffectRecordRepository;
+    private final SideEffectSideEffectRecordRepository sideEffectSideEffectRecordRepository;
     private final ObjectMapper objectMapper;
 
     /**
@@ -118,16 +121,43 @@ public class ExportService {
                 ))
                 .toList();
 
-        // 부작용 기록
+        // 부작용 기록 - 배치 조회로 N+1 문제 해결
         List<SideEffectRecord> sideEffectRecords = sideEffectRecordRepository.findByMember_MemberIdOrderByCreatedAtDesc(
                 memberId, PageRequest.of(0, 1000)).getContent();
-        List<SideEffectRecordExportData> sideEffectData = sideEffectRecords.stream()
-                .map(r -> new SideEffectRecordExportData(
-                        r.getSideEffectRecordId(),
-                        r.getCreatedAt(),
-                        List.of() // TODO: 부작용 상세 정보 추가
-                ))
-                .toList();
+
+        List<SideEffectRecordExportData> sideEffectData;
+        if (sideEffectRecords.isEmpty()) {
+            sideEffectData = List.of();
+        } else {
+            // 모든 부작용 기록 ID 추출
+            List<Long> sideEffectRecordIds = sideEffectRecords.stream()
+                    .map(SideEffectRecord::getSideEffectRecordId)
+                    .toList();
+
+            // 한 번의 쿼리로 모든 부작용 상세 정보 조회
+            List<SideEffectSideEffectRecord> allDetails = sideEffectSideEffectRecordRepository
+                    .findByRecordIdsWithSideEffect(sideEffectRecordIds);
+
+            // 부작용 기록 ID별로 그룹화
+            java.util.Map<Long, List<SideEffectSideEffectRecord>> detailsByRecordId = allDetails.stream()
+                    .collect(java.util.stream.Collectors.groupingBy(
+                            d -> d.getSideEffectRecord().getSideEffectRecordId()));
+
+            sideEffectData = sideEffectRecords.stream()
+                    .map(r -> {
+                        List<SideEffectSideEffectRecord> details = detailsByRecordId.getOrDefault(
+                                r.getSideEffectRecordId(), List.of());
+                        List<String> sideEffectNames = details.stream()
+                                .map(d -> d.getSideEffect().getName() + "(심각도: " + d.getDegree() + ")")
+                                .toList();
+                        return new SideEffectRecordExportData(
+                                r.getSideEffectRecordId(),
+                                r.getCreatedAt(),
+                                sideEffectNames
+                        );
+                    })
+                    .toList();
+        }
 
         log.info("데이터 내보내기 완료 - memberId: {}, schedules: {}, records: {}, diaries: {}",
                 memberId, scheduleData.size(), recordData.size(), diaryData.size());

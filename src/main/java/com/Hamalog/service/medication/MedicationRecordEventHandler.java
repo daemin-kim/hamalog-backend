@@ -3,6 +3,7 @@ package com.Hamalog.service.medication;
 import com.Hamalog.domain.events.medication.MedicationRecordCreated;
 import com.Hamalog.logging.StructuredLogger;
 import com.Hamalog.logging.events.BusinessEvent;
+import com.Hamalog.service.notification.FcmPushService;
 import java.util.HashMap;
 import java.util.Map;
 import lombok.RequiredArgsConstructor;
@@ -24,6 +25,8 @@ public class MedicationRecordEventHandler {
 
     private final RedisTemplate<String, Object> redisTemplate;
     private final StructuredLogger structuredLogger;
+    private final FcmPushService fcmPushService;
+    private final MedicationReminderService medicationReminderService;
 
     /**
      * 복약 기록 생성 시 캐시 무효화 (동기 처리)
@@ -79,8 +82,27 @@ public class MedicationRecordEventHandler {
 
             structuredLogger.business(businessEvent);
 
-            // TODO: 연속 복약 달성 시 업적 알림
-            // TODO: 복용 1시간 후 부작용 기록 권유 알림 스케줄링
+            // 복약 완료 시에만 후속 작업 수행
+            if (event.getIsTakeMedication()) {
+                // 연속 복약 달성 시 업적 알림
+                int consecutiveDays = medicationReminderService.calculateConsecutiveMedicationDays(
+                        event.getMemberId(), event.getMedicationScheduleId());
+
+                if (consecutiveDays == 7 || consecutiveDays == 30 || consecutiveDays == 100) {
+                    log.info("Consecutive medication milestone reached for memberId: {}, days: {}",
+                            event.getMemberId(), consecutiveDays);
+                    fcmPushService.sendConsecutiveMedicationAchievement(event.getMemberId(), consecutiveDays);
+                }
+
+                // 복용 1시간 후 부작용 기록 권유 알림 스케줄링
+                if (event.getRealTakeTime() != null) {
+                    medicationReminderService.scheduleSideEffectRecordReminder(
+                            event.getMemberId(),
+                            event.getMedicationScheduleId(),
+                            event.getRealTakeTime()
+                    );
+                }
+            }
 
             log.info("Completed async processing for MedicationRecordCreated: recordId={}, memberId={}",
                     event.getMedicationRecordId(), event.getMemberId());

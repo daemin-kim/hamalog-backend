@@ -83,6 +83,10 @@ dependencies {
 	implementation 'net.logstash.logback:logstash-logback-encoder:7.4'
 	implementation 'org.springframework.boot:spring-boot-starter-data-redis'
 	implementation 'org.apache.httpcomponents.client5:httpclient5'
+
+	// Firebase Admin SDK - FCM Push 알림
+	implementation 'com.google.firebase:firebase-admin:9.2.0'
+
 	testImplementation 'org.apache.httpcomponents.client5:httpclient5'
 }
 

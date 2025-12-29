@@ -3,6 +3,7 @@ package com.Hamalog.service.sideEffect;
 import com.Hamalog.domain.events.sideEffect.SideEffectRecordCreated;
 import com.Hamalog.logging.StructuredLogger;
 import com.Hamalog.logging.events.BusinessEvent;
+import com.Hamalog.service.notification.FcmPushService;
 import java.util.HashMap;
 import java.util.Map;
 import java.util.stream.Collectors;
@@ -25,6 +26,7 @@ public class SideEffectEventHandler {
 
     private final RedisTemplate<String, Object> redisTemplate;
     private final StructuredLogger structuredLogger;
+    private final FcmPushService fcmPushService;
 
     /**
      * 부작용 기록 생성 시 캐시 갱신 (동기 처리)
@@ -86,15 +88,29 @@ public class SideEffectEventHandler {
             if (event.hasSevereSideEffect()) {
                 log.warn("Severe side effect recorded for memberId: {}, maxDegree: {}",
                         event.getMemberId(), event.getMaxDegree());
-                // TODO: 심각한 부작용 알림 발송
-                // TODO: 의료진 상담 권유 메시지 발송
+
+                // 심각한 부작용 알림 발송
+                String severeSideEffectName = event.getSideEffects().stream()
+                        .filter(s -> s.degree() >= 3)
+                        .map(s -> s.name())
+                        .findFirst()
+                        .orElse("알 수 없음");
+                fcmPushService.sendSevereSideEffectAlert(
+                        event.getMemberId(), severeSideEffectName, event.getMaxDegree());
+
+                // 의료진 상담 권유 메시지 발송
+                fcmPushService.sendMedicalConsultationReminder(event.getMemberId());
             }
 
             // 복약 스케줄과 연계된 부작용인 경우 통계 집계
             if (event.isLinkedToMedication()) {
                 log.info("Side effect linked to medication schedule: {} for memberId: {}",
                         event.getLinkedMedicationScheduleId(), event.getMemberId());
-                // TODO: 특정 약물별 부작용 통계 업데이트
+
+                // 약물별 부작용 통계 캐시 갱신 (Redis에 저장)
+                String medicationStatsKey = "medication_side_effect_stats:" +
+                        event.getLinkedMedicationScheduleId();
+                redisTemplate.opsForValue().increment(medicationStatsKey, 1);
             }
 
             log.info("Completed async processing for SideEffectRecordCreated: recordId={}, memberId={}",

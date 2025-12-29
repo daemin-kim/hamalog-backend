@@ -3,6 +3,7 @@ package com.Hamalog.service.diary;
 import com.Hamalog.domain.events.diary.MoodDiaryCreated;
 import com.Hamalog.logging.StructuredLogger;
 import com.Hamalog.logging.events.BusinessEvent;
+import com.Hamalog.service.notification.FcmPushService;
 import java.util.HashMap;
 import java.util.Map;
 import lombok.RequiredArgsConstructor;
@@ -24,6 +25,7 @@ public class MoodDiaryEventHandler {
 
     private final RedisTemplate<String, Object> redisTemplate;
     private final StructuredLogger structuredLogger;
+    private final FcmPushService fcmPushService;
 
     /**
      * 마음 일기 생성 시 캐시 무효화 (동기 처리)
@@ -84,7 +86,14 @@ public class MoodDiaryEventHandler {
             if (event.isNegativeMood()) {
                 log.info("Negative mood detected for memberId: {}, mood: {} - Consider side effect recording notification",
                         event.getMemberId(), event.getMoodType());
-                // TODO: 부정적 기분 연속 N일 시 부작용 기록 권유 알림 발송
+
+                // 연속 부정적 기분 일수 확인 (연속 3일 이상)
+                Integer consecutiveNegativeDays = checkConsecutiveNegativeMoodDays(event.getMemberId());
+                if (consecutiveNegativeDays != null && consecutiveNegativeDays >= 3) {
+                    fcmPushService.sendNegativeMoodAlert(event.getMemberId(), consecutiveNegativeDays);
+                    fcmPushService.sendSideEffectRecordReminder(event.getMemberId(),
+                            "최근 며칠간 기분이 좋지 않으셨군요. 혹시 부작용으로 인한 것은 아닌지 확인해보세요.");
+                }
             }
 
             // 연속 작성일 업적 알림
@@ -93,7 +102,7 @@ public class MoodDiaryEventHandler {
                 if (days == 7 || days == 30 || days == 100) {
                     log.info("Consecutive days milestone reached for memberId: {}, days: {}",
                             event.getMemberId(), days);
-                    // TODO: 업적 달성 알림 발송
+                    fcmPushService.sendConsecutiveDiaryAchievement(event.getMemberId(), days);
                 }
             }
 
@@ -104,5 +113,22 @@ public class MoodDiaryEventHandler {
             log.error("Failed async processing for MoodDiaryCreated: {}",
                     event.getMoodDiaryId(), e);
         }
+    }
+
+    /**
+     * 연속 부정적 기분 일수 확인 (Redis 캐시 기반)
+     * 실제 구현에서는 DB 조회가 필요하지만, 간단히 Redis 카운터 사용
+     */
+    private Integer checkConsecutiveNegativeMoodDays(Long memberId) {
+        String key = "negative_mood_streak:" + memberId;
+        try {
+            Object value = redisTemplate.opsForValue().get(key);
+            if (value != null) {
+                return Integer.parseInt(value.toString());
+            }
+        } catch (Exception e) {
+            log.debug("Failed to get negative mood streak from Redis: {}", e.getMessage());
+        }
+        return 0;
     }
 }

@@ -16,6 +16,7 @@ import com.Hamalog.handler.GlobalExceptionHandler;
 import com.Hamalog.logging.StructuredLogger;
 import com.Hamalog.security.filter.TrustedProxyService;
 import com.Hamalog.security.jwt.JwtTokenProvider;
+import com.Hamalog.security.validation.InputValidationUtil;
 import com.Hamalog.service.auth.AuthenticationService;
 import com.Hamalog.service.auth.MemberDeletionService;
 import com.Hamalog.service.auth.MemberRegistrationService;
@@ -70,6 +71,9 @@ class AuthControllerTest {
     @Mock
     private ExceptionHandlerUtils handlerUtils;
 
+    @Mock
+    private InputValidationUtil inputValidationUtil;
+
     @InjectMocks
     private AuthController authController;
 
@@ -88,7 +92,7 @@ class AuthControllerTest {
         jsonConverter.setObjectMapper(objectMapper);
         
         mockMvc = MockMvcBuilders.standaloneSetup(authController)
-                .setControllerAdvice(new GlobalExceptionHandler(structuredLogger, handlerUtils))
+                .setControllerAdvice(new GlobalExceptionHandler(structuredLogger, handlerUtils, trustedProxyService, inputValidationUtil))
                 .setMessageConverters(stringConverter, jsonConverter)
                 .defaultResponseCharacterEncoding(StandardCharsets.UTF_8)
                 .build();

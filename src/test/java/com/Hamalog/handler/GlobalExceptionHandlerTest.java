@@ -13,6 +13,8 @@ import com.Hamalog.exception.oauth2.OAuth2Exception;
 import com.Hamalog.exception.token.TokenException;
 import com.Hamalog.exception.validation.InvalidInputException;
 import com.Hamalog.logging.StructuredLogger;
+import com.Hamalog.security.filter.TrustedProxyService;
+import com.Hamalog.security.validation.InputValidationUtil;
 import jakarta.persistence.OptimisticLockException;
 import java.util.ArrayList;
 import java.util.List;
@@ -48,6 +50,12 @@ class GlobalExceptionHandlerTest {
     @Mock
     private ExceptionHandlerUtils handlerUtils;
 
+    @Mock
+    private TrustedProxyService trustedProxyService;
+
+    @Mock
+    private InputValidationUtil inputValidationUtil;
+
     private MockHttpServletRequest request;
 
     @BeforeEach
@@ -55,7 +63,7 @@ class GlobalExceptionHandlerTest {
         request = new MockHttpServletRequest();
         request.setRequestURI("/api/test");
         lenient().when(handlerUtils.createErrorContext(any(), any(), any())).thenReturn(Map.of());
-        globalExceptionHandler = new GlobalExceptionHandler(structuredLogger, handlerUtils);
+        globalExceptionHandler = new GlobalExceptionHandler(structuredLogger, handlerUtils, trustedProxyService, inputValidationUtil);
     }
 
     @Nested

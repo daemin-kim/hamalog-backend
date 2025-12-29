@@ -19,6 +19,8 @@ import com.Hamalog.handler.ExceptionHandlerUtils;
 import com.Hamalog.handler.GlobalExceptionHandler;
 import com.Hamalog.logging.StructuredLogger;
 import com.Hamalog.security.CustomUserDetails;
+import com.Hamalog.security.filter.TrustedProxyService;
+import com.Hamalog.security.validation.InputValidationUtil;
 import com.Hamalog.service.diary.MoodDiaryService;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.datatype.jsr310.JavaTimeModule;
@@ -56,6 +58,12 @@ class MoodDiaryControllerTest {
     @Mock
     private ExceptionHandlerUtils handlerUtils;
 
+    @Mock
+    private TrustedProxyService trustedProxyService;
+
+    @Mock
+    private InputValidationUtil inputValidationUtil;
+
     @InjectMocks
     private MoodDiaryController moodDiaryController;
 
@@ -70,7 +78,7 @@ class MoodDiaryControllerTest {
 
         mockMvc = MockMvcBuilders.standaloneSetup(moodDiaryController)
                 .setCustomArgumentResolvers(new CustomUserResolver())
-                .setControllerAdvice(new GlobalExceptionHandler(structuredLogger, handlerUtils))
+                .setControllerAdvice(new GlobalExceptionHandler(structuredLogger, handlerUtils, trustedProxyService, inputValidationUtil))
                 .defaultResponseCharacterEncoding(java.nio.charset.StandardCharsets.UTF_8)
                 .build();
 

@@ -12,6 +12,8 @@ import com.Hamalog.exception.token.TokenException;
 import com.Hamalog.exception.validation.InvalidInputException;
 import com.Hamalog.logging.MDCUtil;
 import com.Hamalog.logging.StructuredLogger;
+import com.Hamalog.security.filter.TrustedProxyService;
+import com.Hamalog.security.validation.InputValidationUtil;
 import jakarta.persistence.OptimisticLockException;
 import jakarta.servlet.http.HttpServletRequest;
 import java.util.HashMap;
@@ -24,26 +26,34 @@ import org.springframework.dao.OptimisticLockingFailureException;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.http.converter.HttpMessageNotReadableException;
+import org.springframework.security.access.AccessDeniedException;
 import org.springframework.security.core.AuthenticationException;
 import org.springframework.validation.FieldError;
 import org.springframework.web.HttpMediaTypeNotSupportedException;
+import org.springframework.web.HttpRequestMethodNotSupportedException;
 import org.springframework.web.bind.MethodArgumentNotValidException;
 import org.springframework.web.bind.annotation.ExceptionHandler;
 import org.springframework.web.bind.annotation.RestControllerAdvice;
+import org.springframework.web.multipart.MaxUploadSizeExceededException;
 import org.springframework.web.multipart.support.MissingServletRequestPartException;
+import org.springframework.web.servlet.NoHandlerFoundException;
 
 /**
  * 전역 예외 처리기
  * REST API에서 발생하는 모든 예외를 일관된 형식으로 처리합니다.
+ * OWASP Top 10 A05: Security Misconfiguration 대응을 포함합니다.
  */
 @RequiredArgsConstructor
 @RestControllerAdvice
 public class GlobalExceptionHandler {
 
     private static final Logger log = LoggerFactory.getLogger(GlobalExceptionHandler.class);
+    private static final Logger securityLog = LoggerFactory.getLogger("SECURITY");
 
     private final StructuredLogger structuredLogger;
     private final ExceptionHandlerUtils handlerUtils;
+    private final TrustedProxyService trustedProxyService;
+    private final InputValidationUtil inputValidationUtil;
 
     // ==================== 리소스 Not Found 예외 ====================
 
@@ -75,8 +85,39 @@ public class GlobalExceptionHandler {
 
     @ExceptionHandler(AuthenticationException.class)
     public ResponseEntity<ErrorResponse> handleAuth(AuthenticationException ex, HttpServletRequest request) {
+        String clientIp = getClientIp(request);
+        String sanitizedPath = inputValidationUtil.sanitizeForLog(request.getRequestURI());
+
+        securityLog.warn("인증 실패: IP={}, Path={}, Error={}",
+                        clientIp, sanitizedPath, ex.getMessage());
+
         return handleSimpleException(ex, request, HttpStatus.UNAUTHORIZED,
                 "UNAUTHORIZED", "Authentication failed", "AUTHENTICATION_ERROR");
+    }
+
+    @ExceptionHandler(AccessDeniedException.class)
+    public ResponseEntity<ErrorResponse> handleAccessDenied(AccessDeniedException ex, HttpServletRequest request) {
+        String clientIp = getClientIp(request);
+        String sanitizedPath = inputValidationUtil.sanitizeForLog(request.getRequestURI());
+
+        securityLog.warn("접근 거부: IP={}, Path={}, Error={}",
+                        clientIp, sanitizedPath, ex.getMessage());
+
+        return handleSimpleException(ex, request, HttpStatus.FORBIDDEN,
+                "ACCESS_DENIED", "해당 리소스에 접근할 권한이 없습니다", "ACCESS_DENIED_ERROR");
+    }
+
+    @ExceptionHandler(InputValidationUtil.InputValidationException.class)
+    public ResponseEntity<ErrorResponse> handleInputValidationException(
+            InputValidationUtil.InputValidationException ex, HttpServletRequest request) {
+        String clientIp = getClientIp(request);
+        String sanitizedPath = inputValidationUtil.sanitizeForLog(request.getRequestURI());
+
+        securityLog.warn("입력값 보안 검증 실패: IP={}, Path={}, Error={}",
+                        clientIp, sanitizedPath, ex.getMessage());
+
+        return handleSimpleException(ex, request, HttpStatus.BAD_REQUEST,
+                "INVALID_INPUT", "유효하지 않은 입력값입니다", "INPUT_VALIDATION_ERROR");
     }
 
     // ==================== 유효성 검증 예외 ====================
@@ -156,6 +197,41 @@ public class GlobalExceptionHandler {
         String errorMessage = String.format("Required request part '%s' is missing.", ex.getRequestPartName());
         return handleSimpleException(ex, request, HttpStatus.BAD_REQUEST,
                 "MISSING_REQUEST_PART", errorMessage, "REQUEST_PART_ERROR");
+    }
+
+    @ExceptionHandler(MaxUploadSizeExceededException.class)
+    public ResponseEntity<ErrorResponse> handleMaxUploadSizeExceeded(
+            MaxUploadSizeExceededException ex, HttpServletRequest request) {
+        String clientIp = getClientIp(request);
+
+        securityLog.warn("파일 업로드 크기 초과: IP={}", clientIp);
+
+        return handleSimpleException(ex, request, HttpStatus.PAYLOAD_TOO_LARGE,
+                ErrorCode.FILE_SIZE_EXCEEDED.getCode(),
+                ErrorCode.FILE_SIZE_EXCEEDED.getMessage(), "FILE_SIZE_ERROR");
+    }
+
+    @ExceptionHandler(HttpRequestMethodNotSupportedException.class)
+    public ResponseEntity<ErrorResponse> handleMethodNotSupported(
+            HttpRequestMethodNotSupportedException ex, HttpServletRequest request) {
+        String sanitizedPath = inputValidationUtil.sanitizeForLog(request.getRequestURI());
+        String method = inputValidationUtil.sanitizeForLog(request.getMethod());
+
+        log.warn("지원하지 않는 HTTP 메서드: {} {}", method, sanitizedPath);
+
+        return handleSimpleException(ex, request, HttpStatus.METHOD_NOT_ALLOWED,
+                "METHOD_NOT_ALLOWED", "지원하지 않는 HTTP 메서드입니다", "METHOD_ERROR");
+    }
+
+    @ExceptionHandler(NoHandlerFoundException.class)
+    public ResponseEntity<ErrorResponse> handleNoHandlerFound(
+            NoHandlerFoundException ex, HttpServletRequest request) {
+        String sanitizedPath = inputValidationUtil.sanitizeForLog(request.getRequestURI());
+
+        log.info("리소스를 찾을 수 없음: {}", sanitizedPath);
+
+        return handleSimpleException(ex, request, HttpStatus.NOT_FOUND,
+                "RESOURCE_NOT_FOUND", "요청하신 리소스를 찾을 수 없습니다", "NOT_FOUND_ERROR");
     }
 
     // ==================== 범용 CustomException 처리 ====================
@@ -276,5 +352,12 @@ public class GlobalExceptionHandler {
             case FILE_SIZE_EXCEEDED -> HttpStatus.PAYLOAD_TOO_LARGE;
             default -> HttpStatus.BAD_REQUEST;
         };
+    }
+
+    /**
+     * 클라이언트 IP 주소 추출 (보안 로깅용)
+     */
+    private String getClientIp(HttpServletRequest request) {
+        return trustedProxyService.resolveClientIp(request).orElse(request.getRemoteAddr());
     }
 }

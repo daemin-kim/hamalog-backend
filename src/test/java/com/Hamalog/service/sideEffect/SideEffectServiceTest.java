@@ -4,6 +4,7 @@ import static org.assertj.core.api.Assertions.*;
 import static org.mockito.ArgumentMatchers.*;
 import static org.mockito.Mockito.*;
 
+import com.Hamalog.domain.events.DomainEventPublisher;
 import com.Hamalog.domain.member.Member;
 import com.Hamalog.domain.sideEffect.SideEffect;
 import com.Hamalog.domain.sideEffect.SideEffectRecord;
@@ -14,6 +15,7 @@ import com.Hamalog.exception.ErrorCode;
 import com.Hamalog.exception.member.MemberNotFoundException;
 import com.Hamalog.exception.sideEffect.SideEffectNotFoundException;
 import com.Hamalog.exception.validation.InvalidInputException;
+import com.Hamalog.repository.medication.MedicationScheduleRepository;
 import com.Hamalog.repository.member.MemberRepository;
 import com.Hamalog.repository.sideEffect.SideEffectRecordRepository;
 import com.Hamalog.repository.sideEffect.SideEffectRepository;
@@ -49,6 +51,12 @@ class SideEffectServiceTest {
     private MemberRepository memberRepository;
 
     @Mock
+    private MedicationScheduleRepository medicationScheduleRepository;
+
+    @Mock
+    private DomainEventPublisher domainEventPublisher;
+
+    @Mock
     private RecentSideEffectCacheService cacheService;
 
     @InjectMocks
@@ -77,6 +85,7 @@ class SideEffectServiceTest {
         createRequest = new SideEffectRecordRequest(
                 1L, // memberId
                 LocalDateTime.now(), // createdAt
+                null, // linkedMedicationScheduleId
                 Arrays.asList(sideEffectItem1, sideEffectItem2) // sideEffects
         );
     }
@@ -89,7 +98,7 @@ class SideEffectServiceTest {
         List<String> cachedNames = Arrays.asList("Headache", "Nausea");
         SideEffectService serviceWithCache = new SideEffectService(
                 sideEffectRepository, sideEffectRecordRepository, sideEffectSideEffectRecordRepository,
-                memberRepository, cacheService
+                memberRepository, medicationScheduleRepository, domainEventPublisher, cacheService
         );
         when(memberRepository.existsById(memberId)).thenReturn(true);
         when(cacheService.getRecentSideEffects(memberId)).thenReturn(cachedNames);
@@ -113,7 +122,7 @@ class SideEffectServiceTest {
         List<String> dbNames = Arrays.asList("Headache", "Nausea");
         SideEffectService serviceWithCache = new SideEffectService(
                 sideEffectRepository, sideEffectRecordRepository, sideEffectSideEffectRecordRepository,
-                memberRepository, cacheService
+                memberRepository, medicationScheduleRepository, domainEventPublisher, cacheService
         );
         when(memberRepository.existsById(memberId)).thenReturn(true);
         when(cacheService.getRecentSideEffects(memberId)).thenReturn(Collections.emptyList());
@@ -138,7 +147,7 @@ class SideEffectServiceTest {
         List<String> emptyNames = Collections.emptyList();
         SideEffectService serviceWithCache = new SideEffectService(
                 sideEffectRepository, sideEffectRecordRepository, sideEffectSideEffectRecordRepository,
-                memberRepository, cacheService
+                memberRepository, medicationScheduleRepository, domainEventPublisher, cacheService
         );
         when(memberRepository.existsById(memberId)).thenReturn(true);
         when(cacheService.getRecentSideEffects(memberId)).thenReturn(Collections.emptyList());
@@ -163,7 +172,7 @@ class SideEffectServiceTest {
         List<String> dbNames = Arrays.asList("Headache", "Nausea");
         SideEffectService serviceWithoutCache = new SideEffectService(
                 sideEffectRepository, sideEffectRecordRepository, sideEffectSideEffectRecordRepository,
-                memberRepository, null
+                memberRepository, medicationScheduleRepository, domainEventPublisher, null
         );
         when(memberRepository.existsById(memberId)).thenReturn(true);
         when(sideEffectRepository.findRecentSideEffectNames(memberId)).thenReturn(dbNames);
@@ -199,7 +208,7 @@ class SideEffectServiceTest {
 
         SideEffectService serviceWithCache = new SideEffectService(
                 sideEffectRepository, sideEffectRecordRepository, sideEffectSideEffectRecordRepository,
-                memberRepository, cacheService
+                memberRepository, medicationScheduleRepository, domainEventPublisher, cacheService
         );
 
         // when
@@ -211,6 +220,7 @@ class SideEffectServiceTest {
         verify(sideEffectRepository).findAllById(Arrays.asList(1L, 2L));
         verify(sideEffectSideEffectRecordRepository, times(2)).save(any(SideEffectSideEffectRecord.class));
         verify(cacheService, times(2)).addRecentSideEffect(eq(1L), anyString());
+        verify(domainEventPublisher).publish(any());
     }
 
     @Test
@@ -252,7 +262,7 @@ class SideEffectServiceTest {
         // given
         SideEffectService serviceWithoutCache = new SideEffectService(
                 sideEffectRepository, sideEffectRecordRepository, sideEffectSideEffectRecordRepository,
-                memberRepository, null
+                memberRepository, medicationScheduleRepository, domainEventPublisher, null
         );
         when(memberRepository.findById(1L)).thenReturn(Optional.of(mockMember));
         when(sideEffectRecordRepository.save(any(SideEffectRecord.class))).thenReturn(mockRecord);
@@ -285,12 +295,13 @@ class SideEffectServiceTest {
         SideEffectRecordRequest emptyRequest = new SideEffectRecordRequest(
                 1L,
                 LocalDateTime.now(),
+                null,
                 Collections.emptyList()
         );
 
         SideEffectService serviceWithCache = new SideEffectService(
                 sideEffectRepository, sideEffectRecordRepository, sideEffectSideEffectRecordRepository,
-                memberRepository, cacheService
+                memberRepository, medicationScheduleRepository, domainEventPublisher, cacheService
         );
 
         // when & then
@@ -364,6 +375,7 @@ class SideEffectServiceTest {
         SideEffectRecordRequest requestWithNullDate = new SideEffectRecordRequest(
                 1L,
                 null, // createdAt is null
+                null, // linkedMedicationScheduleId
                 Arrays.asList(sideEffectItem1)
         );
         when(memberRepository.findById(1L)).thenReturn(Optional.of(mockMember));
@@ -378,7 +390,7 @@ class SideEffectServiceTest {
 
         SideEffectService serviceWithCache = new SideEffectService(
                 sideEffectRepository, sideEffectRecordRepository, sideEffectSideEffectRecordRepository,
-                memberRepository, cacheService
+                memberRepository, medicationScheduleRepository, domainEventPublisher, cacheService
         );
 
         // when

@@ -5,6 +5,7 @@ import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.Mockito.*;
 
+import com.Hamalog.domain.events.DomainEventPublisher;
 import com.Hamalog.domain.member.Member;
 import com.Hamalog.domain.notification.DeviceType;
 import com.Hamalog.domain.notification.FcmDeviceToken;
@@ -44,6 +45,9 @@ class NotificationSettingsServiceTest {
 
     @Mock
     private MemberRepository memberRepository;
+
+    @Mock
+    private DomainEventPublisher domainEventPublisher;
 
     @InjectMocks
     private NotificationSettingsService notificationSettingsService;

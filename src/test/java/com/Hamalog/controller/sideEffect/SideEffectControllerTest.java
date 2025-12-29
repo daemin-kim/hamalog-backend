@@ -313,6 +313,7 @@ class SideEffectControllerTest {
         return new SideEffectRecordRequest(
                 1L, // memberId
                 LocalDateTime.now(), // recordedAt
+                null, // linkedMedicationScheduleId
                 Arrays.asList(item1, item2) // sideEffects
         );
     }

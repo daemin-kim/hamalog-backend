@@ -9,6 +9,7 @@ import static org.mockito.Mockito.*;
 import com.Hamalog.domain.diary.DiaryType;
 import com.Hamalog.domain.diary.MoodDiary;
 import com.Hamalog.domain.diary.MoodType;
+import com.Hamalog.domain.events.DomainEventPublisher;
 import com.Hamalog.domain.member.Member;
 import com.Hamalog.dto.diary.request.MoodDiaryCreateRequest;
 import com.Hamalog.dto.diary.request.MoodDiaryUpdateRequest;
@@ -46,6 +47,9 @@ class MoodDiaryServiceTest {
 
     @Mock
     private MemberRepository memberRepository;
+
+    @Mock
+    private DomainEventPublisher domainEventPublisher;
 
     @InjectMocks
     private MoodDiaryService moodDiaryService;

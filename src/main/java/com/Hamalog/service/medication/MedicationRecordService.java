@@ -1,5 +1,7 @@
 package com.Hamalog.service.medication;
 
+import com.Hamalog.domain.events.DomainEventPublisher;
+import com.Hamalog.domain.events.medication.MedicationRecordCreated;
 import com.Hamalog.domain.medication.MedicationRecord;
 import com.Hamalog.domain.medication.MedicationSchedule;
 import com.Hamalog.domain.medication.MedicationTime;
@@ -32,6 +34,7 @@ public class MedicationRecordService {
     private final MedicationScheduleRepository medicationScheduleRepository;
     private final MedicationTimeRepository medicationTimeRepository;
     private final MemberRepository memberRepository;
+    private final DomainEventPublisher domainEventPublisher;
 
     public List<MedicationRecord> getMedicationRecords(Long medicationScheduleId) {
         if (medicationScheduleId == null || medicationScheduleId <= 0) {
@@ -90,7 +93,22 @@ public class MedicationRecordService {
                 medicationRecordCreateRequest.realTakeTime()
         );
 
-        return medicationRecordRepository.save(medicationRecord);
+        MedicationRecord savedRecord = medicationRecordRepository.save(medicationRecord);
+
+        // 도메인 이벤트 발행
+        MedicationRecordCreated event = new MedicationRecordCreated(
+                savedRecord.getMedicationRecordId(),
+                medicationSchedule.getMedicationScheduleId(),
+                medicationTime.getMedicationTimeId(),
+                medicationSchedule.getMember().getMemberId(),
+                medicationSchedule.getMember().getLoginId(),
+                savedRecord.getIsTakeMedication(),
+                savedRecord.getRealTakeTime()
+        );
+        domainEventPublisher.publish(event);
+        log.debug("Published MedicationRecordCreated event for record ID: {}", savedRecord.getMedicationRecordId());
+
+        return savedRecord;
     }
 
     @RequireResourceOwnership(

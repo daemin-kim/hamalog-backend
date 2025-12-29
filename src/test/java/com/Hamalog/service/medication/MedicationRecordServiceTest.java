@@ -6,6 +6,7 @@ import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.anyLong;
 import static org.mockito.Mockito.*;
 
+import com.Hamalog.domain.events.DomainEventPublisher;
 import com.Hamalog.domain.medication.MedicationRecord;
 import com.Hamalog.domain.medication.MedicationSchedule;
 import com.Hamalog.domain.medication.MedicationTime;
@@ -46,6 +47,9 @@ class MedicationRecordServiceTest {
     
     @Mock
     private MemberRepository memberRepository;
+
+    @Mock
+    private DomainEventPublisher domainEventPublisher;
 
     @InjectMocks
     private MedicationRecordService medicationRecordService;
@@ -130,6 +134,9 @@ class MedicationRecordServiceTest {
         // Mock the relationship between MedicationTime and MedicationSchedule
         when(mockTime.getMedicationSchedule()).thenReturn(mockSchedule);
         when(mockSchedule.getMedicationScheduleId()).thenReturn(1L);
+        when(mockSchedule.getMember()).thenReturn(mockMember);
+        when(mockMember.getMemberId()).thenReturn(1L);
+        when(mockMember.getLoginId()).thenReturn("testUser");
 
         when(medicationRecordRepository.save(any(MedicationRecord.class))).thenReturn(mockRecord);
 

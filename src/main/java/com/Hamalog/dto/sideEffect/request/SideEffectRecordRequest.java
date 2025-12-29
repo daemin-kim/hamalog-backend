@@ -16,6 +16,9 @@ public record SideEffectRecordRequest(
         @Schema(description = "기록 시간", example = "2025-08-29T10:30:00", requiredMode = Schema.RequiredMode.REQUIRED)
         LocalDateTime createdAt,
 
+        @Schema(description = "연계된 복약 스케줄 ID (선택) - 특정 약물 복용 후 부작용 발생 시 연결", example = "101")
+        Long linkedMedicationScheduleId,
+
         @NotEmpty(message = "{sideEffect.sideEffects.notEmpty}")
         @Valid
         @Schema(description = "부작용 항목 목록", requiredMode = Schema.RequiredMode.REQUIRED)

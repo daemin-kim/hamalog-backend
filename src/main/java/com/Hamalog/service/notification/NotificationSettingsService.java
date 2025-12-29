@@ -1,5 +1,7 @@
 package com.Hamalog.service.notification;
 
+import com.Hamalog.domain.events.DomainEventPublisher;
+import com.Hamalog.domain.events.notification.NotificationSettingsUpdated;
 import com.Hamalog.domain.member.Member;
 import com.Hamalog.domain.notification.FcmDeviceToken;
 import com.Hamalog.domain.notification.NotificationSettings;
@@ -33,6 +35,7 @@ public class NotificationSettingsService {
     private final NotificationSettingsRepository notificationSettingsRepository;
     private final FcmDeviceTokenRepository fcmDeviceTokenRepository;
     private final MemberRepository memberRepository;
+    private final DomainEventPublisher domainEventPublisher;
 
     /**
      * 알림 설정 조회
@@ -83,6 +86,24 @@ public class NotificationSettingsService {
         // 3. 저장 및 응답 반환
         NotificationSettings saved = notificationSettingsRepository.save(settings);
         log.info("알림 설정 업데이트 완료: memberId={}", memberId);
+
+        // 4. 도메인 이벤트 발행
+        Member member = settings.getMember();
+        NotificationSettingsUpdated event = new NotificationSettingsUpdated(
+                saved.getNotificationSettingsId(),
+                memberId,
+                member.getLoginId(),
+                saved.isPushEnabled(),
+                saved.isMedicationReminderEnabled(),
+                saved.getMedicationReminderMinutesBefore(),
+                saved.isDiaryReminderEnabled(),
+                saved.getDiaryReminderTime(),
+                saved.isQuietHoursEnabled(),
+                saved.getQuietHoursStart(),
+                saved.getQuietHoursEnd()
+        );
+        domainEventPublisher.publish(event);
+        log.debug("Published NotificationSettingsUpdated event for memberId: {}", memberId);
 
         return NotificationSettingsResponse.from(saved);
     }

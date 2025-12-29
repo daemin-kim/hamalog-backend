@@ -1,5 +1,8 @@
 package com.Hamalog.service.sideEffect;
 
+import com.Hamalog.domain.events.DomainEventPublisher;
+import com.Hamalog.domain.events.sideEffect.SideEffectRecordCreated;
+import com.Hamalog.domain.medication.MedicationSchedule;
 import com.Hamalog.domain.member.Member;
 import com.Hamalog.domain.sideEffect.SideEffect;
 import com.Hamalog.domain.sideEffect.SideEffectRecord;
@@ -13,6 +16,7 @@ import com.Hamalog.exception.ErrorCode;
 import com.Hamalog.exception.member.MemberNotFoundException;
 import com.Hamalog.exception.sideEffect.SideEffectNotFoundException;
 import com.Hamalog.exception.validation.InvalidInputException;
+import com.Hamalog.repository.medication.MedicationScheduleRepository;
 import com.Hamalog.repository.member.MemberRepository;
 import com.Hamalog.repository.sideEffect.SideEffectRecordRepository;
 import com.Hamalog.repository.sideEffect.SideEffectRepository;
@@ -40,17 +44,23 @@ public class SideEffectService {
     private final SideEffectRecordRepository sideEffectRecordRepository;
     private final SideEffectSideEffectRecordRepository sideEffectSideEffectRecordRepository;
     private final MemberRepository memberRepository;
+    private final MedicationScheduleRepository medicationScheduleRepository;
     private final RecentSideEffectCacheService cacheService;
+    private final DomainEventPublisher domainEventPublisher;
 
     public SideEffectService(SideEffectRepository sideEffectRepository,
                            SideEffectRecordRepository sideEffectRecordRepository,
                            SideEffectSideEffectRecordRepository sideEffectSideEffectRecordRepository,
                            MemberRepository memberRepository,
+                           MedicationScheduleRepository medicationScheduleRepository,
+                           DomainEventPublisher domainEventPublisher,
                            @Autowired(required = false) RecentSideEffectCacheService cacheService) {
         this.sideEffectRepository = sideEffectRepository;
         this.sideEffectRecordRepository = sideEffectRecordRepository;
         this.sideEffectSideEffectRecordRepository = sideEffectSideEffectRecordRepository;
         this.memberRepository = memberRepository;
+        this.medicationScheduleRepository = medicationScheduleRepository;
+        this.domainEventPublisher = domainEventPublisher;
         this.cacheService = cacheService;
     }
 
@@ -108,9 +118,22 @@ public class SideEffectService {
         LocalDateTime createdAt = request.createdAt() != null ? request.createdAt() : LocalDateTime.now();
         validateCreatedAt(createdAt);
 
+        // 복약 스케줄 연계 처리 (선택)
+        MedicationSchedule linkedSchedule = null;
+        if (request.linkedMedicationScheduleId() != null) {
+            linkedSchedule = medicationScheduleRepository.findById(request.linkedMedicationScheduleId())
+                    .orElse(null);
+            if (linkedSchedule != null && !linkedSchedule.getMember().getMemberId().equals(request.memberId())) {
+                log.warn("LinkedMedicationSchedule does not belong to member: scheduleId={}, memberId={}",
+                        request.linkedMedicationScheduleId(), request.memberId());
+                linkedSchedule = null;
+            }
+        }
+
         // SideEffectRecord 생성
         SideEffectRecord sideEffectRecord = SideEffectRecord.builder()
                 .member(member)
+                .linkedMedicationSchedule(linkedSchedule)
                 .createdAt(createdAt)
                 .build();
         
@@ -175,6 +198,29 @@ public class SideEffectService {
                 cacheService.addRecentSideEffect(request.memberId(), sideEffectName);
             }
         }
+
+        // 도메인 이벤트 발행
+        List<SideEffectRecordCreated.SideEffectItem> eventItems = request.sideEffects().stream()
+                .map(item -> {
+                    SideEffect se = sideEffectMap.get(item.sideEffectId());
+                    return new SideEffectRecordCreated.SideEffectItem(
+                            item.sideEffectId(),
+                            se != null ? se.getName() : "Unknown",
+                            item.degree()
+                    );
+                })
+                .toList();
+
+        SideEffectRecordCreated event = new SideEffectRecordCreated(
+                savedRecord.getSideEffectRecordId(),
+                member.getMemberId(),
+                member.getLoginId(),
+                request.linkedMedicationScheduleId(),
+                createdAt,
+                eventItems
+        );
+        domainEventPublisher.publish(event);
+        log.debug("Published SideEffectRecordCreated event for record ID: {}", savedRecord.getSideEffectRecordId());
     }
     
     public boolean isOwner(Long memberId, String loginId) {

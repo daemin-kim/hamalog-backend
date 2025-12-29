@@ -27,7 +27,7 @@ class SideEffectRecordRequestTest {
         );
 
         // when
-        SideEffectRecordRequest request = new SideEffectRecordRequest(memberId, createdAt, sideEffects);
+        SideEffectRecordRequest request = new SideEffectRecordRequest(memberId, createdAt, null, sideEffects);
 
         // then
         assertThat(request.memberId()).isEqualTo(memberId);
@@ -48,7 +48,7 @@ class SideEffectRecordRequestTest {
         List<SideEffectRecordRequest.SideEffectItem> sideEffects = Collections.emptyList();
 
         // when
-        SideEffectRecordRequest request = new SideEffectRecordRequest(memberId, createdAt, sideEffects);
+        SideEffectRecordRequest request = new SideEffectRecordRequest(memberId, createdAt, null, sideEffects);
 
         // then
         assertThat(request.memberId()).isNull();
@@ -65,7 +65,7 @@ class SideEffectRecordRequestTest {
         List<SideEffectRecordRequest.SideEffectItem> sideEffects = Collections.emptyList();
 
         // when
-        SideEffectRecordRequest request = new SideEffectRecordRequest(memberId, createdAt, sideEffects);
+        SideEffectRecordRequest request = new SideEffectRecordRequest(memberId, createdAt, null, sideEffects);
 
         // then
         assertThat(request.memberId()).isEqualTo(memberId);
@@ -82,7 +82,7 @@ class SideEffectRecordRequestTest {
         List<SideEffectRecordRequest.SideEffectItem> sideEffects = null;
 
         // when
-        SideEffectRecordRequest request = new SideEffectRecordRequest(memberId, createdAt, sideEffects);
+        SideEffectRecordRequest request = new SideEffectRecordRequest(memberId, createdAt, null, sideEffects);
 
         // then
         assertThat(request.memberId()).isEqualTo(memberId);
@@ -99,7 +99,7 @@ class SideEffectRecordRequestTest {
         List<SideEffectRecordRequest.SideEffectItem> sideEffects = Collections.emptyList();
 
         // when
-        SideEffectRecordRequest request = new SideEffectRecordRequest(memberId, createdAt, sideEffects);
+        SideEffectRecordRequest request = new SideEffectRecordRequest(memberId, createdAt, null, sideEffects);
 
         // then
         assertThat(request.memberId()).isEqualTo(memberId);
@@ -117,8 +117,8 @@ class SideEffectRecordRequestTest {
                 new SideEffectRecordRequest.SideEffectItem(1L, 3)
         );
 
-        SideEffectRecordRequest request1 = new SideEffectRecordRequest(memberId, createdAt, sideEffects);
-        SideEffectRecordRequest request2 = new SideEffectRecordRequest(memberId, createdAt, sideEffects);
+        SideEffectRecordRequest request1 = new SideEffectRecordRequest(memberId, createdAt, null, sideEffects);
+        SideEffectRecordRequest request2 = new SideEffectRecordRequest(memberId, createdAt, null, sideEffects);
 
         // then
         assertThat(request1).isEqualTo(request2);
@@ -133,8 +133,8 @@ class SideEffectRecordRequestTest {
         LocalDateTime createdAt = LocalDateTime.now();
         List<SideEffectRecordRequest.SideEffectItem> sideEffects = Collections.emptyList();
 
-        SideEffectRecordRequest request1 = new SideEffectRecordRequest(1L, createdAt, sideEffects);
-        SideEffectRecordRequest request2 = new SideEffectRecordRequest(2L, createdAt, sideEffects);
+        SideEffectRecordRequest request1 = new SideEffectRecordRequest(1L, createdAt, null, sideEffects);
+        SideEffectRecordRequest request2 = new SideEffectRecordRequest(2L, createdAt, null, sideEffects);
 
         // then
         assertThat(request1).isNotEqualTo(request2);
@@ -151,7 +151,7 @@ class SideEffectRecordRequestTest {
                 new SideEffectRecordRequest.SideEffectItem(1L, 3)
         );
 
-        SideEffectRecordRequest request = new SideEffectRecordRequest(memberId, createdAt, sideEffects);
+        SideEffectRecordRequest request = new SideEffectRecordRequest(memberId, createdAt, null, sideEffects);
 
         // when
         String toStringResult = request.toString();
@@ -177,7 +177,7 @@ class SideEffectRecordRequestTest {
         }
 
         // when
-        SideEffectRecordRequest request = new SideEffectRecordRequest(memberId, createdAt, sideEffects);
+        SideEffectRecordRequest request = new SideEffectRecordRequest(memberId, createdAt, null, sideEffects);
 
         // then
         assertThat(request.memberId()).isEqualTo(memberId);

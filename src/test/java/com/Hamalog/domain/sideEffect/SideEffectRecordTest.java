@@ -52,11 +52,12 @@ class SideEffectRecordTest {
         String desc = "test";
 
         // when
-        SideEffectRecord sideEffectRecord = new SideEffectRecord(id, mockMember, now, desc);
+        SideEffectRecord sideEffectRecord = new SideEffectRecord(id, mockMember, null, now, desc);
 
         // then
         assertThat(sideEffectRecord.getSideEffectRecordId()).isEqualTo(id);
         assertThat(sideEffectRecord.getMember()).isEqualTo(mockMember);
+        assertThat(sideEffectRecord.getLinkedMedicationSchedule()).isNull();
         assertThat(sideEffectRecord.getCreatedAt()).isEqualTo(now);
         assertThat(sideEffectRecord.getDescription()).isEqualTo(desc);
     }

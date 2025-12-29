@@ -2,6 +2,8 @@ package com.Hamalog.service.diary;
 
 import com.Hamalog.domain.diary.DiaryType;
 import com.Hamalog.domain.diary.MoodDiary;
+import com.Hamalog.domain.events.DomainEventPublisher;
+import com.Hamalog.domain.events.diary.MoodDiaryCreated;
 import com.Hamalog.domain.member.Member;
 import com.Hamalog.dto.diary.request.MoodDiaryCreateRequest;
 import com.Hamalog.dto.diary.request.MoodDiaryUpdateRequest;
@@ -32,6 +34,7 @@ public class MoodDiaryService {
 
     private final MoodDiaryRepository moodDiaryRepository;
     private final MemberRepository memberRepository;
+    private final DomainEventPublisher domainEventPublisher;
 
     @Transactional
     public MoodDiaryResponse createMoodDiary(Long memberId, MoodDiaryCreateRequest request) {
@@ -53,7 +56,39 @@ public class MoodDiaryService {
         MoodDiary savedDiary = moodDiaryRepository.save(moodDiary);
         log.info("마음 일기 생성 완료 - moodDiaryId: {}", savedDiary.getMoodDiaryId());
 
+        // 연속 작성일 계산 (어제 일기가 있으면 연속)
+        Integer consecutiveDays = calculateConsecutiveDays(member, request.diaryDate());
+
+        // 도메인 이벤트 발행
+        MoodDiaryCreated event = new MoodDiaryCreated(
+                savedDiary.getMoodDiaryId(),
+                memberId,
+                member.getLoginId(),
+                savedDiary.getDiaryDate(),
+                savedDiary.getMoodType(),
+                savedDiary.getDiaryType(),
+                consecutiveDays
+        );
+        domainEventPublisher.publish(event);
+        log.debug("Published MoodDiaryCreated event for diary ID: {}", savedDiary.getMoodDiaryId());
+
         return MoodDiaryResponse.from(savedDiary);
+    }
+
+    /**
+     * 연속 작성일 계산
+     */
+    private Integer calculateConsecutiveDays(Member member, LocalDate diaryDate) {
+        int consecutive = 1;
+        LocalDate checkDate = diaryDate.minusDays(1);
+
+        while (moodDiaryRepository.existsByMemberAndDiaryDate(member, checkDate)) {
+            consecutive++;
+            checkDate = checkDate.minusDays(1);
+            if (consecutive > 365) break;  // 최대 1년까지만 체크
+        }
+
+        return consecutive;
     }
 
     public MoodDiaryResponse getMoodDiary(Long moodDiaryId, Long memberId) {

@@ -6,9 +6,9 @@ import lombok.*;
 
 @Entity
 @Table(name = "refresh_tokens", indexes = {
-    @Index(name = "idx_member_id", columnList = "member_id"),
-    @Index(name = "idx_token_value", columnList = "token_value"),
-    @Index(name = "idx_expires_at", columnList = "expires_at")
+    @Index(name = "idx_refresh_tokens_member_id", columnList = "member_id"),
+    @Index(name = "idx_refresh_tokens_token_value", columnList = "token_value"),
+    @Index(name = "idx_refresh_tokens_expires_at", columnList = "expires_at")
 })
 @Data
 @NoArgsConstructor

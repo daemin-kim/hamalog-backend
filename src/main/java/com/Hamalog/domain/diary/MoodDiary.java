@@ -17,8 +17,8 @@ import lombok.*;
 @Table(name = "mood_diary",
        uniqueConstraints = @UniqueConstraint(columnNames = {"member_id", "diary_date"}),
        indexes = {
-           @Index(name = "idx_member_id", columnList = "member_id"),
-           @Index(name = "idx_diary_date", columnList = "diary_date")
+           @Index(name = "idx_mood_diary_member_id", columnList = "member_id"),
+           @Index(name = "idx_mood_diary_diary_date", columnList = "diary_date")
        })
 public class MoodDiary {
 

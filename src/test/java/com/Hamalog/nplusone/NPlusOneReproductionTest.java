@@ -21,7 +21,7 @@ import org.springframework.transaction.annotation.Transactional;
 
 @SpringBootTest
 @Import(TestRedisConfig.class)
-@ActiveProfiles("local")
+@ActiveProfiles("test")
 @TestPropertySource(locations = "classpath:application-test.properties")
 @TestPropertySource(properties = {
     "hamalog.encryption.key=+ZFRGoRl5CElrJfikdx1TmzQ3U8OJ+J6im5OMjuvsqE="

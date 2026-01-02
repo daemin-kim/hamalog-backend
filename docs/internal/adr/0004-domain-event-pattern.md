@@ -178,6 +178,71 @@ Hamalog에서는 **데이터 일관성**이 중요하므로 `BEFORE_COMMIT` 사�
 | `MedicationScheduleCreatedEvent` | 스케줄 생성 | 알림 시간 자동 생성 |
 | `MedicationScheduleDeletedEvent` | 스케줄 삭제 | 관련 기록 삭제 |
 
+---
+
+## 트레이드오프 분석
+
+### 직접 호출 vs Domain Event 비교
+
+| 기준 | 직접 호출 | Domain Event (현재) |
+|------|-----------|---------------------|
+| **이해 용이성** | ✅ 흐름이 명확 | ⚠️ 이벤트 추적 필요 |
+| **결합도** | ⚠️ 강결합 | ✅ 느슨한 결합 |
+| **확장성** | ⚠️ 수정 필요 | ✅ 핸들러 추가만 |
+| **디버깅** | ✅ 쉬움 | ⚠️ 이벤트 흐름 추적 |
+| **구현 복잡도** | ✅ 낮음 | ⚠️ 높음 |
+
+**Hamalog에서 Domain Event가 필요한 이유:**
+1. **회원 탈퇴 시 5개+ 도메인 연쇄 삭제** - 직접 호출 시 순환 의존성 발생
+2. **복약 스케줄 생성 시 알림 자동 생성** - 핵심 도메인(Medication)이 부가 도메인(Notification)을 몰라도 됨
+3. **감사 로그 자동 수집** - `EventPersistenceHandler`로 모든 이벤트 추적
+
+### Event Store(StoredDomainEvent) 사용 판단 기준
+
+| 규모/요구사항 | Event Store 필요? | 이유 |
+|---------------|-------------------|------|
+| **MVP** (사용자 ~100명) | ❌ 불필요 | 로그로 충분 |
+| **감사 추적 필요** (의료/금융) | ✅ 필요 | 법적 요구사항 |
+| **이벤트 소싱 아키텍처** | ✅ 필수 | 상태 복원 목적 |
+| **장애 복구 필요** | ✅ 권장 | 실패한 이벤트 재처리 |
+| **Hamalog** | ⚠️ 학습 목적 | 실무 패턴 경험 |
+
+**현재 Hamalog의 Event Store 목적:**
+1. **감사 추적** - 의료 앱 특성상 변경 이력 중요
+2. **학습** - 이벤트 스토어 패턴 실습
+3. **향후 확장** - 비동기 이벤트 처리, 재처리 기능 기반
+
+### 과잉 엔지니어링 인정 및 대응
+
+> ⚠️ **Hamalog 규모에서 Domain Event + Event Store는 과잉일 수 있습니다.**
+
+**그럼에도 채택한 이유:**
+1. 실무에서 많이 사용되는 패턴 학습
+2. 면접에서 "도메인 이벤트 패턴 경험"으로 어필 가능
+3. 추후 기능 추가 시 확장 용이
+
+**더 단순한 대안 (소규모 시):**
+```java
+// 직접 호출 방식 - 규모가 작다면 이게 더 나음
+@Service
+public class MemberDeletionService {
+    private final List<MemberDataCleanupService> cleanupServices;
+    
+    @Transactional
+    public void deleteMember(Long memberId) {
+        cleanupServices.forEach(s -> s.cleanup(memberId));
+        memberRepository.deleteById(memberId);
+    }
+}
+```
+
+### 만약 다시 선택한다면?
+
+**동일한 선택을 하되:**
+1. **Event Store 토글** 추가 - 개발 환경에서는 비활성화 옵션
+2. **이벤트 흐름 다이어그램** 문서화 - 디버깅 용이성 확보
+3. **@Order 어노테이션** 명시 - 핸들러 실행 순서 보장
+
 ## 참고
 
 - [Spring Application Events](https://docs.spring.io/spring-framework/reference/core/beans/context-introduction.html#context-functionality-events)

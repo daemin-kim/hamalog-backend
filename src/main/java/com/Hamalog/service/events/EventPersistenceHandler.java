@@ -6,6 +6,7 @@ import com.Hamalog.logging.StructuredLogger;
 import com.Hamalog.logging.events.AuditEvent;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty;
 import org.springframework.context.event.EventListener;
 import org.springframework.core.annotation.Order;
 import org.springframework.stereotype.Component;
@@ -13,8 +14,12 @@ import org.springframework.stereotype.Component;
 /**
  * 모든 도메인 이벤트를 저장소에 영속화하는 핸들러
  * 가장 먼저 실행되어 이벤트를 저장한 후 다른 핸들러들이 처리
+ *
+ * <p>설정: {@code app.event-store.enabled=true} (기본값: true)</p>
+ * <p>참고: docs/internal/adr/0004-domain-event-pattern.md</p>
  */
 @Component
+@ConditionalOnProperty(name = "app.event-store.enabled", havingValue = "true", matchIfMissing = true)
 @RequiredArgsConstructor
 @Slf4j
 public class EventPersistenceHandler {

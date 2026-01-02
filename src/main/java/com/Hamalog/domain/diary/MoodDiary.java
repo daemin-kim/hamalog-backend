@@ -131,4 +131,90 @@ public class MoodDiary {
         this.templateAnswer3 = null;
         this.templateAnswer4 = null;
     }
+
+    // ========== 도메인 로직 (비즈니스 규칙) ==========
+
+    /**
+     * 템플릿 형식 일기인지 확인
+     * @return 템플릿 형식이면 true
+     */
+    public boolean isTemplateType() {
+        return this.diaryType == DiaryType.TEMPLATE;
+    }
+
+    /**
+     * 자유 형식 일기인지 확인
+     * @return 자유 형식이면 true
+     */
+    public boolean isFreeFormType() {
+        return this.diaryType == DiaryType.FREE_FORM;
+    }
+
+    /**
+     * 긍정적인 기분인지 확인
+     * @return HAPPY, EXCITED, PEACEFUL 중 하나면 true
+     */
+    public boolean isPositiveMood() {
+        return this.moodType == MoodType.HAPPY
+            || this.moodType == MoodType.EXCITED
+            || this.moodType == MoodType.PEACEFUL;
+    }
+
+    /**
+     * 부정적인 기분인지 확인
+     * @return ANXIOUS, LETHARGIC, ANGRY, SAD 중 하나면 true
+     */
+    public boolean isNegativeMood() {
+        return this.moodType == MoodType.ANXIOUS
+            || this.moodType == MoodType.LETHARGIC
+            || this.moodType == MoodType.ANGRY
+            || this.moodType == MoodType.SAD;
+    }
+
+    /**
+     * 오늘 작성된 일기인지 확인
+     * @return 오늘 날짜 일기면 true
+     */
+    public boolean isToday() {
+        return this.diaryDate.equals(LocalDate.now());
+    }
+
+    /**
+     * 특정 날짜 범위 내 일기인지 확인
+     * @param startDate 시작일 (포함)
+     * @param endDate 종료일 (포함)
+     * @return 범위 내 일기면 true
+     */
+    public boolean isWithinDateRange(LocalDate startDate, LocalDate endDate) {
+        return !this.diaryDate.isBefore(startDate) && !this.diaryDate.isAfter(endDate);
+    }
+
+    /**
+     * 일기에 내용이 있는지 확인
+     * @return 템플릿 답변 또는 자유 내용이 있으면 true
+     */
+    public boolean hasContent() {
+        if (isTemplateType()) {
+            return hasAnyTemplateAnswer();
+        }
+        return this.freeContent != null && !this.freeContent.isBlank();
+    }
+
+    /**
+     * 템플릿 답변이 하나라도 있는지 확인
+     */
+    private boolean hasAnyTemplateAnswer() {
+        return (this.templateAnswer1 != null && !this.templateAnswer1.isBlank())
+            || (this.templateAnswer2 != null && !this.templateAnswer2.isBlank())
+            || (this.templateAnswer3 != null && !this.templateAnswer3.isBlank())
+            || (this.templateAnswer4 != null && !this.templateAnswer4.isBlank());
+    }
+
+    /**
+     * 기분 설명 조회
+     * @return 기분 타입의 한글 설명
+     */
+    public String getMoodDescription() {
+        return this.moodType.getDescription();
+    }
 }

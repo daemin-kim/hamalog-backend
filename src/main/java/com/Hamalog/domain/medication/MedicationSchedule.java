@@ -3,6 +3,7 @@ package com.Hamalog.domain.medication;
 import com.Hamalog.domain.member.Member;
 import jakarta.persistence.*;
 import java.time.LocalDate;
+import java.time.temporal.ChronoUnit;
 import lombok.Getter;
 import lombok.NoArgsConstructor;
 
@@ -76,6 +77,90 @@ public class MedicationSchedule {
         this.alarmType = alarmType;
     }
 
+    // ========== 도메인 로직 (비즈니스 규칙) ==========
+
+    /**
+     * 복약 스케줄 종료일 계산
+     * @return 복약 종료 예정일
+     */
+    public LocalDate getEndDate() {
+        return this.startOfAd.plusDays(this.prescriptionDays - 1);
+    }
+
+    /**
+     * 복약 스케줄 만료 여부 확인
+     * @return 오늘 기준 복약 기간이 종료되었으면 true
+     */
+    public boolean isExpired() {
+        return LocalDate.now().isAfter(getEndDate());
+    }
+
+    /**
+     * 복약 스케줄 만료 여부 확인 (특정 날짜 기준)
+     * @param referenceDate 기준 날짜
+     * @return 기준 날짜 기준 복약 기간이 종료되었으면 true
+     */
+    public boolean isExpiredAt(LocalDate referenceDate) {
+        return referenceDate.isAfter(getEndDate());
+    }
+
+    /**
+     * 남은 복약 일수 계산
+     * @return 남은 일수 (만료 시 0 반환)
+     */
+    public int getRemainingDays() {
+        long remaining = ChronoUnit.DAYS.between(LocalDate.now(), getEndDate()) + 1;
+        return Math.max(0, (int) remaining);
+    }
+
+    /**
+     * 복약 진행률 계산 (백분율)
+     * @return 0~100 사이의 진행률
+     */
+    public int getProgressPercentage() {
+        long totalDays = this.prescriptionDays;
+        long elapsedDays = ChronoUnit.DAYS.between(this.startOfAd, LocalDate.now()) + 1;
+
+        if (elapsedDays <= 0) return 0;
+        if (elapsedDays >= totalDays) return 100;
+
+        return (int) ((elapsedDays * 100) / totalDays);
+    }
+
+    /**
+     * 복약이 시작되었는지 확인
+     * @return 오늘이 복약 시작일 이후면 true
+     */
+    public boolean hasStarted() {
+        return !LocalDate.now().isBefore(this.startOfAd);
+    }
+
+    /**
+     * 현재 복약 중인지 확인 (시작됨 & 만료되지 않음 & 활성 상태)
+     * @return 현재 복약 중이면 true
+     */
+    public boolean isOngoing() {
+        return hasStarted() && !isExpired() && Boolean.TRUE.equals(this.isActive);
+    }
+
+    /**
+     * 총 복용 횟수 계산
+     * @return 처방 기간 동안의 총 복용 횟수
+     */
+    public int getTotalDosageCount() {
+        return this.prescriptionDays * this.perDay;
+    }
+
+    /**
+     * 알람 활성화 여부 확인
+     * @return 알람 타입이 설정되어 있으면 true
+     */
+    public boolean isAlarmEnabled() {
+        return this.alarmType != null;
+    }
+
+    // ========== 상태 변경 메서드 ==========
+
     public void update(
             String name,
             String hospitalName,
@@ -102,6 +187,14 @@ public class MedicationSchedule {
 
     public void removeImage() {
         this.imagePath = null;
+    }
+
+    public void activate() {
+        this.isActive = true;
+    }
+
+    public void deactivate() {
+        this.isActive = false;
     }
 
     public void setActive(boolean isActive) {

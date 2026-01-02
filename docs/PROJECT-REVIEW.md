@@ -146,36 +146,25 @@ docs/
 
 ---
 
-### 2. 과잉 엔지니어링 경향 (우선순위: ⭐⭐)
+### 2. 과잉 엔지니어링 경향 (우선순위: ⭐⭐) ✅ 해결됨
+
+> 📅 해결일: 2026-01-02  
+> 📄 참고: [COMPLEXITY-JUSTIFICATION.md](internal/COMPLEXITY-JUSTIFICATION.md)
 
 **문제:**
 - 헬스케어 앱 규모 대비 JWT+CSRF, Domain Event, 이벤트 스토어 등이 과함
 - 실무에서는 "왜 더 단순한 방법을 안 썼는지" 질문받을 수 있음
 
-**현재 구조:**
-```
-복잡한 패턴들:
-- JWT + CSRF 이중 보호 (SPA인데 필요할까?)
-- Domain Event + Event Store
-- @RequireResourceOwnership AOP
-- Redis 캐싱 (사용자 수 예상이 적다면?)
-```
+**해결 내용:**
+1. ✅ ADR-0002 (JWT+CSRF) - 트레이드오프 섹션 추가, 규모별 권장 방식 명시
+2. ✅ ADR-0003 (AOP) - @RequireResourceOwnership vs @PreAuthorize 비교 추가
+3. ✅ ADR-0004 (Domain Event) - Event Store 사용 판단 기준 명시
+4. ✅ ADR-0005 (Redis) - 규모별 캐싱 전략 권장 방식 추가
+5. ✅ 종합 문서 - `docs/internal/COMPLEXITY-JUSTIFICATION.md` 생성
+6. ✅ 토글 옵션 - CSRF, Event Store 활성화/비활성화 설정 추가
 
-**개선 방법:**
-ADR에 **트레이드오프 명시** 추가:
-
-```markdown
-## ADR-0002 보완
-
-### 왜 단순한 Session 방식을 선택하지 않았나?
-- 이유 1: SPA 프론트엔드에서 Stateless 선호
-- 이유 2: 향후 수평 확장 대비
-- 트레이드오프: 구현 복잡도 증가 인지함
-
-### 만약 다시 선택한다면?
-- 사용자 100명 이하: Session + Cookie
-- 사용자 1000명 이상: 현재 방식 유지
-```
+**핵심 메시지:**
+> "과잉 엔지니어링임을 인지하고 있으며, 학습 목적과 확장성을 고려해 의도적으로 선택했습니다."
 
 ---
 
@@ -209,37 +198,54 @@ API 요청 → Redis Queue/Kafka → Worker가 비동기 처리
 
 ---
 
-### 4. 도메인 로직 빈약 - Anemic Domain Model (우선순위: ⭐⭐)
+### 4. 도메인 로직 빈약 - Anemic Domain Model (우선순위: ⭐⭐) ✅ 해결됨
+
+> 📅 해결일: 2026-01-02
 
 **문제:**
 - Entity가 Getter/Setter 위주로 구성됨
 - 비즈니스 로직이 대부분 Service에 있음
 
-**현재 (빈약한 도메인):**
-```java
-@Entity
-public class MedicationSchedule {
-    private String name;
-    private LocalDate startOfAd;
-    private Integer prescriptionDays;
-    
-    // Getter/Setter만 있음
-}
+**해결 내용:**
+다음 Entity에 도메인 로직(비즈니스 규칙)을 추가했습니다:
 
-@Service
-public class MedicationScheduleService {
-    public boolean isExpired(MedicationSchedule schedule) {
-        return schedule.getStartOfAd()
-            .plusDays(schedule.getPrescriptionDays())
-            .isBefore(LocalDate.now());
-    }
-}
-```
+1. **MedicationSchedule** - 복약 스케줄
+   - `getEndDate()` - 종료일 계산
+   - `isExpired()` - 만료 여부 확인
+   - `getRemainingDays()` - 남은 일수 계산
+   - `getProgressPercentage()` - 진행률 계산 (0~100%)
+   - `hasStarted()` - 복약 시작 여부
+   - `isOngoing()` - 현재 복약 중 여부
+   - `getTotalDosageCount()` - 총 복용 횟수
 
-**개선 (풍부한 도메인):**
-```java
-@Entity
-public class MedicationSchedule {
+2. **MedicationRecord** - 복약 기록
+   - `isTaken()` / `isSkipped()` - 복용 상태 확인
+   - `isDelayed()` - 지연 복용 여부 (30분 기준)
+   - `isEarly()` - 조기 복용 여부
+   - `isOnTime()` - 정시 복용 여부
+   - `getTimeDifferenceMinutes()` - 시간 차이 계산
+   - `markAsTaken()` / `markAsSkipped()` - 상태 변경
+
+3. **SideEffectRecord** - 부작용 기록
+   - `isLinkedToMedication()` - 약물 연계 여부
+   - `getDaysSinceCreated()` - 경과 일수
+   - `isRecent()` - 최근 기록 여부 (7일 이내)
+   - `getLinkedMedicationName()` - 연계 약물명
+
+4. **MoodDiary** - 마음 일기
+   - `isPositiveMood()` / `isNegativeMood()` - 기분 분류
+   - `isTemplateType()` / `isFreeFormType()` - 일기 유형
+   - `hasContent()` - 내용 유무 확인
+   - `getMoodDescription()` - 기분 한글 설명
+
+**테스트 추가:**
+- `MedicationScheduleDomainTest.java` - 12개 테스트 케이스
+- `MedicationRecordDomainTest.java` - 11개 테스트 케이스
+
+**장점:**
+- Entity가 자체 비즈니스 규칙을 알고 있음
+- Service 레이어가 더 얇아짐
+- 테스트하기 쉬움 (DB 없이 단위 테스트 가능)
     // ...필드들
     
     // 도메인 로직을 Entity로 이동

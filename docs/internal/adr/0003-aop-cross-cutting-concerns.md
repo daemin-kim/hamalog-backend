@@ -171,6 +171,90 @@ public class MyService {
 - AOP 프록시 오버헤드: 메서드당 ~0.1ms
 - 전체 요청 영향: 무시할 수 있는 수준
 
+---
+
+## 트레이드오프 분석
+
+### @RequireResourceOwnership vs Spring Security @PreAuthorize
+
+| 기준 | @RequireResourceOwnership (현재) | @PreAuthorize (Spring Security) |
+|------|----------------------------------|----------------------------------|
+| **가독성** | ✅ 의도가 명확 | ⚠️ SpEL 표현식 복잡 |
+| **유연성** | ✅ 커스텀 로직 자유 | ⚠️ SpEL 제한적 |
+| **생태계 호환** | ⚠️ 자체 구현 | ✅ Spring Security 표준 |
+| **학습 곡선** | ⚠️ 내부 구현 이해 필요 | ✅ 문서/레퍼런스 풍부 |
+| **테스트** | ⚠️ 별도 테스트 구성 | ✅ WithMockUser 등 지원 |
+
+**현재 방식 예시:**
+```java
+@RequireResourceOwnership(resourceType = "MEDICATION_SCHEDULE", idParam = "id")
+public ResponseEntity<ScheduleResponse> getById(@PathVariable Long id)
+```
+
+**Spring Security 대안:**
+```java
+@PreAuthorize("@ownershipChecker.isOwner(#id, 'MEDICATION_SCHEDULE')")
+public ResponseEntity<ScheduleResponse> getById(@PathVariable Long id)
+```
+
+**Hamalog에서 커스텀 어노테이션을 선택한 이유:**
+1. **명확한 의도 표현** - `resourceType`과 `idParam`이 자체 문서화
+2. **복잡한 소유권 로직** - 다중 전략(DIRECT, VIA_SCHEDULE 등) 지원 필요
+3. **학습 목적** - AOP Aspect 구현 경험
+
+### 과잉 엔지니어링 인정 및 대응
+
+> ⚠️ **소규모 프로젝트에서 커스텀 AOP는 과잉일 수 있습니다.**
+
+**더 단순한 대안들:**
+
+1. **서비스에서 직접 검증 (가장 단순)**
+   ```java
+   public ScheduleResponse getById(Long id) {
+       var schedule = repository.findById(id).orElseThrow();
+       if (!schedule.getMember().getLoginId().equals(getCurrentLoginId())) {
+           throw ErrorCode.FORBIDDEN.toException();
+       }
+       return ScheduleResponse.from(schedule);
+   }
+   ```
+
+2. **Spring Security @PreAuthorize**
+   ```java
+   @PreAuthorize("@scheduleService.isOwner(#id)")
+   public ScheduleResponse getById(Long id) { ... }
+   ```
+
+3. **JPA Specification/Querydsl로 필터링**
+   ```java
+   repository.findByIdAndMember_LoginId(id, loginId);  // 없으면 404
+   ```
+
+**Hamalog에서 AOP를 유지하는 이유:**
+1. 20개+ 엔드포인트에 일관된 소유권 검증 필요
+2. 검증 로직 변경 시 한 곳만 수정
+3. 실무에서 자주 사용되는 패턴 학습
+
+### 규모별 권장 방식
+
+| 규모 | 권장 방식 | 이유 |
+|------|-----------|------|
+| **MVP** (~10 엔드포인트) | 서비스 직접 검증 | 단순함, 명시적 |
+| **성장** (10~50 엔드포인트) | @PreAuthorize | 표준, 생태계 지원 |
+| **스케일업** (50+ 엔드포인트) | 커스텀 AOP | 복잡한 정책, 감사 로깅 |
+
+### 만약 다시 선택한다면?
+
+**@PreAuthorize로 시작하고**, 복잡도가 증가하면 커스텀 AOP로 마이그레이션하는 것을 권장합니다.
+
+```java
+// 1단계: @PreAuthorize로 시작
+@PreAuthorize("@auth.canAccess(#id, 'SCHEDULE')")
+
+// 2단계: 복잡해지면 커스텀 어노테이션으로 전환
+@RequireResourceOwnership(resourceType = "SCHEDULE", strategy = "VIA_SCHEDULE")
+```
+
 ## 참고
 
 - [Spring AOP Documentation](https://docs.spring.io/spring-framework/reference/core/aop.html)

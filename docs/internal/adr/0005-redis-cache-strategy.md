@@ -148,6 +148,109 @@ public class RedisConfig {
 | CSRF 검증 | ~5ms | ~1ms | 80% |
 | Rate Limit 체크 | ~10ms | ~1ms | 90% |
 
+---
+
+## 트레이드오프 분석
+
+### Redis 도입 판단 기준
+
+| 기준 | Redis 필요? | 이유 |
+|------|-------------|------|
+| **단일 인스턴스** | ⚠️ 선택적 | 로컬 캐시(Caffeine)로 충분 |
+| **다중 인스턴스** | ✅ 권장 | 캐시 일관성 필요 |
+| **사용자 ~100명** | ❌ 불필요 | DB 부하 미미 |
+| **사용자 ~1,000명** | ⚠️ 선택적 | 핫 데이터만 캐싱 |
+| **사용자 10,000명+** | ✅ 필수 | DB 병목 해소 |
+
+### Hamalog에서 Redis가 적합한 이유
+
+1. **CSRF 토큰 저장** - 분산 환경에서 세션 없이 CSRF 방어
+2. **Rate Limiting** - 인스턴스 간 요청 카운트 공유 필수
+3. **Refresh Token 블랙리스트** - 로그아웃 시 즉시 토큰 무효화
+
+> ⚠️ **단순 조회 캐싱만 필요하다면 Caffeine(로컬 캐시)이 더 적합합니다.**
+
+### 규모별 권장 캐싱 전략
+
+| 규모 | 권장 방식 | 이유 |
+|------|-----------|------|
+| **MVP** (~100명) | 캐싱 없음 | 조기 최적화 방지 |
+| **성장** (~1,000명) | Caffeine (로컬) | 단순, 인프라 불필요 |
+| **스케일업** (1,000명+) | Redis | 분산 캐시 필수 |
+| **대규모** (10,000명+) | Redis + CDN | 정적 리소스 분리 |
+
+### 과잉 엔지니어링 인정 및 대응
+
+> ⚠️ **현재 Hamalog 규모에서 Redis 캐싱은 학습 목적입니다.**
+
+**Redis가 실제로 필요한 기능:**
+- ✅ CSRF 토큰 (분산 환경 필수)
+- ✅ Rate Limiting (인스턴스 간 공유)
+- ✅ Refresh Token 블랙리스트
+
+**Redis 없이도 가능한 기능:**
+- ⚠️ 회원 프로필 캐싱 → Caffeine으로 대체 가능
+- ⚠️ 최근 부작용 목록 → DB 인덱스로 충분
+
+### 더 단순한 대안
+
+**Caffeine (로컬 캐시) 예시:**
+```java
+@Configuration
+@EnableCaching
+public class CacheConfig {
+    @Bean
+    public CacheManager cacheManager() {
+        CaffeineCacheManager manager = new CaffeineCacheManager();
+        manager.setCaffeine(Caffeine.newBuilder()
+            .maximumSize(1000)
+            .expireAfterWrite(Duration.ofMinutes(30)));
+        return manager;
+    }
+}
+```
+
+**장점:** 인프라 없음, 네트워크 지연 없음, 단순함  
+**단점:** 분산 환경에서 캐시 불일치
+
+### Fallback 전략 (현재 구현됨)
+
+Redis 장애 시에도 서비스가 동작하도록 Fallback을 구현했습니다:
+
+```java
+// CsrfTokenProvider.java
+private final ConcurrentMap<String, TokenRecord> fallbackStore = new ConcurrentHashMap<>();
+
+public String generateToken(String sessionId) {
+    if (storeInRedis(sessionId, token)) {
+        fallbackStore.remove(sessionId);  // Redis 성공 시 로컬 삭제
+    } else {
+        storeInFallback(sessionId, token);  // Redis 실패 시 로컬 저장
+    }
+    return token;
+}
+```
+
+### 만약 다시 선택한다면?
+
+1. **CSRF + Rate Limiting만 Redis 사용**
+2. **회원 프로필 캐싱은 Caffeine으로 시작**
+3. **부하 테스트 후 필요 시 Redis로 마이그레이션**
+
+```java
+// 하이브리드 캐시 설정 예시
+@Configuration
+public class HybridCacheConfig {
+    @Bean
+    public CacheManager cacheManager() {
+        return new CompositeCacheManager(
+            caffeineCacheManager(),   // 1차: 로컬 캐시
+            redisCacheManager()       // 2차: 분산 캐시
+        );
+    }
+}
+```
+
 ## 참고
 
 - [Spring Cache Abstraction](https://docs.spring.io/spring-framework/reference/integration/cache.html)

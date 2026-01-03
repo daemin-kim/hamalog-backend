@@ -5,6 +5,7 @@ import com.Hamalog.domain.notification.FcmDeviceToken;
 import com.Hamalog.domain.notification.NotificationSettings;
 import com.Hamalog.repository.notification.FcmDeviceTokenRepository;
 import com.Hamalog.repository.notification.NotificationSettingsRepository;
+import com.Hamalog.service.alert.DiscordAlertService;
 import com.Hamalog.service.queue.message.NotificationMessage;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.google.firebase.messaging.*;
@@ -38,7 +39,7 @@ public class NotificationConsumerService {
     private final RedisTemplate<String, Object> redisTemplate;
     private final MessageQueueProperties queueProperties;
     private final MessageQueueService messageQueueService;
-    private final DiscordWebhookService discordWebhookService;
+    private final DiscordAlertService discordAlertService;
     private final FcmDeviceTokenRepository fcmDeviceTokenRepository;
     private final NotificationSettingsRepository notificationSettingsRepository;
     private final ObjectMapper objectMapper;
@@ -55,7 +56,7 @@ public class NotificationConsumerService {
             RedisTemplate<String, Object> redisTemplate,
             MessageQueueProperties queueProperties,
             MessageQueueService messageQueueService,
-            @Autowired(required = false) DiscordWebhookService discordWebhookService,
+            @Autowired(required = false) DiscordAlertService discordAlertService,
             FcmDeviceTokenRepository fcmDeviceTokenRepository,
             NotificationSettingsRepository notificationSettingsRepository,
             ObjectMapper objectMapper,
@@ -64,7 +65,7 @@ public class NotificationConsumerService {
         this.redisTemplate = redisTemplate;
         this.queueProperties = queueProperties;
         this.messageQueueService = messageQueueService;
-        this.discordWebhookService = discordWebhookService;
+        this.discordAlertService = discordAlertService;
         this.fcmDeviceTokenRepository = fcmDeviceTokenRepository;
         this.notificationSettingsRepository = notificationSettingsRepository;
         this.objectMapper = objectMapper;
@@ -233,8 +234,8 @@ public class NotificationConsumerService {
             dlqCounter.increment();
 
             // Discord 알림 발송
-            if (discordWebhookService != null) {
-                discordWebhookService.sendDeadLetterAlert(retriedMessage, errorMessage);
+            if (discordAlertService != null) {
+                discordAlertService.sendDeadLetterAlert(retriedMessage, errorMessage);
             }
 
             log.warn("Message moved to DLQ after {} retries: {}",

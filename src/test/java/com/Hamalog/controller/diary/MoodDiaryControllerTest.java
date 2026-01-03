@@ -78,7 +78,7 @@ class MoodDiaryControllerTest {
 
         mockMvc = MockMvcBuilders.standaloneSetup(moodDiaryController)
                 .setCustomArgumentResolvers(new CustomUserResolver())
-                .setControllerAdvice(new GlobalExceptionHandler(structuredLogger, handlerUtils, trustedProxyService, inputValidationUtil))
+                .setControllerAdvice(new GlobalExceptionHandler(structuredLogger, handlerUtils, trustedProxyService, inputValidationUtil, null))
                 .defaultResponseCharacterEncoding(java.nio.charset.StandardCharsets.UTF_8)
                 .build();
 

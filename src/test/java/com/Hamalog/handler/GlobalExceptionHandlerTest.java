@@ -63,7 +63,8 @@ class GlobalExceptionHandlerTest {
         request = new MockHttpServletRequest();
         request.setRequestURI("/api/test");
         lenient().when(handlerUtils.createErrorContext(any(), any(), any())).thenReturn(Map.of());
-        globalExceptionHandler = new GlobalExceptionHandler(structuredLogger, handlerUtils, trustedProxyService, inputValidationUtil);
+        // DiscordAlertService는 null로 전달 (Optional 의존성)
+        globalExceptionHandler = new GlobalExceptionHandler(structuredLogger, handlerUtils, trustedProxyService, inputValidationUtil, null);
     }
 
     @Nested

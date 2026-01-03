@@ -14,13 +14,14 @@ import com.Hamalog.logging.MDCUtil;
 import com.Hamalog.logging.StructuredLogger;
 import com.Hamalog.security.filter.TrustedProxyService;
 import com.Hamalog.security.validation.InputValidationUtil;
+import com.Hamalog.service.alert.DiscordAlertService;
 import jakarta.persistence.OptimisticLockException;
 import jakarta.servlet.http.HttpServletRequest;
 import java.util.HashMap;
 import java.util.Map;
-import lombok.RequiredArgsConstructor;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.dao.DataIntegrityViolationException;
 import org.springframework.dao.OptimisticLockingFailureException;
 import org.springframework.http.HttpStatus;
@@ -42,8 +43,8 @@ import org.springframework.web.servlet.NoHandlerFoundException;
  * 전역 예외 처리기
  * REST API에서 발생하는 모든 예외를 일관된 형식으로 처리합니다.
  * OWASP Top 10 A05: Security Misconfiguration 대응을 포함합니다.
+ * Critical/High 심각도 에러 발생 시 Discord 알림을 발송합니다.
  */
-@RequiredArgsConstructor
 @RestControllerAdvice
 public class GlobalExceptionHandler {
 
@@ -54,6 +55,21 @@ public class GlobalExceptionHandler {
     private final ExceptionHandlerUtils handlerUtils;
     private final TrustedProxyService trustedProxyService;
     private final InputValidationUtil inputValidationUtil;
+    private final DiscordAlertService discordAlertService;
+
+    public GlobalExceptionHandler(
+            StructuredLogger structuredLogger,
+            ExceptionHandlerUtils handlerUtils,
+            TrustedProxyService trustedProxyService,
+            InputValidationUtil inputValidationUtil,
+            @Autowired(required = false) DiscordAlertService discordAlertService
+    ) {
+        this.structuredLogger = structuredLogger;
+        this.handlerUtils = handlerUtils;
+        this.trustedProxyService = trustedProxyService;
+        this.inputValidationUtil = inputValidationUtil;
+        this.discordAlertService = discordAlertService;
+    }
 
     // ==================== 리소스 Not Found 예외 ====================
 
@@ -269,10 +285,22 @@ public class GlobalExceptionHandler {
         log.error("[UNEXPECTED_ERROR] Unexpected system error - path={} exception={}",
                 request.getRequestURI(), ex.getClass().getSimpleName(), ex);
 
+        // Critical 에러 발생 시 Discord 알림 발송
+        sendDiscordAlert(ex, request, ErrorSeverity.CRITICAL);
+
         return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body(error);
     }
 
     // ==================== 공통 처리 메서드 ====================
+
+    /**
+     * Discord 알림 발송 (Optional 의존성)
+     */
+    private void sendDiscordAlert(Exception ex, HttpServletRequest request, ErrorSeverity severity) {
+        if (discordAlertService != null) {
+            discordAlertService.sendServerErrorAlert(ex, request, severity);
+        }
+    }
 
     /**
      * CustomException 계열 예외를 처리하는 템플릿 메서드
@@ -284,6 +312,7 @@ public class GlobalExceptionHandler {
 
         MDCUtil.addErrorContext(ex);
         MDCUtil.put("error.severity", severity.name());
+
         MDCUtil.put("error.category", category);
 
         ErrorResponse error = ErrorResponse.of(
@@ -299,6 +328,11 @@ public class GlobalExceptionHandler {
 
         logByLevel(severity, "[{}] {} - path={} code={}",
                 category, logMessage, request.getRequestURI(), ex.getErrorCode().getCode());
+
+        // HIGH 이상 심각도일 때 Discord 알림 발송
+        if (severity == ErrorSeverity.HIGH || severity == ErrorSeverity.CRITICAL) {
+            sendDiscordAlert(ex, request, severity);
+        }
 
         MDCUtil.clearErrorContext();
         return ResponseEntity.status(status).body(error);

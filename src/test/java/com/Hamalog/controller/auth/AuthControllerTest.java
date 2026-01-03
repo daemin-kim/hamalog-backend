@@ -92,7 +92,7 @@ class AuthControllerTest {
         jsonConverter.setObjectMapper(objectMapper);
         
         mockMvc = MockMvcBuilders.standaloneSetup(authController)
-                .setControllerAdvice(new GlobalExceptionHandler(structuredLogger, handlerUtils, trustedProxyService, inputValidationUtil))
+                .setControllerAdvice(new GlobalExceptionHandler(structuredLogger, handlerUtils, trustedProxyService, inputValidationUtil, null))
                 .setMessageConverters(stringConverter, jsonConverter)
                 .defaultResponseCharacterEncoding(StandardCharsets.UTF_8)
                 .build();

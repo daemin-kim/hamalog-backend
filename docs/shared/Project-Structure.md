@@ -143,6 +143,14 @@ HTTP 요청을 처리하는 REST API 컨트롤러 계층입니다.
 | `service/monitoring/` | `TransactionMetricsService.java` | 트랜잭션 메트릭 서비스 |
 | `service/export/` | `ExportService.java` | 데이터 내보내기 서비스 **(신규)** |
 | `service/notification/` | `NotificationSettingsService.java` | 알림 설정 및 FCM 토큰 관리 **(신규)** |
+| | `FcmPushService.java` | FCM 푸시 알림 발송 **(신규)** |
+| | `NotificationSchedulerService.java` | 알림 스케줄러 **(신규)** |
+| `service/queue/` | `MessageQueueService.java` | 메시지 발행 (Producer) **(신규)** |
+| | `NotificationConsumerService.java` | 메시지 소비 및 FCM 발송 **(신규)** |
+| | `QueuedNotificationService.java` | 큐 활성화 여부에 따른 Facade **(신규)** |
+| | `DiscordWebhookService.java` | DLQ 알림 발송 **(신규)** |
+| `service/queue/message/` | `NotificationMessage.java` | 알림 메시지 DTO **(신규)** |
+| | `NotificationType.java` | 알림 유형 상수 **(신규)** |
 
 ---
 
@@ -288,6 +296,12 @@ JPA 엔티티 및 도메인 모델을 정의합니다.
 | `OpenApiConfig.java` | Swagger/OpenAPI 설정 |
 | `AopConfiguration.java` | AOP 설정 |
 | `TextPlainJsonHttpMessageConverter.java` | 커스텀 HTTP 메시지 변환기 |
+| `MessageQueueConfig.java` | 메시지 큐 설정 **(신규)** |
+| `MessageQueueProperties.java` | 메시지 큐 프로퍼티 **(신규)** |
+| `FirebaseConfig.java` | Firebase Admin SDK 설정 **(신규)** |
+| `AsyncConfig.java` | 비동기 처리 설정 |
+| `SchedulingConfig.java` | 스케줄링 설정 |
+| `QuerydslConfig.java` | QueryDSL 설정 |
 
 ---
 

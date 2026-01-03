@@ -52,16 +52,18 @@
 
 ## 2. Hamalog 현재 상태
 
-### 2.1 프로젝트 성숙도 점수: **85/100** ⭐⭐⭐⭐
+### 2.1 프로젝트 성숙도 점수: **95/100** ⭐⭐⭐⭐⭐
 
 | 영역 | 점수 | 현재 상태 | 개선 필요 |
 |------|------|-----------|-----------|
 | **코드 구조** | 95/100 | 레이어드 아키텍처, 명확한 패키지 분리 | ✅ 완료 |
 | **테스트 커버리지** | 90/100 | 1,400+ 테스트 케이스, ArchUnit | E2E 테스트 추가 |
-| **문서화** | 95/100 | API 명세서, ADR 6개, 패턴 문서 4개 | ✅ 완료 |
+| **문서화** | 95/100 | API 명세서, ADR 7개, 패턴 문서 5개 | ✅ 완료 |
 | **AI 컨텍스트** | 95/100 | `.cursorrules`, `copilot-instructions.md` | ✅ 완료 |
 | **자동화** | 95/100 | CI/CD, Spotless, JaCoCo, git-cliff | ✅ 완료 |
 | **선언적 패턴** | 95/100 | AOP 기반 + 문서화 완료 | ✅ 완료 |
+| **비동기 처리** | 95/100 | Redis Stream 메시지 큐 | ✅ 완료 |
+| **도메인 로직** | 90/100 | Rich Domain Model 적용 | ✅ 완료 |
 
 ### 2.2 이미 갖춘 바이브 코딩 기반
 
@@ -99,7 +101,8 @@
         ├── 0003-aop-cross-cutting-concerns.md
         ├── 0004-domain-event-pattern.md
         ├── 0005-redis-cache-strategy.md
-        └── 0006-sensitive-data-encryption.md
+        ├── 0006-sensitive-data-encryption.md
+        └── 0007-message-queue-redis-stream.md
 ```
 
 ### ✅ Phase 2: 선언적 패턴 문서화 (완료)

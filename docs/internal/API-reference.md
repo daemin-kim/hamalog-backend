@@ -547,3 +547,31 @@ INSERT INTO side_effect (type, name) VALUES
         - `OAuth2StateValidationException.java` (미사용 예외)
         - `MemberDeletionScheduler.java` (빈 클래스)
     - **문서 업데이트**: `Project-Structure.md`, `API-reference.md` 최신화
+- **2026/01/02**: **도메인 로직 강화 (Rich Domain Model)**
+    - **MedicationSchedule 도메인 로직 추가**:
+        - `getEndDate()`, `isExpired()`, `getRemainingDays()`, `getProgressPercentage()`
+        - `hasStarted()`, `isOngoing()`, `getTotalDosageCount()`
+    - **MedicationRecord 도메인 로직 추가**:
+        - `isTaken()`, `isSkipped()`, `isDelayed()`, `isEarly()`, `isOnTime()`
+        - `getTimeDifferenceMinutes()`, `markAsTaken()`, `markAsSkipped()`
+    - **도메인 로직 테스트 추가**: `MedicationScheduleDomainTest`, `MedicationRecordDomainTest`
+- **2026/01/03**: **Redis Stream 메시지 큐 도입**
+    - **비동기 알림 처리 시스템 구축**:
+        - `MessageQueueService` - 메시지 발행 (Producer)
+        - `NotificationConsumerService` - 메시지 소비 및 FCM 발송
+        - `QueuedNotificationService` - 큐 활성화 여부에 따른 Facade
+        - `DiscordWebhookService` - DLQ 알림 발송
+    - **재시도 및 Dead Letter Queue 구현**:
+        - 최대 3회 재시도 후 DLQ로 이동
+        - Discord Webhook으로 DLQ 적재 알림
+    - **메시지 큐 설정 프로퍼티 추가**:
+        - `hamalog.queue.enabled` - 큐 활성화/비활성화
+        - `hamalog.queue.notification-stream` - Redis Stream 키
+        - `hamalog.queue.dead-letter-stream` - DLQ 키
+        - `hamalog.queue.max-retries` - 최대 재시도 횟수
+        - `hamalog.queue.discord.enabled` - Discord 알림 활성화
+        - `hamalog.queue.discord.webhook-url` - Discord Webhook URL
+    - **Prometheus 메트릭 추가**:
+        - `hamalog.queue.messages.published`, `processed`, `failed`, `dlq`
+    - **ADR-0007 문서 작성**: Kafka 대신 Redis Stream 선택 이유 문서화
+    - **신규 파일**: Config 2개, Service 4개, DTO 2개, ADR 문서 1개

@@ -1,13 +1,14 @@
 # Hamalog 프로젝트 개선 계획
 
 > 📅 작성일: 2025년 12월 25일  
+> 📅 최종 업데이트: 2026년 1월 3일  
 > 📌 docs 폴더 분석 및 현 프로젝트 상태 기반
 
 ---
 
 ## 📊 현재 상태 요약
 
-### 프로젝트 성숙도: **90/100** ⭐⭐⭐⭐⭐
+### 프로젝트 성숙도: **95/100** ⭐⭐⭐⭐⭐
 
 Hamalog는 이미 **Production Ready** 수준의 성숙도를 갖추고 있습니다.
 
@@ -15,10 +16,12 @@ Hamalog는 이미 **Production Ready** 수준의 성숙도를 갖추고 있습�
 |------|------|-----------|
 | **코드 구조** | 95/100 | 레이어드 아키텍처, 명확한 패키지 분리 ✅ |
 | **테스트 커버리지** | 90/100 | 1,400+ 테스트 케이스, ArchUnit ✅ |
-| **문서화** | 95/100 | API 명세서, ADR 6개, 패턴 문서 4개 ✅ |
+| **문서화** | 95/100 | API 명세서, ADR 7개, 패턴 문서 5개 ✅ |
 | **AI 컨텍스트** | 95/100 | `.cursorrules`, `copilot-instructions.md` ✅ |
 | **자동화** | 95/100 | CI/CD, Spotless, JaCoCo, git-cliff ✅ |
 | **선언적 패턴** | 95/100 | AOP 기반 + 문서화 완료 ✅ |
+| **비동기 처리** | 95/100 | Redis Stream 메시지 큐 ✅ |
+| **도메인 로직** | 90/100 | Rich Domain Model 적용 ✅ |
 
 ---
 
@@ -73,20 +76,36 @@ src/test/java/com/Hamalog/service/notification/
 
 ### Phase 1: 핵심 기능 완성 (우선순위 높음)
 
-#### 1.1 FCM 실제 전송 기능 구현
-**필요 작업:**
-- Firebase 프로젝트 설정
-- Firebase Admin SDK 의존성 추가
-- `FcmPushService` 구현 (실제 알림 전송)
-- 스케줄러 기반 복약 알림 발송
+#### 1.1 FCM 실제 전송 기능 ✅ 구현 완료 (2026-01-03)
 
-**예상 파일:**
-```java
-@Service
-public class FcmPushService {
-    public void sendMedicationReminder(Long memberId, String medicineName, LocalTime takeTime);
-    public void sendDiaryReminder(Long memberId);
-}
+**구현 내용:**
+- ✅ Firebase Admin SDK 연동
+- ✅ `FcmPushService` 구현 (실제 알림 전송)
+- ✅ Redis Stream 기반 메시지 큐 도입
+- ✅ 비동기 처리로 API 응답 지연 해결
+- ✅ 재시도 로직 (최대 3회) 및 Dead Letter Queue
+- ✅ Discord Webhook 알림 (DLQ 적재 시)
+
+**생성된 파일:**
+```
+src/main/java/com/Hamalog/service/queue/
+├── MessageQueueService.java           # 메시지 발행 (Producer)
+├── NotificationConsumerService.java   # 메시지 소비 및 FCM 발송
+├── QueuedNotificationService.java     # 큐 활성화 여부에 따른 Facade
+├── DiscordWebhookService.java         # DLQ 알림 발송
+└── message/
+    ├── NotificationMessage.java       # 알림 메시지 DTO
+    └── NotificationType.java          # 알림 유형 상수
+
+docs/internal/adr/
+└── 0007-message-queue-redis-stream.md # ADR 문서
+```
+
+**설정:**
+```properties
+hamalog.queue.enabled=true
+hamalog.queue.discord.enabled=true
+hamalog.queue.discord.webhook-url=https://discord.com/api/webhooks/...
 ```
 
 #### 1.2 Soft Delete 패턴 도입
@@ -113,6 +132,7 @@ public class FcmPushService {
   - Rate Limiting 차단/허용 비율
   - Redis 캐시 히트율
   - 복약 이행률 통계
+  - **메시지 큐 메트릭 (published, processed, failed, dlq)**
 
 **예상 경로:** `docs/monitoring/grafana-dashboard.json`
 
@@ -157,16 +177,22 @@ public class FcmPushService {
 - [x] Flyway 마이그레이션 스크립트 작성
 - [x] 단위 테스트 작성
 - [x] API 명세서 업데이트
-- [ ] FCM 실제 전송 (Firebase 설정 필요)
+- [x] FCM 실제 전송 (Firebase 설정 완료)
+- [x] Redis Stream 메시지 큐 도입
+- [x] 도메인 로직 강화 (Rich Domain Model)
 
-### Firebase 설정 후 가능한 작업
-- [ ] Firebase Admin SDK 연동
-- [ ] 복약 알림 스케줄러 구현
-- [ ] 일기 작성 리마인더 구현
+### 2026-01-03 완료된 작업
+- [x] MessageQueueService (Producer)
+- [x] NotificationConsumerService
+- [x] 재시도 로직 및 Dead Letter Queue
+- [x] Discord Webhook 알림
+- [x] ADR-0007 문서 작성
+- [x] MedicationSchedule/MedicationRecord 도메인 로직 추가
+- [x] 도메인 로직 테스트 케이스 추가
 
 ### 인프라 작업
 - [ ] Grafana 대시보드 템플릿
-- [ ] Slack 웹훅 연동
+- [x] Discord 웹훅 연동 (DLQ 알림)
 - [ ] k6 부하 테스트 스크립트
 
 ---
@@ -177,6 +203,7 @@ public class FcmPushService {
 - [코딩 컨벤션](./internal/CODING-CONVENTIONS.md)
 - [에러 처리 패턴](./internal/patterns/ERROR-HANDLING.md)
 - [캐싱 패턴](./internal/patterns/CACHING-PATTERNS.md)
+- [메시지 큐 ADR](./internal/adr/0007-message-queue-redis-stream.md)
 - [바이브 코딩 가이드](./ai/VIBE-CODING-GUIDE.md)
 
 ---

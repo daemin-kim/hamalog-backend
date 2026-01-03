@@ -177,6 +177,7 @@ Hamalog는 Spring Boot 3.4.5 기반의 헬스케어 백엔드 시스템입니다
 - `docs/internal/patterns/SECURITY-PATTERNS.md` - 보안 패턴
 - `docs/internal/patterns/CACHING-PATTERNS.md` - 캐싱 패턴
 - `docs/internal/patterns/JPA-PERFORMANCE.md` - JPA 성능 최적화 (N+1 해결, DTO Projection, QueryDSL)
+- `docs/internal/patterns/MESSAGE-QUEUE-PATTERNS.md` - 메시지 큐 패턴 (Redis Stream)
 - `docs/internal/CODING-CONVENTIONS.md` - 코딩 컨벤션
 
 ## 🛠️ 도구

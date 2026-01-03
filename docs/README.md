@@ -26,13 +26,16 @@
 │   │   ├── 📄 0003-aop-cross-cutting-concerns.md
 │   │   ├── 📄 0004-domain-event-pattern.md
 │   │   ├── 📄 0005-redis-cache-strategy.md
-│   │   └── 📄 0006-sensitive-data-encryption.md
+│   │   ├── 📄 0006-sensitive-data-encryption.md
+│   │   └── 📄 0007-message-queue-redis-stream.md
 │   │
 │   └── 📂 patterns/                 선언적 패턴 가이드
 │       ├── 📄 ANNOTATION-GUIDE.md   커스텀 어노테이션 사용법
 │       ├── 📄 ERROR-HANDLING.md     에러 처리 패턴
 │       ├── 📄 SECURITY-PATTERNS.md  보안 패턴
-│       └── 📄 CACHING-PATTERNS.md   캐싱 패턴
+│       ├── 📄 CACHING-PATTERNS.md   캐싱 패턴
+│       ├── 📄 JPA-PERFORMANCE.md    JPA 성능 최적화
+│       └── 📄 MESSAGE-QUEUE-PATTERNS.md  메시지 큐 패턴
 │
 └── 📂 ai/                           🤖 AI용 (바이브 코딩)
     └── 📄 VIBE-CODING-GUIDE.md      AI 협업 가이드, 프롬프트
@@ -74,6 +77,7 @@
 | `0004-domain-event-pattern.md` | Domain Event 패턴 |
 | `0005-redis-cache-strategy.md` | Redis 캐시 전략 |
 | `0006-sensitive-data-encryption.md` | 민감 데이터 암호화 |
+| `0007-message-queue-redis-stream.md` | 메시지 큐 (Redis Stream) |
 
 #### 📂 `internal/patterns/` - 선언적 패턴
 
@@ -83,6 +87,8 @@
 | `ERROR-HANDLING.md` | `ErrorCode`, `BusinessException` |
 | `SECURITY-PATTERNS.md` | JWT, CSRF, 리소스 소유권 검증 |
 | `CACHING-PATTERNS.md` | `@Cacheable`, Redis TTL 전략 |
+| `JPA-PERFORMANCE.md` | N+1 해결, DTO Projection, QueryDSL |
+| `MESSAGE-QUEUE-PATTERNS.md` | Redis Stream, Producer/Consumer, DLQ |
 
 ---
 
@@ -119,5 +125,5 @@ AI 도구 (Cursor, GitHub Copilot)가 코드 생성 시 참조하는 문서입�
 
 ---
 
-> 📝 최종 업데이트: 2025년 12월 24일
+> 📝 최종 업데이트: 2026년 1월 3일
 

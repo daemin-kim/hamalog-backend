@@ -1,9 +1,11 @@
 # Hamalog 향후 개선사항 분석 보고서
 
-> 📅 최종 업데이트: 2025년 12월 23일  
+> 📅 최종 업데이트: 2026년 1월 3일  
 > 📌 API 명세서 및 현재 코드 구조 기반 분석
 > ✅ 2025/12/22 대규모 업데이트 완료 - 8개 기능 구현
 > ✅ 2025/12/23 추가 업데이트 완료 - 8개 기능 추가 구현
+> ✅ 2026/01/02 도메인 로직 강화 - Rich Domain Model 적용
+> ✅ 2026/01/03 비동기 메시지 큐 도입 - Redis Stream
 > 🎯 2025/12/23 바이브 코딩 프로젝트 기반 구축 완료
 
 ---
@@ -23,9 +25,21 @@
 |---|------|------|
 | 1 | AI 컨텍스트 파일 (`.cursorrules`) | ✅ |
 | 2 | GitHub Copilot 지시 파일 (`.github/copilot-instructions.md`) | ✅ |
-| 3 | ADR 템플릿 및 문서 4개 | ✅ |
+| 3 | ADR 템플릿 및 문서 7개 | ✅ |
 | 4 | 코딩 컨벤션 문서 | ✅ |
 | 5 | 바이브 코딩 가이드 문서 | ✅ |
+
+### ✅ 2026/01/02~03 아키텍처 개선
+| # | 기능 | 상태 |
+|---|------|------|
+| 1 | 도메인 로직 강화 (Rich Domain Model) | ✅ |
+| 2 | MedicationSchedule/Record 비즈니스 메서드 추가 | ✅ |
+| 3 | Redis Stream 메시지 큐 도입 | ✅ |
+| 4 | MessageQueueService (Producer) | ✅ |
+| 5 | NotificationConsumerService | ✅ |
+| 6 | 재시도 로직 및 Dead Letter Queue | ✅ |
+| 7 | Discord Webhook 알림 (DLQ) | ✅ |
+| 8 | ADR-0007 문서 (메시지 큐 선택 이유) | ✅ |
 
 ### ✅ 2025/12/22 구현 완료 목록
 | # | 기능 | 상태 |

@@ -168,33 +168,47 @@ docs/
 
 ---
 
-### 3. 비동기 처리 미흡 (우선순위: ⭐⭐⭐)
+### 3. 비동기 처리 미흡 (우선순위: ⭐⭐⭐) ✅ 해결됨
+
+> 📅 해결일: 2026-01-03  
+> 📄 참고: [ADR-0007](internal/adr/0007-message-queue-redis-stream.md)
 
 **문제:**
 - FCM 푸시, 이메일 발송 등 I/O 작업이 동기적으로 처리됨
 - 대량 푸시 발송 시 응답 지연 발생 가능
 
-**현재:**
-```java
-// 동기 처리 - 사용자 응답 대기 발생
-fcmService.sendNotification(token, message);
-return ResponseEntity.ok("완료");
+**해결 내용:**
+Redis Stream 기반 메시지 큐 시스템을 도입했습니다:
+
+1. ✅ `MessageQueueService` - 메시지 발행 (Producer)
+2. ✅ `NotificationConsumerService` - 메시지 소비 및 FCM 발송
+3. ✅ `QueuedNotificationService` - 큐 활성화 여부에 따른 Facade
+4. ✅ 재시도 로직 (최대 3회) 및 Dead Letter Queue 구현
+5. ✅ Discord Webhook 알림 (DLQ 적재 시)
+6. ✅ Prometheus 메트릭 수집
+
+**아키텍처:**
+```
+API 요청 → MessageQueueService → Redis Stream → NotificationConsumerService → FCM
+                                       ↓ (실패 시)
+                                Dead Letter Queue → Discord 알림
 ```
 
-**개선:**
-```java
-// 비동기 처리 - 즉시 응답
-@Async
-public CompletableFuture<Void> sendNotificationAsync(String token, String message) {
-    fcmService.sendNotification(token, message);
-    return CompletableFuture.completedFuture(null);
-}
+**설정 옵션:**
+```properties
+# 활성화/비활성화
+hamalog.queue.enabled=true
+
+# Discord 알림
+hamalog.queue.discord.enabled=true
+hamalog.queue.discord.webhook-url=https://discord.com/api/webhooks/...
 ```
 
-**또는 메시지 큐 도입:**
-```
-API 요청 → Redis Queue/Kafka → Worker가 비동기 처리
-```
+**Kafka 대신 Redis Stream을 선택한 이유:**
+- 기존 Redis 인프라 활용 (추가 비용 없음)
+- 프로젝트 규모에 적합한 처리량
+- 낮은 운영 복잡도
+- 필요 시 Kafka로 마이그레이션 가능한 설계
 
 ---
 

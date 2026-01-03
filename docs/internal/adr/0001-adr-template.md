@@ -41,6 +41,7 @@
 | 0004 | [Domain Event 패턴 도입](./0004-domain-event-pattern.md) | Accepted | 2025-12-23 |
 | 0005 | [Redis 캐시 전략](./0005-redis-cache-strategy.md) | Accepted | 2025-12-23 |
 | 0006 | [민감 정보 AES 암호화](./0006-sensitive-data-encryption.md) | Accepted | 2025-12-23 |
+| 0007 | [메시지 큐 도입 - Redis Stream 선택](./0007-message-queue-redis-stream.md) | Accepted | 2026-01-03 |
 
 ## 작성 가이드
 

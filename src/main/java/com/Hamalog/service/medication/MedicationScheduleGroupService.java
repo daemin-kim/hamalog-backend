@@ -46,7 +46,7 @@ public class MedicationScheduleGroupService {
     /**
      * 그룹 생성
      */
-    @Transactional
+    @Transactional(rollbackFor = {Exception.class})
     public MedicationScheduleGroupResponse createGroup(Long memberId, MedicationScheduleGroupCreateRequest request) {
         Member member = memberRepository.findById(memberId)
                 .orElseThrow(() -> new CustomException(ErrorCode.MEMBER_NOT_FOUND));
@@ -72,7 +72,7 @@ public class MedicationScheduleGroupService {
     /**
      * 그룹 수정
      */
-    @Transactional
+    @Transactional(rollbackFor = {Exception.class})
     public MedicationScheduleGroupResponse updateGroup(Long memberId, Long groupId, MedicationScheduleGroupUpdateRequest request) {
         MedicationScheduleGroup group = groupRepository.findByMedicationScheduleGroupIdAndMember_MemberId(groupId, memberId)
                 .orElseThrow(() -> new CustomException(ErrorCode.MEDICATION_SCHEDULE_NOT_FOUND));
@@ -95,7 +95,7 @@ public class MedicationScheduleGroupService {
     /**
      * 그룹 삭제
      */
-    @Transactional
+    @Transactional(rollbackFor = {Exception.class})
     public void deleteGroup(Long memberId, Long groupId) {
         MedicationScheduleGroup group = groupRepository.findByMedicationScheduleGroupIdAndMember_MemberId(groupId, memberId)
                 .orElseThrow(() -> new CustomException(ErrorCode.MEDICATION_SCHEDULE_NOT_FOUND));

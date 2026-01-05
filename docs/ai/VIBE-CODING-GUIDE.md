@@ -169,7 +169,7 @@ Hamalog는 Spring Boot 3.4.5 기반의 헬스케어 백엔드 시스템입니다
 2. 엔티티는 JPA @Entity + Lombok 최소화 (생성자 직접 정의)
 3. 서비스는 SRP 준수 (Auth → Registration/Authentication/Deletion 분리)
 4. 모든 API는 @RequireResourceOwnership으로 리소스 소유권 검증
-5. 에러는 ErrorCode Enum + BusinessException 사용
+5. 에러는 ErrorCode Enum + CustomException 사용
 
 ## Key Patterns
 - @RequireResourceOwnership(resourceType, idParam) - 리소스 소유권 AOP 검증
@@ -285,11 +285,11 @@ public void updateProfile(Long memberId, ProfileUpdateRequest request) { ... }
 ```java
 // ErrorCode Enum 정의
 public enum ErrorCode {
-    MEMBER_NOT_FOUND(HttpStatus.NOT_FOUND, "M001", "회원을 찾을 수 없습니다"),
-    SCHEDULE_NOT_FOUND(HttpStatus.NOT_FOUND, "S001", "복약 스케줄을 찾을 수 없습니다");
+    MEMBER_NOT_FOUND("MEMBER_NOT_FOUND", "회원을 찾을 수 없습니다"),
+    SCHEDULE_NOT_FOUND("SCHEDULE_NOT_FOUND", "복약 스케줄을 찾을 수 없습니다");
     
-    public BusinessException toException() {
-        return new BusinessException(this);
+    public CustomException toException() {
+        return new CustomException(this);
     }
 }
 

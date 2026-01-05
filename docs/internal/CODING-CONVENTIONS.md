@@ -26,7 +26,7 @@ com.Hamalog.dto.medication.response
 | Service | `{도메인}Service` | `MedicationScheduleService` |
 | Controller | `{도메인}Controller` | `MedicationScheduleController` |
 | Repository | `{도메인}Repository` | `MedicationScheduleRepository` |
-| Exception | `{예외명}Exception` | `BusinessException`, `ResourceNotFoundException` |
+| Exception | `{예외명}Exception` | `CustomException`, `ResourceNotFoundException` |
 
 ### 1.3 메서드
 | 동작 | 접두사 | 예시 |
@@ -169,8 +169,8 @@ public class MedicationScheduleService {
         return MedicationScheduleResponse.from(schedule);
     }
     
-    // 3. 변경 메서드 (@Transactional 명시)
-    @Transactional
+    // 3. 변경 메서드 (@Transactional + rollbackFor 명시)
+    @Transactional(rollbackFor = {Exception.class})
     public MedicationScheduleResponse create(MedicationScheduleCreateRequest request) {
         Member member = memberRepository.findById(request.memberId())
             .orElseThrow(ErrorCode.MEMBER_NOT_FOUND::toException);
@@ -185,13 +185,37 @@ public class MedicationScheduleService {
     }
     
     // 4. 삭제 메서드
-    @Transactional
+    @Transactional(rollbackFor = {Exception.class})
     public void delete(Long id) {
         MedicationSchedule schedule = scheduleRepository.findById(id)
             .orElseThrow(ErrorCode.SCHEDULE_NOT_FOUND::toException);
         scheduleRepository.delete(schedule);
     }
 }
+```
+
+#### 2.3.1 트랜잭션 어노테이션 규칙
+
+| 용도 | 어노테이션 | 설명 |
+|------|-----------|------|
+| 읽기 전용 (클래스 기본값) | `@Transactional(readOnly = true)` | 클래스 레벨에 적용 |
+| 읽기 전용 (메서드) | `@Transactional(readOnly = true)` | 조회 메서드에 적용 |
+| 쓰기 작업 | `@Transactional(rollbackFor = {Exception.class})` | CUD 메서드에 적용 |
+| 별도 트랜잭션 필요 | `@Transactional(propagation = Propagation.REQUIRES_NEW)` | 독립 트랜잭션 필요 시 |
+
+**✅ 쓰기 트랜잭션 필수 규칙:**
+- 모든 Create, Update, Delete 메서드는 `rollbackFor = {Exception.class}` 명시
+- Checked Exception 발생 시에도 롤백을 보장
+- 일관성 있는 에러 처리와 데이터 무결성 유지
+
+```java
+// Good - 명시적 rollbackFor 지정
+@Transactional(rollbackFor = {Exception.class})
+public void createSchedule(ScheduleRequest request) { ... }
+
+// Bad - rollbackFor 누락
+@Transactional
+public void createSchedule(ScheduleRequest request) { ... }
 ```
 
 ### 2.4 Controller
@@ -256,14 +280,13 @@ public enum ErrorCode {
     DUPLICATE_MEMBER(HttpStatus.CONFLICT, "M002", "이미 존재하는 회원입니다"),
     
     // 복약
-    SCHEDULE_NOT_FOUND(HttpStatus.NOT_FOUND, "S001", "복약 스케줄을 찾을 수 없습니다");
+    SCHEDULE_NOT_FOUND("SCHEDULE_NOT_FOUND", "복약 스케줄을 찾을 수 없습니다");
     
-    private final HttpStatus status;
     private final String code;
     private final String message;
     
-    public BusinessException toException() {
-        return new BusinessException(this);
+    public CustomException toException() {
+        return new CustomException(this);
     }
 }
 ```
@@ -341,7 +364,7 @@ class MedicationScheduleServiceTest {
             
             // when & then
             assertThatThrownBy(() -> scheduleService.create(request))
-                .isInstanceOf(BusinessException.class)
+                .isInstanceOf(CustomException.class)
                 .hasFieldOrPropertyWithValue("errorCode", ErrorCode.MEMBER_NOT_FOUND);
         }
     }
@@ -385,9 +408,9 @@ public class MedicationScheduleService { }
  *
  * @param request 생성 요청 DTO
  * @return 생성된 스케줄 응답 DTO
- * @throws BusinessException 회원이 존재하지 않는 경우 (MEMBER_NOT_FOUND)
+ * @throws CustomException 회원이 존재하지 않는 경우 (MEMBER_NOT_FOUND)
  */
-@Transactional
+@Transactional(rollbackFor = {Exception.class})
 public MedicationScheduleResponse create(MedicationScheduleCreateRequest request) { }
 ```
 
@@ -441,5 +464,5 @@ Closes #123
 
 ---
 
-> 📅 최종 업데이트: 2025년 12월 23일
+> 📅 최종 업데이트: 2026년 1월 5일
 

@@ -282,3 +282,7 @@ void testNoPlusOneProblem() {
 - [에러 처리](./ERROR-HANDLING.md)
 - [코딩 컨벤션](../CODING-CONVENTIONS.md)
 
+---
+
+> 📝 최종 업데이트: 2026년 1월 5일
+

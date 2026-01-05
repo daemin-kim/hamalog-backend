@@ -52,7 +52,7 @@ public class NotificationSettingsService {
     /**
      * 기본 알림 설정 생성
      */
-    @Transactional
+    @Transactional(rollbackFor = {Exception.class})
     public NotificationSettings createDefaultSettings(Long memberId) {
         Member member = memberRepository.findById(memberId)
                 .orElseThrow(() -> new CustomException(ErrorCode.MEMBER_NOT_FOUND));
@@ -64,7 +64,7 @@ public class NotificationSettingsService {
     /**
      * 알림 설정 수정
      */
-    @Transactional
+    @Transactional(rollbackFor = {Exception.class})
     @CacheEvict(value = "notificationSettings", key = "#memberId")
     public NotificationSettingsResponse updateSettings(Long memberId, NotificationSettingsUpdateRequest request) {
         // 1. 설정 조회 또는 생성
@@ -111,7 +111,7 @@ public class NotificationSettingsService {
     /**
      * FCM 토큰 등록 (신규 등록 또는 기존 갱신)
      */
-    @Transactional
+    @Transactional(rollbackFor = {Exception.class})
     public FcmDeviceTokenResponse registerFcmToken(Long memberId, FcmTokenRegisterRequest request) {
         Member member = memberRepository.findById(memberId)
                 .orElseThrow(() -> new CustomException(ErrorCode.MEMBER_NOT_FOUND));
@@ -161,7 +161,7 @@ public class NotificationSettingsService {
     /**
      * FCM 토큰 비활성화 (로그아웃, 디바이스 삭제)
      */
-    @Transactional
+    @Transactional(rollbackFor = {Exception.class})
     public void deactivateFcmToken(Long memberId, String token) {
         fcmDeviceTokenRepository.findByMember_MemberIdAndToken(memberId, token)
                 .ifPresent(deviceToken -> {
@@ -174,7 +174,7 @@ public class NotificationSettingsService {
     /**
      * 특정 디바이스 토큰 삭제
      */
-    @Transactional
+    @Transactional(rollbackFor = {Exception.class})
     public void deleteDeviceToken(Long memberId, Long tokenId) {
         FcmDeviceToken token = fcmDeviceTokenRepository.findById(tokenId)
                 .orElseThrow(() -> new CustomException(ErrorCode.FCM_TOKEN_NOT_FOUND));
@@ -191,7 +191,7 @@ public class NotificationSettingsService {
     /**
      * 모든 FCM 토큰 비활성화 (전체 로그아웃)
      */
-    @Transactional
+    @Transactional(rollbackFor = {Exception.class})
     public void deactivateAllFcmTokens(Long memberId) {
         fcmDeviceTokenRepository.deactivateAllByMemberId(memberId, java.time.LocalDateTime.now());
         log.info("모든 FCM 토큰 비활성화: memberId={}", memberId);

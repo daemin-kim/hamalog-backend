@@ -218,46 +218,20 @@ public MedicationScheduleResponse update(Long id, UpdateRequest request) {
 
 ## 4. Rate Limiting
 
-### 4.1 구현 방식
+> 🚧 **현재 미구현** - 현재 프로젝트 규모(개인/소규모 헬스케어 앱)에서는 Rate Limiting이 오버 엔지니어링으로 판단되어 구현하지 않았습니다. 향후 사용자 증가 시 아래 설계를 참고하여 구현할 수 있습니다.
 
-Redis 기반 Sliding Window 알고리즘:
+### 4.1 권장 구현 방식
 
-```java
-@Component
-public class RateLimitFilter extends OncePerRequestFilter {
+Redis 기반 Sliding Window 알고리즘 권장:
 
-    private final RedisTemplate<String, String> redisTemplate;
-    
-    @Override
-    protected void doFilterInternal(HttpServletRequest request, ...) {
-        String clientId = extractClientId(request);  // IP 또는 memberId
-        String key = "ratelimit:" + clientId;
-        
-        Long count = redisTemplate.opsForValue().increment(key);
-        if (count == 1) {
-            redisTemplate.expire(key, Duration.ofMinutes(1));
-        }
-        
-        if (count > 100) {  // 분당 100회 제한
-            response.setStatus(429);
-            return;
-        }
-        
-        filterChain.doFilter(request, response);
-    }
-}
-```
-
-### 4.2 제한 정책
-
-| 엔드포인트 | 제한 | 기준 |
-|------------|------|------|
+| 엔드포인트 | 권장 제한 | 기준 |
+|------------|----------|------|
 | `/api/auth/login` | 5회/분 | IP |
 | `/api/auth/register` | 3회/시간 | IP |
 | 일반 API | 100회/분 | memberId |
 | 파일 업로드 | 10회/분 | memberId |
 
-### 4.3 응답 헤더
+### 4.2 구현 시 응답 헤더
 
 ```
 X-RateLimit-Limit: 100
@@ -347,7 +321,6 @@ Content-Security-Policy: default-src 'self'
 - [ ] `@RequireResourceOwnership` 적용 (리소스 접근 API)
 - [ ] `@Valid` 적용 (요청 DTO 검증)
 - [ ] 민감 데이터 로깅 제외 (`@NoLogging` 또는 마스킹)
-- [ ] Rate Limiting 정책 확인
 - [ ] 에러 메시지에 민감 정보 미포함
 
 ### 7.2 코드 리뷰 체크리스트
@@ -396,5 +369,5 @@ void accessOtherUserResource_forbidden() {
 
 ---
 
-> 📝 최종 업데이트: 2025년 12월 24일
+> 📝 최종 업데이트: 2026년 1월 5일
 

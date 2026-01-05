@@ -649,6 +649,9 @@ formData.append('image', imageFile); // 선택
 | `FORBIDDEN` | 접근 권한이 없습니다. | 403 |
 | `INVALID_TOKEN` | 유효하지 않은 토큰입니다. | 401 |
 | `TOKEN_EXPIRED` | 토큰이 만료되었습니다. | 401 |
+| `TOKEN_BLACKLISTED` | 무효화된 토큰입니다. | 401 |
+| `INVALID_REFRESH_TOKEN` | 유효하지 않은 Refresh Token입니다. | 401 |
+| `REFRESH_TOKEN_EXPIRED` | Refresh Token이 만료되었습니다. | 401 |
 
 ### 회원 관련
 | 에러 코드 | 메시지 | HTTP |
@@ -657,6 +660,8 @@ formData.append('image', imageFile); // 선택
 | `DUPLICATE_MEMBER` | 이미 존재하는 회원입니다. | 409 |
 | `INVALID_CURRENT_PASSWORD` | 현재 비밀번호가 일치하지 않습니다. | 400 |
 | `PASSWORD_CONFIRM_MISMATCH` | 비밀번호와 확인이 일치하지 않습니다. | 400 |
+| `SAME_AS_CURRENT_PASSWORD` | 새 비밀번호는 현재 비밀번호와 달라야 합니다. | 400 |
+| `NO_PROFILE_UPDATE_DATA` | 수정할 프로필 정보가 없습니다. | 400 |
 
 ### 복약 관련
 | 에러 코드 | 메시지 | HTTP |
@@ -664,12 +669,25 @@ formData.append('image', imageFile); // 선택
 | `SCHEDULE_NOT_FOUND` | 복약 스케줄을 찾을 수 없습니다. | 404 |
 | `RECORD_NOT_FOUND` | 복약 기록을 찾을 수 없습니다. | 404 |
 | `TIME_NOT_FOUND` | 복약 시간 정보를 찾을 수 없습니다. | 404 |
+| `INVALID_SCHEDULE` | 유효하지 않은 복약 스케줄입니다. | 400 |
+| `INVALID_PRESCRIPTION_DAYS` | 처방 일수는 1일 이상이어야 합니다. | 400 |
+| `INVALID_PER_DAY` | 1일 복용 횟수는 1회 이상이어야 합니다. | 400 |
+| `DUPLICATE_GROUP_NAME` | 이미 존재하는 그룹 이름입니다. | 409 |
 
 ### 마음 일기 관련
 | 에러 코드 | 메시지 | HTTP |
 |-----------|--------|------|
 | `MOOD_DIARY_NOT_FOUND` | 마음 일기를 찾을 수 없습니다. | 404 |
 | `DIARY_ALREADY_EXISTS` | 해당 날짜에 이미 일기가 존재합니다. | 409 |
+| `INVALID_DIARY_TYPE` | 유효하지 않은 일기 형식입니다. | 400 |
+| `INVALID_MOOD_TYPE` | 유효하지 않은 기분 타입입니다. | 400 |
+
+### 부작용 관련
+| 에러 코드 | 메시지 | HTTP |
+|-----------|--------|------|
+| `SIDE_EFFECT_NOT_FOUND` | 부작용 정보를 찾을 수 없습니다. | 404 |
+| `INVALID_DEGREE` | 부작용 정도는 1-5 사이여야 합니다. | 400 |
+| `EMPTY_SIDE_EFFECT_LIST` | 부작용 목록이 비어있습니다. | 400 |
 
 ### 파일 관련
 | 에러 코드 | 메시지 | HTTP |
@@ -677,6 +695,7 @@ formData.append('image', imageFile); // 선택
 | `FILE_SAVE_FAIL` | 파일 저장에 실패했습니다. | 500 |
 | `FILE_SIZE_EXCEEDED` | 파일 크기가 제한을 초과했습니다. | 413 |
 | `INVALID_FILE_TYPE` | 지원하지 않는 파일 형식입니다. | 400 |
+| `FILE_NOT_FOUND` | 파일을 찾을 수 없습니다. | 404 |
 
 ### 알림 관련
 | 에러 코드 | 메시지 | HTTP |
@@ -685,6 +704,22 @@ formData.append('image', imageFile); // 선택
 | `FCM_TOKEN_NOT_FOUND` | FCM 토큰을 찾을 수 없습니다. | 404 |
 | `FCM_SEND_FAILED` | 푸시 알림 전송에 실패했습니다. | 500 |
 | `INVALID_DEVICE_TYPE` | 유효하지 않은 디바이스 타입입니다. | 400 |
+
+### 유효성 검증 관련
+| 에러 코드 | 메시지 | HTTP |
+|-----------|--------|------|
+| `BAD_REQUEST` | 잘못된 요청입니다. | 400 |
+| `INVALID_INPUT` | 입력값이 유효하지 않습니다. | 400 |
+| `INVALID_PARAMETER` | 파라미터가 유효하지 않습니다. | 400 |
+| `MISSING_REQUIRED_FIELD` | 필수 필드가 누락되었습니다. | 400 |
+| `INVALID_DATE_RANGE` | 시작일은 처방일 이후여야 합니다. | 400 |
+
+### 시스템/동시성 관련
+| 에러 코드 | 메시지 | HTTP |
+|-----------|--------|------|
+| `INTERNAL_ERROR` | 서버 내부 오류가 발생했습니다. | 500 |
+| `OPTIMISTIC_LOCK_FAILED` | 다른 사용자가 데이터를 수정했습니다. 다시 시도해주세요. | 409 |
+| `RESOURCE_CONFLICT` | 리소스 충돌이 발생했습니다. | 409 |
 
 ---
 

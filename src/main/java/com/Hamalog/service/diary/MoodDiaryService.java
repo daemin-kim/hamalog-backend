@@ -36,7 +36,7 @@ public class MoodDiaryService {
     private final MemberRepository memberRepository;
     private final DomainEventPublisher domainEventPublisher;
 
-    @Transactional
+    @Transactional(rollbackFor = {Exception.class})
     public MoodDiaryResponse createMoodDiary(Long memberId, MoodDiaryCreateRequest request) {
         log.info("마음 일기 생성 시작 - memberId: {}, diaryDate: {}", memberId, request.diaryDate());
 
@@ -139,7 +139,7 @@ public class MoodDiaryService {
         return MoodDiaryResponse.from(moodDiary);
     }
 
-    @Transactional
+    @Transactional(rollbackFor = {Exception.class})
     public void deleteMoodDiary(Long moodDiaryId, Long memberId) {
         log.info("마음 일기 삭제 시작 - moodDiaryId: {}, memberId: {}", moodDiaryId, memberId);
 
@@ -150,7 +150,7 @@ public class MoodDiaryService {
         log.info("마음 일기 삭제 완료 - moodDiaryId: {}", moodDiaryId);
     }
 
-    @Transactional
+    @Transactional(rollbackFor = {Exception.class})
     public MoodDiaryResponse updateMoodDiary(Long moodDiaryId, Long memberId, MoodDiaryUpdateRequest request) {
         log.info("마음 일기 수정 시작 - moodDiaryId: {}, memberId: {}", moodDiaryId, memberId);
 

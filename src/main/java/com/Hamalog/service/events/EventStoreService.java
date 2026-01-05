@@ -60,7 +60,7 @@ public class EventStoreService {
     /**
      * 이벤트 처리 완료 표시
      */
-    @Transactional
+    @Transactional(rollbackFor = {Exception.class})
     public void markAsProcessed(Long eventId) {
         repository.findById(eventId).ifPresent(event -> {
             event.markAsProcessed();
@@ -72,7 +72,7 @@ public class EventStoreService {
     /**
      * 이벤트 처리 실패 표시
      */
-    @Transactional
+    @Transactional(rollbackFor = {Exception.class})
     public void markAsFailed(Long eventId, String errorMessage) {
         repository.findById(eventId).ifPresent(event -> {
             event.markAsFailed(errorMessage);

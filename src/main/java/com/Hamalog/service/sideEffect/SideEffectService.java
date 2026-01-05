@@ -279,7 +279,7 @@ public class SideEffectService {
     /**
      * 부작용 기록 삭제
      */
-    @Transactional
+    @Transactional(rollbackFor = {Exception.class})
     public void deleteSideEffectRecord(Long recordId, Long memberId) {
         log.info("부작용 기록 삭제 - recordId: {}, memberId: {}", recordId, memberId);
 

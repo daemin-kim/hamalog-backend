@@ -73,14 +73,15 @@ public ResponseEntity<List<MedicationScheduleResponse>> getByMemberId(
 public class SideEffectService {
 
     @RequireResourceOwnership(
-        resourceType = ResourceType.MEDICATION_SCHEDULE,
-        paramName = "medicationScheduleId",
-        parameterSource = ParameterSource.REQUEST_BODY
+        resourceType = ResourceType.MEMBER,
+        paramName = "memberId",
+        source = ParameterSource.REQUEST_BODY,
+        bodyField = "memberId"
     )
     @Transactional(readOnly = true)
-    public List<SideEffectResponse> findByScheduleId(Long medicationScheduleId) {
+    public List<SideEffectResponse> findByMemberId(Long memberId) {
         // 소유권 검증이 AOP에서 자동으로 수행됨
-        return sideEffectRepository.findByMedicationScheduleId(medicationScheduleId)
+        return sideEffectRepository.findByMemberId(memberId)
             .stream()
             .map(SideEffectResponse::from)
             .toList();
@@ -94,8 +95,11 @@ public class SideEffectService {
 |------|------|------|--------|------|
 | `resourceType` | ResourceType | ✅ | - | 검증할 리소스 타입 |
 | `paramName` | String | ✅ | - | 리소스 ID를 가져올 파라미터명 |
-| `parameterSource` | ParameterSource | ❌ | PATH_VARIABLE | 파라미터 추출 전략 |
-| `ownershipStrategy` | OwnershipStrategy | ❌ | DIRECT | 소유권 검증 전략 |
+| `source` | ParameterSource | ❌ | PATH_VARIABLE | 파라미터 추출 전략 |
+| `strategy` | OwnershipStrategy | ❌ | DIRECT | 소유권 검증 전략 |
+| `bodyField` | String | ❌ | "" | REQUEST_BODY 사용 시 추출할 필드명 |
+| `errorStatus` | int | ❌ | 403 | 인가 실패 시 HTTP 상태 코드 |
+| `errorMessage` | String | ❌ | "접근 권한이 없습니다." | 인가 실패 시 에러 메시지 |
 
 ### 1.6 동작 원리
 
@@ -140,7 +144,7 @@ public MemberProfileResponse getProfile(Long memberId) {
 
 ```java
 @CacheEvict(value = "memberProfile", key = "#memberId")
-@Transactional
+@Transactional(rollbackFor = {Exception.class})
 public MemberProfileResponse updateProfile(Long memberId, ProfileUpdateRequest request) {
     Member member = memberRepository.findById(memberId)
         .orElseThrow(ErrorCode.MEMBER_NOT_FOUND::toException);
@@ -248,5 +252,5 @@ class MyCustomAspectTest {
 
 ---
 
-> 📝 최종 업데이트: 2025년 12월 24일
+> 📝 최종 업데이트: 2026년 1월 5일
 

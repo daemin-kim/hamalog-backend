@@ -82,7 +82,7 @@
 | 문서 | 내용 |
 |------|------|
 | `ANNOTATION-GUIDE.md` | `@RequireResourceOwnership`, `@Retryable` 등 |
-| `ERROR-HANDLING.md` | `ErrorCode`, `BusinessException` |
+| `ERROR-HANDLING.md` | `ErrorCode`, `CustomException` |
 | `SECURITY-PATTERNS.md` | JWT, CSRF, 리소스 소유권 검증 |
 | `CACHING-PATTERNS.md` | `@Cacheable`, Redis TTL 전략 |
 | `JPA-PERFORMANCE.md` | N+1 해결, DTO Projection, QueryDSL |

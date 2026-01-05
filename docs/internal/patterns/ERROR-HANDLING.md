@@ -9,7 +9,7 @@
 
 1. [에러 처리 아키텍처](#1-에러-처리-아키텍처)
 2. [ErrorCode Enum](#2-errorcode-enum)
-3. [BusinessException](#3-businessexception)
+3. [CustomException](#3-customexception)
 4. [GlobalExceptionHandler](#4-globalexceptionhandler)
 5. [ErrorResponse 형식](#5-errorresponse-형식)
 6. [사용 예제](#6-사용-예제)
@@ -32,7 +32,7 @@
                           ↓
 ┌─────────────────────────────────────────────────────────────┐
 │               GlobalExceptionHandler                         │
-│  @ExceptionHandler(BusinessException.class)                  │
+│  @ExceptionHandler(CustomException.class)                    │
 │  → ErrorResponse 생성 + HTTP 상태 코드 매핑                  │
 └─────────────────────────┬───────────────────────────────────┘
                           ↓
@@ -80,12 +80,8 @@ public enum ErrorCode {
         this.message = message;
     }
 
-    public BusinessException toException() {
-        return new BusinessException(this);
-    }
-
-    public BusinessException toException(String detail) {
-        return new BusinessException(this, detail);
+    public CustomException toException() {
+        return new CustomException(this);
     }
 }
 ```
@@ -118,33 +114,25 @@ GlobalExceptionHandler에서 ErrorCode를 HTTP 상태 코드로 매핑:
 
 ---
 
-## 3. BusinessException
+## 3. CustomException
 
 ### 3.1 위치
 
 ```
-src/main/java/com/Hamalog/exception/BusinessException.java
+src/main/java/com/Hamalog/exception/CustomException.java
 ```
 
 ### 3.2 구조
 
 ```java
 @Getter
-public class BusinessException extends RuntimeException {
+public class CustomException extends RuntimeException {
     
     private final ErrorCode errorCode;
-    private final String detail;
     
-    public BusinessException(ErrorCode errorCode) {
+    public CustomException(ErrorCode errorCode) {
         super(errorCode.getMessage());
         this.errorCode = errorCode;
-        this.detail = null;
-    }
-    
-    public BusinessException(ErrorCode errorCode, String detail) {
-        super(errorCode.getMessage() + " - " + detail);
-        this.errorCode = errorCode;
-        this.detail = detail;
     }
 }
 ```
@@ -155,8 +143,8 @@ public class BusinessException extends RuntimeException {
 // 기본 사용
 throw ErrorCode.MEMBER_NOT_FOUND.toException();
 
-// 상세 정보 포함
-throw ErrorCode.MEMBER_NOT_FOUND.toException("memberId: " + memberId);
+// 직접 생성
+throw new CustomException(ErrorCode.MEMBER_NOT_FOUND);
 
 // 메서드 레퍼런스
 Member member = memberRepository.findById(id)
@@ -177,7 +165,7 @@ src/main/java/com/Hamalog/handler/GlobalExceptionHandler.java
 
 | 예외 타입 | 처리 방식 |
 |-----------|-----------|
-| `BusinessException` | ErrorCode 기반 응답 생성 |
+| `CustomException` | ErrorCode 기반 응답 생성 |
 | `MethodArgumentNotValidException` | Validation 오류 상세 정보 |
 | `ConstraintViolationException` | Bean Validation 오류 |
 | `HttpMessageNotReadableException` | JSON 파싱 오류 |
@@ -188,11 +176,10 @@ src/main/java/com/Hamalog/handler/GlobalExceptionHandler.java
 
 ```java
 @RestControllerAdvice
-@Order(Ordered.HIGHEST_PRECEDENCE)
 public class GlobalExceptionHandler {
 
-    @ExceptionHandler(BusinessException.class)
-    public ResponseEntity<ErrorResponse> handleBusinessException(BusinessException e) {
+    @ExceptionHandler(CustomException.class)
+    public ResponseEntity<ErrorResponse> handleCustomException(CustomException e) {
         // 1순위: 비즈니스 예외
     }
 
@@ -290,7 +277,7 @@ public class MedicationScheduleService {
     private final MedicationScheduleRepository scheduleRepository;
     private final MemberRepository memberRepository;
 
-    @Transactional
+    @Transactional(rollbackFor = {Exception.class})
     public MedicationScheduleResponse create(MedicationScheduleCreateRequest request) {
         // 1. 회원 존재 확인
         Member member = memberRepository.findById(request.memberId())
@@ -341,17 +328,23 @@ public void updateProfile(Long memberId, ProfileUpdateRequest request) {
 }
 ```
 
-### 6.3 상세 정보 포함
+### 6.3 도메인별 예외 클래스 활용
+
+특정 도메인에서 반복적으로 사용되는 예외는 전용 클래스로 정의하여 사용합니다:
 
 ```java
-public MoodDiary createDiary(MoodDiaryCreateRequest request) {
-    // 중복 검사
-    if (diaryRepository.existsByMemberIdAndDiaryDate(request.memberId(), request.diaryDate())) {
-        throw ErrorCode.DIARY_ALREADY_EXISTS.toException(
-            "날짜: " + request.diaryDate()
-        );
+// 도메인별 예외 클래스 정의
+public class MoodDiaryNotFoundException extends CustomException {
+    public MoodDiaryNotFoundException() {
+        super(ErrorCode.MOOD_DIARY_NOT_FOUND);
     }
-    // ...
+}
+
+// 사용 예시
+public MoodDiaryResponse getMoodDiary(Long diaryId, Long memberId) {
+    return moodDiaryRepository.findByIdAndMemberId(diaryId, memberId)
+        .map(MoodDiaryResponse::from)
+        .orElseThrow(MoodDiaryNotFoundException::new);
 }
 ```
 
@@ -403,5 +396,5 @@ public enum ErrorCode {
 
 ---
 
-> 📝 최종 업데이트: 2025년 12월 24일
+> 📝 최종 업데이트: 2026년 1월 5일
 

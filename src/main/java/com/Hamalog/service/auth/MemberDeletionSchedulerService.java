@@ -31,7 +31,7 @@ public class MemberDeletionSchedulerService {
     private final MoodDiaryRepository moodDiaryRepository;
 
     @Scheduled(cron = "0 0 3 * * *") // 매일 03:00 실행
-    @Transactional
+    @Transactional(rollbackFor = {Exception.class})
     public void purgeScheduledMembers() {
         LocalDateTime now = LocalDateTime.now();
         List<Member> targets = memberRepository.findAllByDeletionScheduledTrueAndDeletionDueAtBefore(now);

@@ -58,7 +58,7 @@ public class MedicationTimeService {
     /**
      * 알림 시간 추가
      */
-    @Transactional
+    @Transactional(rollbackFor = {Exception.class})
     public MedicationTimeResponse createMedicationTime(Long scheduleId, MedicationTimeCreateRequest request) {
         log.info("복약 알림 시간 생성 - scheduleId: {}, time: {}", scheduleId, request.takeTime());
 
@@ -75,7 +75,7 @@ public class MedicationTimeService {
     /**
      * 알림 시간 수정
      */
-    @Transactional
+    @Transactional(rollbackFor = {Exception.class})
     public MedicationTimeResponse updateMedicationTime(Long timeId, MedicationTimeUpdateRequest request) {
         log.info("복약 알림 시간 수정 - timeId: {}, newTime: {}", timeId, request.takeTime());
 
@@ -91,7 +91,7 @@ public class MedicationTimeService {
     /**
      * 알림 시간 삭제
      */
-    @Transactional
+    @Transactional(rollbackFor = {Exception.class})
     public void deleteMedicationTime(Long timeId) {
         log.info("복약 알림 시간 삭제 - timeId: {}", timeId);
 

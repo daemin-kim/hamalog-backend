@@ -57,7 +57,7 @@ public class KakaoOAuth2AuthService {
      * @throws OAuth2Exception OAuth2 인증 과정에서 오류 발생 시
      * @throws CustomException 기타 오류 발생 시
      */
-    @Transactional
+    @Transactional(rollbackFor = {Exception.class})
     public LoginResponse processOAuth2Callback(String code) {
         try {
             // 입력값 검증

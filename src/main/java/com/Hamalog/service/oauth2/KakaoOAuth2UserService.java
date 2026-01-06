@@ -28,7 +28,7 @@ public class KakaoOAuth2UserService extends DefaultOAuth2UserService {
     }
 
     @Override
-    @Transactional
+    @Transactional(rollbackFor = {Exception.class})
     public OAuth2User loadUser(OAuth2UserRequest userRequest) throws OAuth2AuthenticationException {
         if (!"kakao".equalsIgnoreCase(userRequest.getClientRegistration().getRegistrationId())) {
             throw new OAuth2AuthenticationException(new OAuth2Error("invalid_request"),

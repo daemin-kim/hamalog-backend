@@ -15,7 +15,7 @@ import org.springframework.transaction.annotation.Transactional;
 
 @Slf4j
 @Service
-@Transactional
+@Transactional(rollbackFor = {Exception.class})
 @RequiredArgsConstructor
 public class RefreshTokenService {
 

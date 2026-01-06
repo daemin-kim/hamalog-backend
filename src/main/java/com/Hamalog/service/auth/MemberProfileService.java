@@ -50,7 +50,7 @@ public class MemberProfileService {
     /**
      * 회원 프로필 수정
      */
-    @Transactional
+    @Transactional(rollbackFor = {Exception.class})
     public MemberProfileResponse updateProfile(Long memberId, ProfileUpdateRequest request) {
         log.info("회원 프로필 수정 시작 - memberId: {}", memberId);
 
@@ -75,7 +75,7 @@ public class MemberProfileService {
     /**
      * 비밀번호 변경
      */
-    @Transactional
+    @Transactional(rollbackFor = {Exception.class})
     public void changePassword(Long memberId, PasswordChangeRequest request) {
         log.info("비밀번호 변경 시작 - memberId: {}", memberId);
 

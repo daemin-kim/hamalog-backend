@@ -10,7 +10,8 @@ import lombok.*;
     @Index(name = "idx_refresh_tokens_token_value", columnList = "token_value"),
     @Index(name = "idx_refresh_tokens_expires_at", columnList = "expires_at")
 })
-@Data
+@Getter
+@Setter
 @NoArgsConstructor
 @AllArgsConstructor
 @Builder

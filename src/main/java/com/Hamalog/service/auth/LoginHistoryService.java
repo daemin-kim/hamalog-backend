@@ -35,7 +35,7 @@ public class LoginHistoryService {
     /**
      * 로그인 성공 기록
      */
-    @Transactional
+    @Transactional(rollbackFor = {Exception.class})
     public String recordLoginSuccess(Long memberId, String ipAddress, String userAgent) {
         Member member = memberRepository.findById(memberId)
                 .orElseThrow(() -> new CustomException(ErrorCode.MEMBER_NOT_FOUND));
@@ -61,7 +61,7 @@ public class LoginHistoryService {
     /**
      * 로그인 실패 기록
      */
-    @Transactional
+    @Transactional(rollbackFor = {Exception.class})
     public void recordLoginFailure(Long memberId, String ipAddress, String userAgent, String failureReason) {
         Member member = memberRepository.findById(memberId).orElse(null);
         if (member == null) {
@@ -122,7 +122,7 @@ public class LoginHistoryService {
     /**
      * 특정 세션 종료
      */
-    @Transactional
+    @Transactional(rollbackFor = {Exception.class})
     public void terminateSession(Long memberId, String sessionId) {
         LoginHistory session = loginHistoryRepository.findBySessionIdAndMember_MemberId(sessionId, memberId)
                 .orElseThrow(() -> new CustomException(ErrorCode.INVALID_TOKEN));
@@ -134,7 +134,7 @@ public class LoginHistoryService {
     /**
      * 회원의 모든 세션 종료 (로그아웃 시)
      */
-    @Transactional
+    @Transactional(rollbackFor = {Exception.class})
     public void terminateAllSessions(Long memberId) {
         int deactivated = loginHistoryRepository.deactivateAllSessionsByMemberId(memberId, LocalDateTime.now());
         log.info("All sessions terminated for member: {}, count: {}", memberId, deactivated);
@@ -143,7 +143,7 @@ public class LoginHistoryService {
     /**
      * 세션 ID로 세션 종료 (다른 기기에서 로그아웃)
      */
-    @Transactional
+    @Transactional(rollbackFor = {Exception.class})
     public void terminateSessionById(String sessionId) {
         int deactivated = loginHistoryRepository.deactivateSession(sessionId, LocalDateTime.now());
         if (deactivated > 0) {

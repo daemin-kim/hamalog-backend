@@ -9,6 +9,7 @@
 3. [QueryDSL](#3-querydsl)
 4. [Batch Size 설정](#4-batch-size-설정)
 5. [성능 모니터링](#5-성능-모니터링)
+6. [HikariCP 커넥션 풀 설정](#6-hikaricp-커넥션-풀-설정)
 
 ---
 
@@ -284,5 +285,57 @@ void testNoPlusOneProblem() {
 
 ---
 
-> 📝 최종 업데이트: 2026년 1월 5일
+## 6. HikariCP 커넥션 풀 설정
+
+### 6.1 기본 설정 (application.properties)
+
+```properties
+# 최대 커넥션 수 (소규모: 5, 중규모: 10, 대규모: 20+)
+spring.datasource.hikari.maximum-pool-size=5
+
+# 유휴 상태로 유지할 최소 커넥션 수
+spring.datasource.hikari.minimum-idle=2
+
+# 커넥션 획득 대기 시간 (30초)
+spring.datasource.hikari.connection-timeout=30000
+
+# 유휴 커넥션 최대 유지 시간 (10분)
+spring.datasource.hikari.idle-timeout=600000
+
+# 커넥션 최대 수명 (30분, MySQL wait_timeout보다 짧게)
+spring.datasource.hikari.max-lifetime=1800000
+
+# 커넥션 풀 이름
+spring.datasource.hikari.pool-name=HamalogHikariPool
+
+# 커넥션 유효성 검사 타임아웃 (5초)
+spring.datasource.hikari.validation-timeout=5000
+```
+
+### 6.2 환경별 설정
+
+| 환경 | max-pool-size | min-idle | leak-detection |
+|------|---------------|----------|----------------|
+| 개발(dev) | 5 | 2 | 2000ms (활성화) |
+| 프로덕션(prod) | 5~10 | 2 | 0 (비활성화) |
+
+### 6.3 풀 사이즈 결정 공식
+
+```
+connections = (core_count * 2) + effective_spindle_count
+```
+
+- 소규모 프로젝트(사용자 없음/소수): 5개면 충분
+- SSD 사용 시: `effective_spindle_count = 1`
+- 예: 2코어 SSD 서버 → `(2 * 2) + 1 = 5`
+
+### 6.4 주의사항
+
+1. **max-lifetime**: MySQL의 `wait_timeout`(기본 8시간)보다 짧게 설정
+2. **leak-detection-threshold**: 개발 환경에서만 사용 (프로덕션에서 성능 오버헤드)
+3. **connection-timeout**: 너무 짧으면 부하 시 연결 실패, 너무 길면 사용자 대기 시간 증가
+
+---
+
+> 📝 최종 업데이트: 2026년 1월 7일
 

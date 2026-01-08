@@ -8,6 +8,7 @@
 | 문서 | 설명 | 대상 |
 |------|------|------|
 | [API 명세서](./API-specification.md) | 현재 문서 - REST API 엔드포인트 상세 명세 | 프론트엔드 개발자 |
+| [🔐 인증 흐름 가이드](#-인증-흐름-가이드) | 토큰 발급 및 API 연동 순서 | 프론트엔드 개발자 |
 | [API 참고 문서](../internal/API-reference.md) | 인프라, 스키마, 변경 이력 | 백엔드/DevOps |
 | [프로젝트 구조 설명서](./Project-Structure.md) | 프로젝트 디렉토리 구조, 아키텍처, 배포 구성 | 전체 |
 | [바이브 코딩 가이드](../ai/VIBE-CODING-GUIDE.md) | AI 협업 개발 가이드 | AI/개발자 |
@@ -16,6 +17,184 @@
 
 ---
 
+## 🔐 인증 흐름 가이드
+
+API 연동 전 반드시 아래 인증 흐름을 이해하고 순서대로 구현해야 합니다.
+
+---
+
+### 📋 전체 흐름 요약
+
+**1단계: 로그인** → **2단계: 토큰 저장** → **3단계: CSRF 토큰 발급** → **4단계: API 호출** → **5단계: 토큰 갱신** → **6단계: 로그아웃**
+
+---
+
+### 🔹 일반 로그인 흐름
+
+| 순서 | 주체 | 액션 | 엔드포인트 | 결과 |
+|:---:|------|------|-----------|------|
+| 1 | 프론트엔드 → 서버 | 회원가입 요청 | `POST /auth/signup` | 201 Created |
+| 2 | 프론트엔드 → 서버 | 로그인 요청 | `POST /auth/login` | Access Token + Refresh Token 반환 |
+
+---
+
+### 🔸 OAuth2 카카오 로그인 흐름
+
+| 순서 | 주체 | 액션 | 엔드포인트 | 결과 |
+|:---:|------|------|-----------|------|
+| 1 | 프론트엔드 → 서버 | 카카오 로그인 시작 | `GET /oauth2/auth/kakao` | 302 Redirect (카카오로 이동) |
+| 2 | 사용자 → 카카오 | 카카오에서 로그인 | 카카오 로그인 페이지 | 인가 코드 발급 |
+| 3 | 카카오 → 서버 | 콜백 호출 | `GET /oauth2/auth/kakao/callback?code=xxx` | Access Token + Refresh Token 반환 |
+
+---
+
+### 🔹 CSRF 토큰 발급 (SPA 필수)
+
+| 순서 | 주체 | 액션 | 엔드포인트 | 결과 |
+|:---:|------|------|-----------|------|
+| 1 | 프론트엔드 → 서버 | CSRF 토큰 요청 | `GET /auth/csrf-token` | CSRF Token 반환 (TTL: 60분) |
+
+⚠️ **POST, PUT, DELETE 요청 전 반드시 CSRF 토큰을 발급받아야 합니다.**
+
+---
+
+### 🔹 인증된 API 호출
+
+| 순서 | 주체 | 액션 | 필수 헤더 | 결과 |
+|:---:|------|------|----------|------|
+| 1 | 프론트엔드 → 서버 | API 요청 | Authorization + X-CSRF-TOKEN | 응답 데이터 |
+
+---
+
+### 🔹 토큰 갱신 흐름
+
+| 순서 | 주체 | 액션 | 엔드포인트 | 결과 |
+|:---:|------|------|-----------|------|
+| 1 | 프론트엔드 → 서버 | 토큰 갱신 요청 | `POST /auth/refresh` | 새 Access Token + 새 Refresh Token |
+
+---
+
+### 단계별 구현 가이드
+
+---
+
+#### Step 1️⃣ 회원가입 또는 로그인
+
+**일반 로그인 방식**
+- `POST /auth/signup` → 회원가입 (최초 1회)
+- `POST /auth/login` → 로그인하여 토큰 발급
+
+**OAuth2 카카오 로그인 방식**
+- `GET /oauth2/auth/kakao` → 카카오 로그인 페이지로 리다이렉트
+- 사용자가 카카오에서 로그인 완료
+- `GET /oauth2/auth/kakao/callback` → 자동 호출, JWT 토큰 반환
+
+---
+
+#### Step 2️⃣ 토큰 저장
+
+로그인 성공 시 받은 토큰을 안전하게 저장합니다.
+
+| 토큰 | 용도 | 만료 시간 | 저장 위치 권장 |
+|------|------|----------|---------------|
+| `access_token` | API 호출 인증 | 15분 | 메모리 또는 sessionStorage |
+| `refresh_token` | Access Token 갱신 | 7일 | httpOnly 쿠키 또는 secure storage |
+
+---
+
+#### Step 3️⃣ CSRF 토큰 발급 (SPA 필수)
+
+**POST, PUT, DELETE 요청 전 반드시 CSRF 토큰을 발급받아야 합니다.**
+
+- 엔드포인트: `GET /auth/csrf-token`
+- TTL: 60분 (만료 시 재발급 필요)
+
+응답으로 받은 CSRF 토큰을 저장하고, 이후 모든 변경 요청에 포함합니다.
+
+---
+
+#### Step 4️⃣ 인증된 API 호출
+
+모든 인증 API 요청 시 아래 헤더를 포함해야 합니다.
+
+| 헤더 | 값 | 필수 여부 |
+|------|-----|----------|
+| `Authorization` | `Bearer {access_token}` | ✅ 모든 인증 API |
+| `X-CSRF-TOKEN` | `{csrf_token}` | ✅ POST, PUT, DELETE |
+| `Content-Type` | `application/json` | 요청 본문이 있는 경우 |
+
+**요청 예시 (GET)**
+```
+GET /medication-schedule/list/1 HTTP/1.1
+Host: api.hamalog.shop
+Authorization: Bearer eyJhbGciOiJIUzI1NiJ9...
+```
+
+**요청 예시 (POST)**
+```
+POST /medication-schedule HTTP/1.1
+Host: api.hamalog.shop
+Authorization: Bearer eyJhbGciOiJIUzI1NiJ9...
+X-CSRF-TOKEN: abc123-csrf-token
+Content-Type: application/json
+```
+
+---
+
+#### Step 5️⃣ 토큰 갱신
+
+Access Token 만료 시 (401 `TOKEN_EXPIRED` 응답) Refresh Token으로 갱신합니다.
+
+**요청**
+```
+POST /auth/refresh
+Content-Type: application/json
+
+{
+  "refresh_token": "{저장된 refresh_token}"
+}
+```
+
+**응답**
+```
+{
+  "access_token": "새로운 access token",
+  "refresh_token": "새로운 refresh token (로테이션)",
+  "expires_in": 900,
+  "token_type": "Bearer"
+}
+```
+
+⚠️ **Refresh Token Rotation**: 갱신 시 새로운 Refresh Token이 발급되므로, 기존 토큰을 반드시 새 토큰으로 교체해야 합니다.
+
+---
+
+#### Step 6️⃣ 로그아웃
+
+**요청**
+```
+POST /auth/logout
+Authorization: Bearer {access_token}
+X-CSRF-TOKEN: {csrf_token}
+```
+
+로그아웃 시 토큰이 블랙리스트에 등록되어 더 이상 사용할 수 없습니다.
+
+---
+
+### ✅ 인증 흐름 체크리스트
+
+| 완료 | 단계 | 설명 |
+|:---:|:---:|------|
+| ☐ | 1 | 회원가입/로그인으로 Access Token & Refresh Token 획득 |
+| ☐ | 2 | 토큰을 안전한 위치에 저장 |
+| ☐ | 3 | CSRF 토큰 발급 (`GET /auth/csrf-token`) |
+| ☐ | 4 | API 호출 시 `Authorization` 헤더에 Access Token 포함 |
+| ☐ | 5 | POST/PUT/DELETE 시 `X-CSRF-TOKEN` 헤더 추가 |
+| ☐ | 6 | 401 `TOKEN_EXPIRED` 발생 시 `/auth/refresh`로 토큰 갱신 |
+| ☐ | 7 | Refresh Token도 만료되면 재로그인 유도 |
+
+---
 
 ## 공통 사항
 

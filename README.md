@@ -136,13 +136,15 @@ Hamalog는 높은 코드 품질을 위해 1,300개 이상의 테스트 케이스
 
 | 문서 | 설명 |
 |------|------|
-| [📖 API 명세서](./docs/API-specification.md) | REST API 엔드포인트 상세 가이드 |
-| [📁 프로젝트 구조](./docs/Project-Structure.md) | 상세 디렉토리 구조 및 인프라 명세 |
-| [📝 API 참고 문서](./docs/API-reference.md) | DB 스키마, 인프라 구성, 변경 이력 |
+| [🎨 **포트폴리오**](./docs/PORTFOLIO.md) | 프로젝트 핵심 역량 및 기술적 도전 |
+| [📋 포트폴리오 요약](./docs/PORTFOLIO-SUMMARY.md) | 1~2페이지 축약 버전 |
+| [📖 API 명세서](./docs/shared/API-specification.md) | REST API 엔드포인트 상세 가이드 |
+| [📁 프로젝트 구조](./docs/shared/Project-Structure.md) | 상세 디렉토리 구조 및 인프라 명세 |
+| [📝 API 참고 문서](./docs/internal/API-reference.md) | DB 스키마, 인프라 구성, 변경 이력 |
 | [📜 CHANGELOG](./CHANGELOG.md) | 버전별 변경 이력 |
-| [🎯 바이브 코딩 가이드](./docs/VIBE-CODING-GUIDE.md) | AI 협업 개발 전략 및 가이드 |
-| [📐 코딩 컨벤션](./docs/CODING-CONVENTIONS.md) | 코드 스타일 및 규칙 |
-| [🏛️ ADR 문서](./docs/adr/) | 아키텍처 결정 기록 |
+| [🎯 바이브 코딩 가이드](./docs/ai/VIBE-CODING-GUIDE.md) | AI 협업 개발 전략 및 가이드 |
+| [📐 코딩 컨벤션](./docs/internal/CODING-CONVENTIONS.md) | 코드 스타일 및 규칙 |
+| [🏛️ ADR 문서](./docs/internal/adr/) | 아키텍처 결정 기록 |
 | [📈 개선 보고서](./docs/IMPROVEMENT-REPORT.md) | 최신 리팩토링 및 성능 개선 내역 |
 
 ---
@@ -166,8 +168,8 @@ Hamalog는 **AI와 협업하기 최적화된 "바이브 코딩" 프로젝트**�
 
 ### ADR (Architecture Decision Records)
 주요 설계 결정을 문서화하여 AI가 "왜 이렇게 구현했는지" 이해할 수 있습니다.
-- [JWT + CSRF 이중 보호](./docs/adr/0002-jwt-csrf-dual-protection.md)
-- [AOP 기반 횡단 관심사](./docs/adr/0003-aop-cross-cutting-concerns.md)
+- [JWT + CSRF 이중 보호](./docs/internal/adr/0002-jwt-csrf-dual-protection.md)
+- [AOP 기반 횡단 관심사](./docs/internal/adr/0003-aop-cross-cutting-concerns.md)
 
 ---
 

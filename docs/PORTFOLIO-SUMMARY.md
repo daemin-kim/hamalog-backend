@@ -66,6 +66,11 @@
 - **해결**: Redis Stream 메시지 큐 + DLQ
 - **결과**: 알림 발송 시간 API에서 제거, 실패 추적 가능
 
+### 6️⃣ Rate Limiting (DDoS/Brute Force 방어)
+- **문제**: 무차별 로그인 시도, API 남용 공격
+- **해결**: Redis Sorted Set + Sliding Window 알고리즘 + Fail-Open 패턴
+- **결과**: 인증 5회/분, API 60회/분 제한, Redis 장애 시에도 서비스 유지
+
 ---
 
 ## 아키텍처 특징

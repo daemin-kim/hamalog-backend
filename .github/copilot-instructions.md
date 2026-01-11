@@ -3,6 +3,8 @@
 - ❌ 직접 SQL 대신 JPA 쿼리 메서드 사용
 - ❌ `FetchType.EAGER` 사용 금지
 - ❌ Lombok `@Data` 사용 금지 (Entity에서)
+- ❌ Entity는 Kotlin으로 작성 금지 (Java + Lombok 유지)
+- ✅ 신규 DTO, 유틸리티, 확장 함수는 Kotlin 권장
 ## 금지 사항
 
 - Test: `src/test/java/com/Hamalog/` (동일 구조)
@@ -10,6 +12,8 @@
 - Controller: `src/main/java/com/Hamalog/controller/{도메인}/`
 - Service: `src/main/java/com/Hamalog/service/{도메인}/`
 - DTO: `src/main/java/com/Hamalog/dto/{도메인}/request/`, `.../response/`
+- DTO (Kotlin): `src/main/kotlin/com/Hamalog/dto/{도메인}/request/`, `.../response/`
+- Kotlin 유틸리티: `src/main/kotlin/com/Hamalog/util/`
 - Entity: `src/main/java/com/Hamalog/domain/{도메인}/`
 ## 파일 위치
 
@@ -158,6 +162,7 @@ public record XxxRequest(
 - Redis 7, Flyway, Docker
 - Spring Security + JWT (jjwt 0.12.6)
 - Java 21, Spring Boot 3.4.5, Spring Data JPA, MySQL 8.0
+- Kotlin 2.0.21 (DTO, 확장 함수, 유틸리티 클래스에 사용)
 ## 기술 스택
 
 - **클래스명**: 영어 PascalCase
@@ -179,6 +184,7 @@ Hamalog는 Spring Boot 3.4.5 기반의 헬스케어 백엔드 시스템입니다
 - `docs/internal/patterns/JPA-PERFORMANCE.md` - JPA 성능 최적화 (N+1 해결, DTO Projection, QueryDSL)
 - `docs/internal/patterns/MESSAGE-QUEUE-PATTERNS.md` - 메시지 큐 패턴 (Redis Stream)
 - `docs/internal/CODING-CONVENTIONS.md` - 코딩 컨벤션
+- `docs/internal/KOTLIN-GUIDE.md` - Kotlin 문법 가이드 (Java 개발자용)
 
 ## 🛠️ 도구
 - CRUD 스캐폴딩: `./scripts/generate-crud.sh --domain <Name> --fields "<fields>"`

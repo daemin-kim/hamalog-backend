@@ -5,6 +5,9 @@ plugins {
 	id 'jacoco'
 	id 'com.diffplug.spotless' version '6.25.0'
 	id 'org.owasp.dependencycheck' version '8.4.3'
+	// Kotlin 플러그인
+	id 'org.jetbrains.kotlin.jvm' version '2.0.21'
+	id 'org.jetbrains.kotlin.plugin.spring' version '2.0.21'
 }
 
 spotless {
@@ -17,6 +20,20 @@ spotless {
 		replaceRegex 'Remove multiple blank lines', '\n{3,}', '\n\n'
 		target 'src/**/*.java'
 	}
+	// Kotlin 코드 포맷팅 (ktlint 기반)
+	kotlin {
+		target 'src/**/*.kt'
+		ktlint('1.5.0')
+			.editorConfigOverride([
+				'ktlint_standard_no-wildcard-imports': 'disabled',
+				'ktlint_standard_package-name': 'disabled',  // com.Hamalog 패키지명 허용
+				'max_line_length': '120'
+			])
+	}
+	kotlinGradle {
+		target '*.gradle.kts'
+		ktlint('1.5.0')
+	}
 }
 
 
@@ -26,6 +43,14 @@ version = '0.0.1-SNAPSHOT'
 java {
 	toolchain {
 		languageVersion = JavaLanguageVersion.of(21)
+	}
+}
+
+// Kotlin 컴파일 옵션 설정
+kotlin {
+	compilerOptions {
+		freeCompilerArgs.addAll('-Xjsr305=strict')  // null 안전성 강화
+		jvmTarget.set(org.jetbrains.kotlin.gradle.dsl.JvmTarget.JVM_21)
 	}
 }
 
@@ -50,7 +75,13 @@ dependencies {
 	implementation 'org.springframework.boot:spring-boot-starter-actuator'
 	// Micrometer Prometheus registry for metrics scraping
 	implementation 'io.micrometer:micrometer-registry-prometheus'
-	
+
+	// Kotlin 표준 라이브러리
+	implementation 'org.jetbrains.kotlin:kotlin-stdlib'
+	implementation 'org.jetbrains.kotlin:kotlin-reflect'
+	// Jackson Kotlin 모듈 (JSON 직렬화/역직렬화)
+	implementation 'com.fasterxml.jackson.module:jackson-module-kotlin'
+
 	// Flyway - 데이터베이스 마이그레이션
 	implementation 'org.flywaydb:flyway-core'
 	implementation 'org.flywaydb:flyway-mysql'
@@ -114,6 +145,14 @@ def querydslDir = "$buildDir/generated/querydsl"
 
 sourceSets {
 	main.java.srcDirs += querydslDir
+	// Kotlin 소스 디렉토리 설정
+	main.kotlin.srcDirs += ['src/main/kotlin']
+	test.kotlin.srcDirs += ['src/test/kotlin']
+}
+
+// Kotlin 컴파일이 Java보다 먼저 실행되도록 설정 (Java-Kotlin 상호운용)
+tasks.withType(org.jetbrains.kotlin.gradle.tasks.KotlinCompile).configureEach {
+	dependsOn tasks.named('processResources')
 }
 
 tasks.withType(JavaCompile).configureEach {

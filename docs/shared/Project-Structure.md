@@ -44,6 +44,14 @@ Hamalog/
 │   │   │   ├── security/                    # 보안 관련 클래스
 │   │   │   ├── service/                     # 비즈니스 로직 계층
 │   │   │   └── validation/                  # 커스텀 유효성 검증
+│   │   ├── kotlin/com/Hamalog/              # Kotlin 소스 (DTO, 유틸리티)
+│   │   │   ├── dto/                         # Kotlin DTO (신규 DTO 권장)
+│   │   │   │   └── medication/              # 복약 관련 Kotlin DTO (예정)
+│   │   │   │       ├── request/             # 요청 DTO
+│   │   │   │       └── response/            # 응답 DTO
+│   │   │   └── util/                        # Kotlin 확장 함수 및 유틸리티
+│   │   │       ├── DateExtensions.kt        # 날짜 확장 함수
+│   │   │       └── StringExtensions.kt      # 문자열 확장 함수
 │   │   └── resources/
 │   │       ├── application.properties       # 기본 설정
 │   │       ├── application-prod.properties  # 프로덕션 설정
@@ -145,12 +153,14 @@ HTTP 요청을 처리하는 REST API 컨트롤러 계층입니다.
 | `service/notification/` | `NotificationSettingsService.java` | 알림 설정 및 FCM 토큰 관리 **(신규)** |
 | | `FcmPushService.java` | FCM 푸시 알림 발송 **(신규)** |
 | | `NotificationSchedulerService.java` | 알림 스케줄러 **(신규)** |
+| | `NotificationSettingsEventHandler.java` | 알림 설정 이벤트 핸들러 **(신규)** |
 | `service/queue/` | `MessageQueueService.java` | 메시지 발행 (Producer) **(신규)** |
 | | `NotificationConsumerService.java` | 메시지 소비 및 FCM 발송 **(신규)** |
 | | `QueuedNotificationService.java` | 큐 활성화 여부에 따른 Facade **(신규)** |
 | | `DiscordWebhookService.java` | DLQ 알림 발송 **(신규)** |
 | `service/queue/message/` | `NotificationMessage.java` | 알림 메시지 DTO **(신규)** |
 | | `NotificationType.java` | 알림 유형 상수 **(신규)** |
+| `service/alert/` | `DiscordAlertService.java` | Discord Webhook 알림 서비스 **(신규)** |
 
 ---
 
@@ -298,6 +308,8 @@ JPA 엔티티 및 도메인 모델을 정의합니다.
 | `TextPlainJsonHttpMessageConverter.java` | 커스텀 HTTP 메시지 변환기 |
 | `MessageQueueConfig.java` | 메시지 큐 설정 **(신규)** |
 | `MessageQueueProperties.java` | 메시지 큐 프로퍼티 **(신규)** |
+| `AlertConfig.java` | Discord 알림 설정 **(신규)** |
+| `AlertProperties.java` | 알림 프로퍼티 **(신규)** |
 | `FirebaseConfig.java` | Firebase Admin SDK 설정 **(신규)** |
 | `AsyncConfig.java` | 비동기 처리 설정 |
 | `SchedulingConfig.java` | 스케줄링 설정 |
@@ -813,10 +825,32 @@ src/test/java/com/Hamalog/
 | 1.1.0 | 2025-12-16 | - | 배포 아키텍처 및 CI/CD 파이프라인 추가 |
 | 1.2.0 | 2025-12-17 | - | AuthService 분리 리팩토링 완료 (SRP 적용) |
 | 1.3.0 | 2025-12-20 | - | 최종 명세 동기화 및 누락 클래스(MemberCacheService 등) 추가 |
+| 1.4.0 | 2026-01-03 | - | Redis Stream 메시지 큐 시스템 추가 |
+| 1.5.0 | 2026-01-12 | - | 프로젝트 구조 현행화 (Kotlin 소스, alert 패키지, 신규 Config 반영) |
 
 ---
 
 ## 변경 이력 (Changelog)
+
+### v1.5.0 (2026-01-12) - 프로젝트 구조 현행화
+
+#### 🔄 주요 변경사항
+
+**신규 패키지 및 클래스 반영**
+- `service/alert/` 패키지 및 `DiscordAlertService.java` 추가 (Discord Webhook 알림)
+- `service/notification/NotificationSettingsEventHandler.java` 추가 (이벤트 핸들러)
+- `config/AlertConfig.java`, `config/AlertProperties.java` 추가 (알림 설정)
+
+**Kotlin 소스 구조 상세화**
+- `src/main/kotlin/com/Hamalog/` 디렉토리 구조 문서화
+- Kotlin 유틸리티 파일 (`DateExtensions.kt`, `StringExtensions.kt`) 반영
+- Kotlin DTO 디렉토리 구조 (`dto/medication/request`, `response`) 명시
+
+**문서 간 일관성 개선**
+- API 명세서, API 참고 문서와 상호 참조 링크 검증
+- 중복 정보 정리 및 상세 내역은 CHANGELOG.md 참조 안내 추가
+
+---
 
 ### v1.2.0 (2025-12-17) - AuthService 리팩토링
 

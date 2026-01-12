@@ -11,6 +11,8 @@
 - Repository: `src/main/java/com/Hamalog/repository/{도메인}/`
 - Controller: `src/main/java/com/Hamalog/controller/{도메인}/`
 - Service: `src/main/java/com/Hamalog/service/{도메인}/`
+- Service (Alert): `src/main/java/com/Hamalog/service/alert/` - Discord 알림 등
+- Service (Queue): `src/main/java/com/Hamalog/service/queue/` - Redis Stream 메시지 큐
 - DTO: `src/main/java/com/Hamalog/dto/{도메인}/request/`, `.../response/`
 - DTO (Kotlin): `src/main/kotlin/com/Hamalog/dto/{도메인}/request/`, `.../response/`
 - Kotlin 유틸리티: `src/main/kotlin/com/Hamalog/util/`

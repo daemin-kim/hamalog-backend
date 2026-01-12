@@ -67,8 +67,42 @@ Internet → Cloudflare Edge (DDoS/WAF) → Cloudflare Tunnel → Nginx → Spri
 | `cloudflare-tunnel` | `cloudflare/cloudflared:latest` | Cloudflare 터널 연결 | 내부 전용 | - |
 | `nginx-hamalog` | `nginx:alpine` | 리버스 프록시, 봇 차단, Rate Limiting | 내부 80 | `/actuator/health` |
 | `hamalog-app` | `ghcr.io/daemin-kim/hamalog-backend:latest` | Spring Boot 애플리케이션 | 내부 8080 | `/actuator/health` |
-| `hamalog-redis` | `redis:7-alpine` | 세션/캐시 저장소 (CSRF 토큰, Rate Limit) | 내부 6379 | `redis-cli ping` |
+| `hamalog-redis` | `redis:7-alpine` | 세션/캐시/메시지 큐 (CSRF 토큰, Rate Limit, Redis Stream) | 내부 6379 | `redis-cli ping` |
 | `mysql-hamalog` | `mysql:8.0` | 데이터베이스 | 내부 3306 | `mysqladmin ping` |
+
+### Redis Stream 메시지 큐
+
+푸시 알림은 Redis Stream 기반 비동기 메시지 큐를 통해 처리됩니다.
+
+#### 메시지 처리 흐름
+
+```
+API 요청 → Producer (발행) → Redis Stream → Consumer (소비) → FCM 발송
+                                  ↓ (실패 시)
+                              재시도 (최대 3회)
+                                  ↓ (실패 지속)
+                              Dead Letter Queue → Discord 알림
+```
+
+#### 설정 프로퍼티
+
+| 프로퍼티 | 기본값 | 설명 |
+|----------|--------|------|
+| `hamalog.queue.enabled` | `true` | 큐 활성화 여부 |
+| `hamalog.queue.notification-stream` | `hamalog:notifications` | Redis Stream 키 |
+| `hamalog.queue.dead-letter-stream` | `hamalog:notifications:dlq` | Dead Letter Queue 키 |
+| `hamalog.queue.max-retries` | `3` | 최대 재시도 횟수 |
+| `hamalog.queue.discord.enabled` | `false` | Discord DLQ 알림 활성화 |
+| `hamalog.queue.discord.webhook-url` | - | Discord Webhook URL |
+
+#### Prometheus 메트릭
+
+| 메트릭 | 설명 |
+|--------|------|
+| `hamalog_queue_messages_published_total` | 발행된 메시지 수 |
+| `hamalog_queue_messages_processed_total` | 처리 완료된 메시지 수 |
+| `hamalog_queue_messages_failed_total` | 처리 실패 메시지 수 |
+| `hamalog_queue_messages_dlq_total` | DLQ로 이동된 메시지 수 |
 
 ---
 
@@ -101,7 +135,7 @@ Hamalog 시스템은 총 16개의 테이블로 구성되어 있으며, 회원 �
 ```sql
 -- =====================================================
 -- Hamalog Database Schema
--- Version: 2025-12-25
+-- Version: 2026-01-12
 -- Description: 복약 관리 시스템 데이터베이스 스키마
 -- =====================================================
 
@@ -575,3 +609,13 @@ INSERT INTO side_effect (type, name) VALUES
         - `hamalog.queue.messages.published`, `processed`, `failed`, `dlq`
     - **ADR-0007 문서 작성**: Kafka 대신 Redis Stream 선택 이유 문서화
     - **신규 파일**: Config 2개, Service 4개, DTO 2개, ADR 문서 1개
+- **2026/01/12**: **전체 문서 현행화 및 동기화**
+    - **API 명세서 업데이트**: 비동기 알림 처리 섹션 추가, 문서 변경 이력 신설
+    - **프로젝트 구조 명세서 업데이트**:
+        - `service/alert/` 패키지 및 `DiscordAlertService.java` 반영
+        - `service/notification/NotificationSettingsEventHandler.java` 반영
+        - `config/AlertConfig.java`, `config/AlertProperties.java` 반영
+        - Kotlin 소스 디렉토리 구조 상세화 (`util/DateExtensions.kt`, `StringExtensions.kt`)
+    - **문서 간 일관성 개선**: 세 문서 간 상호 참조 링크 검증 완료
+    - **버전 관리**: 문서 버전 1.5.0으로 갱신, 상세 변경 이력은 CHANGELOG.md 참조 안내 추가
+    - **DDL 스키마 버전**: 2026-01-12로 갱신

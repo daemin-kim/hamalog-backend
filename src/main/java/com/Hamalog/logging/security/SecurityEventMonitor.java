@@ -282,8 +282,44 @@ public class SecurityEventMonitor {
         log.error("BRUTE_FORCE_ATTACK [CRITICAL]: Brute force attack detected from {} targeting user {} - {} attempts", 
             clientIp, username, failureCount);
         
-        // TODO: Integrate with IP blocking service or rate limiting
-        // blockIpAddress(clientIp, Duration.ofHours(1));
+        // Redis를 통해 해당 IP를 1시간 동안 차단 (Rate Limiting 적용)
+        blockIpAddress(clientIp, Duration.ofHours(1));
+    }
+
+    /**
+     * IP 주소를 지정된 기간 동안 차단합니다.
+     * Redis에 차단 키를 저장하여 RateLimitingFilter에서 차단됩니다.
+     */
+    private void blockIpAddress(String clientIp, Duration duration) {
+        if (redisTemplate == null) {
+            log.warn("Redis not available, IP blocking skipped for: {}", clientIp);
+            return;
+        }
+
+        try {
+            String blockKey = "blocked_ip:" + clientIp;
+            redisTemplate.opsForValue().set(blockKey, "BRUTE_FORCE", duration);
+            log.info("IP {} blocked for {} due to brute force attack", clientIp, duration);
+        } catch (Exception e) {
+            log.error("Failed to block IP {}: {}", clientIp, e.getMessage());
+        }
+    }
+
+    /**
+     * IP 주소의 차단 여부를 확인합니다.
+     */
+    public boolean isIpBlocked(String clientIp) {
+        if (redisTemplate == null) {
+            return false;
+        }
+
+        try {
+            String blockKey = "blocked_ip:" + clientIp;
+            return Boolean.TRUE.equals(redisTemplate.hasKey(blockKey));
+        } catch (Exception e) {
+            log.debug("Failed to check IP block status: {}", e.getMessage());
+            return false;
+        }
     }
 
     /**

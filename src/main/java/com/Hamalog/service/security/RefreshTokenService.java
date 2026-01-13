@@ -1,8 +1,10 @@
 package com.Hamalog.service.security;
 
+import com.Hamalog.domain.member.Member;
 import com.Hamalog.domain.security.RefreshToken;
 import com.Hamalog.exception.CustomException;
 import com.Hamalog.exception.ErrorCode;
+import com.Hamalog.repository.member.MemberRepository;
 import com.Hamalog.repository.security.RefreshTokenRepository;
 import java.time.LocalDateTime;
 import java.util.UUID;
@@ -20,6 +22,7 @@ import org.springframework.transaction.annotation.Transactional;
 public class RefreshTokenService {
 
     private final RefreshTokenRepository refreshTokenRepository;
+    private final MemberRepository memberRepository;
 
     @Value("${jwt.refresh-token.expiry:604800000}")
     private long refreshTokenExpiryMs;
@@ -31,11 +34,14 @@ public class RefreshTokenService {
         // 기존 토큰 제거 (사용자당 1개만 유지)
         revokeAllByMemberId(memberId);
 
+        Member member = memberRepository.findById(memberId)
+            .orElseThrow(() -> new CustomException(ErrorCode.MEMBER_NOT_FOUND));
+
         LocalDateTime now = LocalDateTime.now();
         LocalDateTime expiresAt = now.plusSeconds(refreshTokenExpiryMs / 1000);
 
         RefreshToken token = RefreshToken.builder()
-            .memberId(memberId)
+            .member(member)
             .tokenValue(generateSecureToken())
             .createdAt(now)
             .expiresAt(expiresAt)

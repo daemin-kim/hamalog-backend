@@ -72,7 +72,7 @@ class AuthenticationServiceTest {
 
         testRefreshToken = RefreshToken.builder()
             .id(1L)
-            .memberId(1L)
+            .member(testMember)
             .tokenValue("refresh-token-value")
             .createdAt(LocalDateTime.now())
             .expiresAt(LocalDateTime.now().plusDays(7))
@@ -225,7 +225,7 @@ class AuthenticationServiceTest {
 
             RefreshToken rotatedToken = RefreshToken.builder()
                 .id(1L)
-                .memberId(1L)
+                .member(testMember)
                 .tokenValue("new-refresh-token")
                 .createdAt(LocalDateTime.now())
                 .expiresAt(LocalDateTime.now().plusDays(7))
@@ -258,9 +258,16 @@ class AuthenticationServiceTest {
             // given
             String refreshTokenValue = "refresh-token";
 
+            Member nonExistentMember = Member.builder()
+                .memberId(999L)
+                .loginId("nonexistent@example.com")
+                .password("password")
+                .name("없는유저")
+                .build();
+
             RefreshToken rotatedToken = RefreshToken.builder()
                 .id(1L)
-                .memberId(999L)  // 존재하지 않는 회원
+                .member(nonExistentMember)  // 존재하지 않는 회원
                 .tokenValue("new-refresh-token")
                 .build();
 

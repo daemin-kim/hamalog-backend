@@ -1,5 +1,6 @@
 package com.Hamalog.domain.security;
 
+import com.Hamalog.domain.member.Member;
 import jakarta.persistence.*;
 import java.time.LocalDateTime;
 import lombok.*;
@@ -21,8 +22,13 @@ public class RefreshToken {
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Long id;
 
-    @Column(nullable = false)
-    private Long memberId;
+    /**
+     * 회원 연관관계 (FK 제약조건 적용)
+     * 회원 삭제 시 RefreshToken도 함께 관리되어야 함
+     */
+    @ManyToOne(fetch = FetchType.LAZY)
+    @JoinColumn(name = "member_id", nullable = false)
+    private Member member;
 
     @Column(nullable = false, unique = true, length = 500)
     private String tokenValue;
@@ -77,5 +83,13 @@ public class RefreshToken {
 
     public void incrementReuseCounter() {
         this.reuseCount += 1;
+    }
+
+    /**
+     * 회원 ID 조회 (하위 호환성 유지)
+     * @return 회원 ID
+     */
+    public Long getMemberId() {
+        return this.member != null ? this.member.getMemberId() : null;
     }
 }

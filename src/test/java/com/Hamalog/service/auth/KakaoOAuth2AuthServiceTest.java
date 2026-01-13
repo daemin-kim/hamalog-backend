@@ -93,7 +93,7 @@ class KakaoOAuth2AuthServiceTest {
 
         testRefreshToken = RefreshToken.builder()
             .id(1L)
-            .memberId(1L)
+            .member(testMember)
             .tokenValue("refresh-token-value")
             .createdAt(LocalDateTime.now())
             .expiresAt(LocalDateTime.now().plusDays(7))

@@ -4,8 +4,10 @@ import static org.junit.jupiter.api.Assertions.*;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.Mockito.*;
 
+import com.Hamalog.domain.member.Member;
 import com.Hamalog.domain.security.RefreshToken;
 import com.Hamalog.exception.CustomException;
+import com.Hamalog.repository.member.MemberRepository;
 import com.Hamalog.repository.security.RefreshTokenRepository;
 import java.time.LocalDateTime;
 import java.util.Optional;
@@ -24,12 +26,21 @@ class RefreshTokenServiceTest {
     @Mock
     private RefreshTokenRepository repository;
 
+    @Mock
+    private MemberRepository memberRepository;
+
+    @Mock
+    private Member mockMember;
+
     @BeforeEach
     void setUp() {
         MockitoAnnotations.openMocks(this);
-        service = new RefreshTokenService(repository);
+        service = new RefreshTokenService(repository, memberRepository);
         // refreshTokenExpiryMs 값을 604800000ms (7일)로 설정
         ReflectionTestUtils.setField(service, "refreshTokenExpiryMs", 604800000L);
+
+        // Mock Member 설정
+        when(mockMember.getMemberId()).thenReturn(1L);
     }
 
     @Test
@@ -37,6 +48,7 @@ class RefreshTokenServiceTest {
     void testCreateRefreshToken() {
         Long memberId = 1L;
 
+        when(memberRepository.findById(memberId)).thenReturn(Optional.of(mockMember));
         when(repository.save(any(RefreshToken.class))).thenAnswer(invocation -> {
             RefreshToken token = invocation.getArgument(0);
             token.setId(1L);
@@ -61,7 +73,7 @@ class RefreshTokenServiceTest {
 
         RefreshToken oldToken = RefreshToken.builder()
             .id(1L)
-            .memberId(memberId)
+            .member(mockMember)
             .tokenValue(oldTokenValue)
             .createdAt(LocalDateTime.now())
             .expiresAt(LocalDateTime.now().plusDays(7))
@@ -72,6 +84,7 @@ class RefreshTokenServiceTest {
         when(repository.findByTokenValue(oldTokenValue))
             .thenReturn(Optional.of(oldToken));
 
+        when(memberRepository.findById(memberId)).thenReturn(Optional.of(mockMember));
         when(repository.save(any(RefreshToken.class))).thenAnswer(invocation -> {
             RefreshToken token = invocation.getArgument(0);
             if (token.getId() == null) {
@@ -103,7 +116,7 @@ class RefreshTokenServiceTest {
     @DisplayName("만료된 RefreshToken 회전 실패")
     void testRotateExpiredToken() {
         RefreshToken expiredToken = RefreshToken.builder()
-            .memberId(1L)
+            .member(mockMember)
             .tokenValue("expired-token")
             .createdAt(LocalDateTime.now().minusDays(8))
             .expiresAt(LocalDateTime.now().minusHours(1))

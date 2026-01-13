@@ -30,10 +30,10 @@ class SideEffectRecordTest {
     }
 
     @Test
-    @DisplayName("SideEffectRecord의 기본 생성자 테스트")
-    void noArgsConstructorTest() {
-        // when
-        SideEffectRecord sideEffectRecord = new SideEffectRecord();
+    @DisplayName("SideEffectRecord의 빈 빌더 테스트")
+    void emptyBuilderTest() {
+        // when - 빈 builder로 생성
+        SideEffectRecord sideEffectRecord = SideEffectRecord.builder().build();
 
         // then
         assertThat(sideEffectRecord).isNotNull();
@@ -51,8 +51,14 @@ class SideEffectRecordTest {
         LocalDateTime now = LocalDateTime.now();
         String desc = "test";
 
-        // when
-        SideEffectRecord sideEffectRecord = new SideEffectRecord(id, mockMember, null, now, desc);
+        // when - Builder 패턴 사용 (AllArgsConstructor는 내부용)
+        SideEffectRecord sideEffectRecord = SideEffectRecord.builder()
+                .sideEffectRecordId(id)
+                .member(mockMember)
+                .linkedMedicationSchedule(null)
+                .createdAt(now)
+                .description(desc)
+                .build();
 
         // then
         assertThat(sideEffectRecord.getSideEffectRecordId()).isEqualTo(id);

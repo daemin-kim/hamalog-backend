@@ -173,11 +173,10 @@ public class MedicationScheduleEventHandler {
             redisTemplate.delete(scheduleCacheKey);
             log.debug("Cleaned up caches for deleted medication schedule: {}", event.getMedicationScheduleId());
 
-            // TODO: In a production system, you might also want to:
-            // - Archive the deleted data for compliance
-            // - Check data retention policies
-            // - Send notifications to relevant parties
-            // - Update related statistics/counters
+            // NOTE: 향후 개선사항 (FUTURE-IMPROVEMENTS.md 참조)
+            // - Soft Delete 도입 시 삭제된 데이터 아카이빙
+            // - 데이터 보존 정책 적용
+            // - 관련 통계/카운터 업데이트
 
             log.info("Successfully processed MedicationScheduleDeleted event for schedule ID: {}", 
                     event.getMedicationScheduleId());

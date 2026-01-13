@@ -3,7 +3,11 @@ package com.Hamalog.domain.medication;
 import com.Hamalog.domain.member.Member;
 import jakarta.persistence.*;
 import java.time.LocalDate;
+import java.time.LocalTime;
 import java.time.temporal.ChronoUnit;
+import java.util.ArrayList;
+import java.util.Collections;
+import java.util.List;
 import lombok.Getter;
 import lombok.NoArgsConstructor;
 
@@ -19,6 +23,14 @@ public class MedicationSchedule {
     @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "member_id", nullable = false)
     private Member member;
+
+    /**
+     * 복약 알림 시간 목록 (애그리게이트 내부 엔티티)
+     * MedicationSchedule이 애그리게이트 루트로서 MedicationTime의 생명주기를 관리
+     */
+    @OneToMany(mappedBy = "medicationSchedule", cascade = CascadeType.ALL, orphanRemoval = true)
+    @OrderBy("takeTime ASC")
+    private List<MedicationTime> medicationTimes = new ArrayList<>();
 
     @Column(length = 20, nullable = false)
     private String name;
@@ -203,5 +215,73 @@ public class MedicationSchedule {
 
     public boolean hasImage() {
         return this.imagePath != null && !this.imagePath.isBlank();
+    }
+
+    // ========== MedicationTime 관리 메서드 (애그리게이트 루트를 통한 접근) ==========
+
+    /**
+     * 복약 알림 시간 추가
+     * 애그리게이트 루트를 통해서만 MedicationTime을 추가할 수 있음
+     * @param takeTime 복용 시간
+     * @return 생성된 MedicationTime
+     */
+    public MedicationTime addMedicationTime(LocalTime takeTime) {
+        MedicationTime medicationTime = new MedicationTime(this, takeTime);
+        this.medicationTimes.add(medicationTime);
+        return medicationTime;
+    }
+
+    /**
+     * 복약 알림 시간 제거
+     * @param medicationTime 제거할 MedicationTime
+     */
+    public void removeMedicationTime(MedicationTime medicationTime) {
+        this.medicationTimes.remove(medicationTime);
+    }
+
+    /**
+     * 특정 ID의 복약 알림 시간 제거
+     * @param medicationTimeId 제거할 MedicationTime의 ID
+     * @return 제거 성공 여부
+     */
+    public boolean removeMedicationTimeById(Long medicationTimeId) {
+        return this.medicationTimes.removeIf(
+                mt -> mt.getMedicationTimeId() != null && mt.getMedicationTimeId().equals(medicationTimeId)
+        );
+    }
+
+    /**
+     * 모든 복약 알림 시간 제거
+     */
+    public void clearMedicationTimes() {
+        this.medicationTimes.clear();
+    }
+
+    /**
+     * 복약 알림 시간 목록 조회 (불변 리스트 반환)
+     * @return 복약 알림 시간 불변 리스트
+     */
+    public List<MedicationTime> getMedicationTimesReadOnly() {
+        return Collections.unmodifiableList(this.medicationTimes);
+    }
+
+    /**
+     * 특정 ID의 복약 알림 시간 조회
+     * @param medicationTimeId 조회할 MedicationTime의 ID
+     * @return MedicationTime (없으면 null)
+     */
+    public MedicationTime findMedicationTimeById(Long medicationTimeId) {
+        return this.medicationTimes.stream()
+                .filter(mt -> mt.getMedicationTimeId() != null && mt.getMedicationTimeId().equals(medicationTimeId))
+                .findFirst()
+                .orElse(null);
+    }
+
+    /**
+     * 복약 알림 시간 개수 조회
+     * @return 알림 시간 개수
+     */
+    public int getMedicationTimeCount() {
+        return this.medicationTimes.size();
     }
 }

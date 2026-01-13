@@ -6,6 +6,7 @@ import com.Hamalog.repository.medication.MedicationRecordRepository;
 import com.Hamalog.repository.medication.MedicationScheduleRepository;
 import com.Hamalog.repository.medication.MedicationTimeRepository;
 import com.Hamalog.service.notification.FcmPushService;
+import com.Hamalog.service.queue.QueuedNotificationService;
 import java.time.LocalDate;
 import java.time.LocalDateTime;
 import java.time.LocalTime;
@@ -30,6 +31,7 @@ public class MedicationReminderService {
     private final MedicationTimeRepository medicationTimeRepository;
     private final MedicationRecordRepository recordRepository;
     private final FcmPushService fcmPushService;
+    private final QueuedNotificationService queuedNotificationService;
 
     /**
      * 복약 미완료 건 확인 및 알림 발송
@@ -123,21 +125,21 @@ public class MedicationReminderService {
 
     /**
      * 복용 1시간 후 부작용 기록 권유 알림 예약
+     * Redis Stream 메시지 큐를 통해 비동기로 처리됩니다.
      */
     @Async("eventExecutor")
     public void scheduleSideEffectRecordReminder(Long memberId, Long scheduleId, LocalDateTime takeTime) {
         try {
-            // 1시간 후에 알림 발송 (실제로는 스케줄러 사용)
             LocalDateTime reminderTime = takeTime.plusHours(1);
 
             if (reminderTime.isAfter(LocalDateTime.now())) {
-                // 현재는 로그만 남기고, 실제 구현은 Redis나 Quartz 스케줄러 사용
-                log.info("Scheduled side effect reminder for memberId: {} at {}",
-                        memberId, reminderTime);
+                log.info("Scheduling side effect reminder for memberId: {} at {}", memberId, reminderTime);
 
-                // 즉시 발송 대신 1시간 후 예약 (TODO: 스케줄러 통합)
-                // fcmPushService.sendSideEffectRecordReminder(memberId,
-                //     "약 복용 1시간이 지났습니다. 혹시 부작용이 있다면 기록해주세요.");
+                // 메시지 큐를 통해 부작용 기록 권유 알림 발송
+                queuedNotificationService.sendSideEffectRecordReminder(
+                        memberId,
+                        "약 복용 1시간이 지났습니다. 혹시 부작용이 있다면 기록해주세요."
+                );
             }
         } catch (Exception e) {
             log.error("Failed to schedule side effect reminder for memberId: {}", memberId, e);

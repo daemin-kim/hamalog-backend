@@ -218,24 +218,55 @@ public MedicationScheduleResponse update(Long id, UpdateRequest request) {
 
 ## 4. Rate Limiting
 
-> 🚧 **현재 미구현** - 현재 프로젝트 규모(개인/소규모 헬스케어 앱)에서는 Rate Limiting이 오버 엔지니어링으로 판단되어 구현하지 않았습니다. 향후 사용자 증가 시 아래 설계를 참고하여 구현할 수 있습니다.
+> ✅ **구현 완료** - Redis 기반 Rate Limiting 및 Brute Force IP 차단 기능이 구현되어 있습니다.
 
-### 4.1 권장 구현 방식
+### 4.1 Rate Limiting 구현
 
-Redis 기반 Sliding Window 알고리즘 권장:
+`RateLimitingService`와 `RateLimitingFilter`를 통해 Redis 기반 Sliding Window 알고리즘으로 구현되어 있습니다.
 
-| 엔드포인트 | 권장 제한 | 기준 |
-|------------|----------|------|
-| `/api/auth/login` | 5회/분 | IP |
-| `/api/auth/register` | 3회/시간 | IP |
-| 일반 API | 100회/분 | memberId |
-| 파일 업로드 | 10회/분 | memberId |
+| 엔드포인트 | 제한 | 기준 |
+|------------|------|------|
+| `/api/auth/**` | 5회/분, 20회/시간 | IP |
+| 일반 API | 60회/분, 1000회/시간 | IP |
 
-### 4.2 구현 시 응답 헤더
+### 4.2 Brute Force IP 차단
+
+`SecurityEventMonitor`에서 인증 실패 횟수를 추적하고, 임계값 초과 시 자동으로 IP를 차단합니다.
+
+```java
+// SecurityEventMonitor.java
+private static final int MAX_LOGIN_FAILURES = 5;      // 경고 시작
+private static final int BRUTE_FORCE_THRESHOLD = 10;  // IP 차단
+private static final Duration FAILURE_WINDOW = Duration.ofMinutes(15);
+
+// Brute Force 감지 시 1시간 동안 IP 차단
+private void blockIpAddress(String clientIp, Duration duration) {
+    String blockKey = "blocked_ip:" + clientIp;
+    redisTemplate.opsForValue().set(blockKey, "BRUTE_FORCE", duration);
+    log.info("IP {} blocked for {} due to brute force attack", clientIp, duration);
+}
+
+// IP 차단 여부 확인
+public boolean isIpBlocked(String clientIp) {
+    String blockKey = "blocked_ip:" + clientIp;
+    return Boolean.TRUE.equals(redisTemplate.hasKey(blockKey));
+}
+```
+
+### 4.3 리스크 레벨 판단
+
+| 실패 횟수 | 리스크 레벨 | 조치 |
+|-----------|-------------|------|
+| 1-2회 | LOW | 로그만 기록 |
+| 3-4회 | MEDIUM | 경고 로그 |
+| 5-9회 | HIGH | 에러 로그, 모니터링 알림 |
+| 10회 이상 | CRITICAL | IP 1시간 차단, 보안 이벤트 발행 |
+
+### 4.4 응답 헤더
 
 ```
-X-RateLimit-Limit: 100
-X-RateLimit-Remaining: 95
+X-RateLimit-Limit: 60
+X-RateLimit-Remaining: 55
 X-RateLimit-Reset: 1703404860
 ```
 
@@ -369,5 +400,5 @@ void accessOtherUserResource_forbidden() {
 
 ---
 
-> 📝 최종 업데이트: 2026년 1월 5일
+> 📝 최종 업데이트: 2026년 1월 13일
 

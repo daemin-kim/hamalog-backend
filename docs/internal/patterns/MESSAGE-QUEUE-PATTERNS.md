@@ -96,7 +96,33 @@ notificationService.sendPushNotification(
 );
 ```
 
-### 2.3 직접 MessageQueueService 사용
+### 2.3 실제 사용 예시: 부작용 리마인더
+
+복약 후 1시간 뒤에 부작용 기록을 권유하는 알림 발송:
+
+```java
+// MedicationReminderService.java
+@Async("eventExecutor")
+public void scheduleSideEffectRecordReminder(Long memberId, Long scheduleId, LocalDateTime takeTime) {
+    try {
+        LocalDateTime reminderTime = takeTime.plusHours(1);
+
+        if (reminderTime.isAfter(LocalDateTime.now())) {
+            log.info("Scheduling side effect reminder for memberId: {} at {}", memberId, reminderTime);
+
+            // 메시지 큐를 통해 부작용 기록 권유 알림 발송
+            queuedNotificationService.sendSideEffectRecordReminder(
+                    memberId,
+                    "약 복용 1시간이 지났습니다. 혹시 부작용이 있다면 기록해주세요."
+            );
+        }
+    } catch (Exception e) {
+        log.error("Failed to schedule side effect reminder for memberId: {}", memberId, e);
+    }
+}
+```
+
+### 2.4 직접 MessageQueueService 사용
 
 저수준 제어가 필요한 경우:
 
@@ -300,5 +326,5 @@ long dlqLength = messageQueueService.getDeadLetterQueueLength();
 
 ---
 
-> 📝 최종 업데이트: 2026년 1월 3일
+> 📝 최종 업데이트: 2026년 1월 13일
 

@@ -1,6 +1,6 @@
 # Hamalog 향후 개선사항
 
-> 📅 최종 업데이트: 2026년 1월 4일  
+> 📅 최종 업데이트: 2026년 1월 13일  
 > 📌 미구현 기능 및 향후 로드맵
 
 ---
@@ -11,11 +11,11 @@ Hamalog는 **Production Ready** 수준으로 구현되어 있습니다.
 
 ### ✅ 주요 완료 기능
 - 인증/인가 (JWT + Refresh Token, OAuth2 카카오)
-- 보안 (CSRF, Rate Limiting, 리소스 소유권 검증)
+- 보안 (CSRF, Rate Limiting, 리소스 소유권 검증, **Brute Force IP 차단**)
 - 푸시 알림 시스템 (FCM + Redis Stream 메시지 큐)
 - 복약 관리 (스케줄, 기록, 통계, 그룹, 이미지)
 - 마음 일기 (CRUD, 통계, 캘린더, 검색)
-- 부작용 기록 (CRUD)
+- 부작용 기록 (CRUD, **복용 후 리마인더 알림**)
 - 데이터 내보내기 (JSON/CSV)
 - 로그인 이력/세션 관리
 
@@ -85,7 +85,7 @@ Hamalog는 **Production Ready** 수준으로 구현되어 있습니다.
 - [ ] Swagger UI에 예제 요청/응답 추가
 
 ### 자동화
-- [ ] CHANGELOG 자동 생성 (git-cliff 연동)
+- [x] ~~CHANGELOG 자동 생성 (git-cliff 연동)~~ ✅ 완료 (2026-01-13)
 
 ### 운영
 - [ ] API 사용량 대시보드

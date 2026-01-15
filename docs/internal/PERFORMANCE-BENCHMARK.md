@@ -158,10 +158,10 @@ export BENCHMARK_API_KEY='your-api-key'
 
 ```bash
 # 복약 스케줄 시뮬레이션만
-./gradlew gatlingRun-com.Hamalog.simulation.MedicationScheduleSimulation
+./gradlew gatlingRun -Dgatling.simulationClass=com.Hamalog.simulation.MedicationScheduleSimulation
 
 # 인증 시뮬레이션만
-./gradlew gatlingRun-com.Hamalog.simulation.AuthenticationSimulation
+./gradlew gatlingRun -Dgatling.simulationClass=com.Hamalog.simulation.AuthenticationSimulation
 ```
 
 ### 4.4 사용자 정의 파라미터

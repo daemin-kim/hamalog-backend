@@ -154,13 +154,15 @@ GATLING_ARGS="-DbaseUrl=$REMOTE_URL -DbenchmarkApiKey=$BENCHMARK_API_KEY"
 case "$SIMULATION_TYPE" in
     "medication")
         echo -e "${YELLOW}▶ 복약 스케줄 시뮬레이션 실행...${NC}"
-        ./gradlew gatlingRun-com.Hamalog.simulation.MedicationScheduleSimulation \
+        ./gradlew gatlingRun \
+            -Dgatling.simulationClass=com.Hamalog.simulation.MedicationScheduleSimulation \
             $GATLING_ARGS \
             --no-daemon
         ;;
     "auth")
         echo -e "${YELLOW}▶ 인증 시뮬레이션 실행...${NC}"
-        ./gradlew gatlingRun-com.Hamalog.simulation.AuthenticationSimulation \
+        ./gradlew gatlingRun \
+            -Dgatling.simulationClass=com.Hamalog.simulation.AuthenticationSimulation \
             $GATLING_ARGS \
             --no-daemon
         ;;

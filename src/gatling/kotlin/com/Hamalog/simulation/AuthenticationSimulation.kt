@@ -14,7 +14,7 @@ import java.time.Duration
  * - 동시 로그인 부하 처리 능력
  *
  * 실행 방법:
- * ./gradlew gatlingRun-com.Hamalog.simulation.AuthenticationSimulation
+ * ./gradlew gatlingRun -Dgatling.simulationClass=com.Hamalog.simulation.AuthenticationSimulation
  */
 class AuthenticationSimulation : Simulation() {
 

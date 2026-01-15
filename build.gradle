@@ -182,5 +182,7 @@ dependencyCheck {
 }
 
 // Gatling 성능 테스트 설정
-// 참고: Gatling 3.11+ 플러그인은 gatling.conf 파일로 설정 관리
-
+gatling {
+    // Kotlin 시뮬레이션 소스 디렉토리 설정
+    simulationsDir = file('src/gatling/kotlin')
+}

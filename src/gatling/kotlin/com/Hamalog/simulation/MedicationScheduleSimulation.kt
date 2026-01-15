@@ -13,7 +13,7 @@ import java.time.Duration
  * - Optimized: @EntityGraph로 최적화된 조회 (optimized=true)
  *
  * 실행 방법:
- * ./gradlew gatlingRun-com.Hamalog.simulation.MedicationScheduleSimulation
+ * ./gradlew gatlingRun -Dgatling.simulationClass=com.Hamalog.simulation.MedicationScheduleSimulation
  */
 class MedicationScheduleSimulation : Simulation() {
 

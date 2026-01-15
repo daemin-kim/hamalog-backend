@@ -118,7 +118,9 @@ public class SecurityConfig {
                             "/error",
                             "/oauth2/**", "/login/oauth2/**", "/oauth2/authorization/**",
                             "/api/auth/kakao/callback",
-                            "/actuator/health"
+                            "/actuator/health",
+                            // 벤치마크 API는 BenchmarkApiSecurityFilter에서 API Key로 인증
+                            "/api/v1/benchmark/**"
                     ).permitAll();
 
                     // Swagger UI는 프로덕션이 아닌 환경에서만 허용

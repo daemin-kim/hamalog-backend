@@ -1,0 +1,340 @@
+name: Deploy Benchmark Mode
+
+# ============================================
+# 벤치마크 전용 배포 워크플로우
+# ============================================
+# 용도: 프로덕션 환경에서 벤치마크 API를 일시적으로 활성화
+#
+# 사용 방법:
+# 1. GitHub Actions > Deploy Benchmark Mode > Run workflow
+# 2. 로컬에서 Gatling 벤치마크 실행
+# 3. 완료 후 "Rollback to Production" 워크플로우 실행 또는 main에 다시 push
+#
+# 주의: 벤치마크 완료 후 반드시 일반 프로덕션 모드로 롤백할 것
+
+on:
+  workflow_dispatch:
+    inputs:
+      duration_minutes:
+        description: '벤치마크 모드 유지 시간 (분)'
+        required: true
+        default: '30'
+        type: choice
+        options:
+          - '15'
+          - '30'
+          - '60'
+          - '120'
+      load_test_data:
+        description: '테스트 데이터 자동 생성'
+        required: true
+        default: 'true'
+        type: boolean
+      auto_rollback:
+        description: '자동 롤백 (시간 경과 후)'
+        required: true
+        default: 'true'
+        type: boolean
+
+env:
+  REGISTRY: ghcr.io
+  IMAGE_NAME: ${{ github.repository }}
+
+jobs:
+  deploy-benchmark:
+    name: Deploy Benchmark Mode
+    runs-on: self-hosted
+    environment:
+      name: production
+
+    env:
+      MYSQL_ROOT_PASSWORD: ${{ secrets.MYSQL_ROOT_PASSWORD }}
+      DB_NAME: ${{ secrets.DB_NAME }}
+      DB_USERNAME: ${{ secrets.DB_USERNAME }}
+      DB_PASSWORD: ${{ secrets.DB_PASSWORD }}
+      JWT_SECRET: ${{ secrets.JWT_SECRET }}
+      JWT_EXPIRY: ${{ secrets.JWT_EXPIRY }}
+      JWT_REFRESH_TOKEN_EXPIRY: ${{ secrets.JWT_REFRESH_TOKEN_EXPIRY }}
+      KAKAO_CLIENT_ID: ${{ secrets.KAKAO_CLIENT_ID }}
+      KAKAO_CLIENT_SECRET: ${{ secrets.KAKAO_CLIENT_SECRET }}
+      KAKAO_REDIRECT_URI: ${{ secrets.KAKAO_REDIRECT_URI }}
+      CLOUDFLARE_TUNNEL_TOKEN: ${{ secrets.CLOUDFLARE_TUNNEL_TOKEN }}
+      SPRING_DATA_REDIS_PASSWORD: ${{ secrets.SPRING_DATA_REDIS_PASSWORD }}
+      HAMALOG_ENCRYPTION_KEY: ${{ secrets.HAMALOG_ENCRYPTION_KEY }}
+      BENCHMARK_API_KEY: ${{ secrets.BENCHMARK_API_KEY }}
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Login to container registry
+        uses: docker/login-action@v3
+        with:
+          registry: ${{ env.REGISTRY }}
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Generate docker-compose.benchmark.yml
+        shell: powershell
+        run: |
+          @"
+          services:
+            tunnel:
+              image: cloudflare/cloudflared:latest
+              container_name: cloudflare-tunnel
+              restart: unless-stopped
+              command: tunnel run
+              environment:
+                - TUNNEL_TOKEN=${{ secrets.CLOUDFLARE_TUNNEL_TOKEN }}
+              depends_on:
+                - nginx
+              networks:
+                - hamalog-network
+
+            nginx:
+              image: nginx:alpine
+              container_name: nginx-hamalog
+              expose:
+                - "80"
+              volumes:
+                - ./nginx-docker.conf:/etc/nginx/conf.d/default.conf:ro
+              depends_on:
+                - hamalog-app
+              networks:
+                - hamalog-network
+              restart: unless-stopped
+
+            hamalog-app:
+              image: ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}:latest
+              container_name: hamalog-app
+              expose:
+                - "8080"
+              environment:
+                # 핵심: prod와 benchmark 프로필 동시 활성화
+                - SPRING_PROFILES_ACTIVE=prod,benchmark
+                - SPRING_DATASOURCE_URL=jdbc:mysql://mysql-hamalog:3306/${{ secrets.DB_NAME }}?useSSL=true&requireSSL=true&characterEncoding=UTF-8&serverTimezone=UTC
+                - SPRING_DATASOURCE_USERNAME=${{ secrets.DB_USERNAME }}
+                - SPRING_DATASOURCE_PASSWORD=${{ secrets.DB_PASSWORD }}
+                - SPRING_DATA_REDIS_HOST=hamalog-redis
+                - SPRING_DATA_REDIS_PORT=6379
+                - SPRING_DATA_REDIS_PASSWORD=${{ secrets.SPRING_DATA_REDIS_PASSWORD }}
+                - JWT_SECRET=${{ secrets.JWT_SECRET }}
+                - JWT_EXPIRY=${{ secrets.JWT_EXPIRY }}
+                - JWT_REFRESH_TOKEN_EXPIRY=${{ secrets.JWT_REFRESH_TOKEN_EXPIRY }}
+                - HAMALOG_ENCRYPTION_KEY=${{ secrets.HAMALOG_ENCRYPTION_KEY }}
+                - KAKAO_CLIENT_ID=${{ secrets.KAKAO_CLIENT_ID }}
+                - KAKAO_CLIENT_SECRET=${{ secrets.KAKAO_CLIENT_SECRET }}
+                - KAKAO_REDIRECT_URI=${{ secrets.KAKAO_REDIRECT_URI }}
+                - FRONTEND_URL=https://api.hamalog.shop
+                - ALLOWED_ORIGINS=https://api.hamalog.shop,http://localhost:3000
+                # 벤치마크 보안 설정
+                - BENCHMARK_API_KEY=${{ secrets.BENCHMARK_API_KEY }}
+              volumes:
+                - hamalog-uploads:/data/hamalog/images
+              depends_on:
+                mysql-hamalog:
+                  condition: service_healthy
+                hamalog-redis:
+                  condition: service_healthy
+              networks:
+                - hamalog-network
+              restart: unless-stopped
+              healthcheck:
+                test: ["CMD", "curl", "-f", "http://localhost:8080/actuator/health"]
+                interval: 30s
+                timeout: 10s
+                start_period: 60s
+                retries: 5
+
+            hamalog-redis:
+              image: redis:7-alpine
+              container_name: hamalog-redis
+              expose:
+                - "6379"
+              command: redis-server --requirepass ${{ secrets.SPRING_DATA_REDIS_PASSWORD }} --appendonly yes --maxmemory 256mb --maxmemory-policy allkeys-lru
+              volumes:
+                - redis-data:/data
+              networks:
+                - hamalog-network
+              restart: unless-stopped
+              healthcheck:
+                test: ["CMD", "redis-cli", "--no-auth-warning", "-a", "${{ secrets.SPRING_DATA_REDIS_PASSWORD }}", "ping"]
+                interval: 30s
+                timeout: 10s
+                retries: 3
+
+            mysql-hamalog:
+              image: mysql:8.0
+              container_name: mysql-hamalog
+              expose:
+                - "3306"
+              ports:
+                - "127.0.0.1:3306:3306"
+              environment:
+                - MYSQL_ROOT_PASSWORD=${{ secrets.MYSQL_ROOT_PASSWORD }}
+                - MYSQL_DATABASE=${{ secrets.DB_NAME }}
+                - MYSQL_USER=${{ secrets.DB_USERNAME }}
+                - MYSQL_PASSWORD=${{ secrets.DB_PASSWORD }}
+              volumes:
+                - mysql-data:/var/lib/mysql
+              networks:
+                - hamalog-network
+              restart: unless-stopped
+              healthcheck:
+                test: ["CMD", "mysqladmin", "ping", "-h", "localhost", "-u", "root", "-p${{ secrets.MYSQL_ROOT_PASSWORD }}"]
+                interval: 30s
+                timeout: 10s
+                retries: 3
+
+          networks:
+            hamalog-network:
+              driver: bridge
+
+          volumes:
+            mysql-data:
+            redis-data:
+            hamalog-uploads:
+          "@ | Out-File -FilePath docker-compose.benchmark.yml -Encoding utf8
+
+      - name: Cleanup existing containers
+        shell: powershell
+        run: |
+          $ErrorActionPreference = "SilentlyContinue"
+          Write-Host "=== Cleaning up existing containers ==="
+          
+          $containers = @(
+            "cloudflare-tunnel", 
+            "nginx-hamalog", 
+            "hamalog-app", 
+            "hamalog-redis", 
+            "mysql-hamalog"
+          )
+          foreach ($container in $containers) {
+            $exists = docker ps -a --format "{{.Names}}" 2>$null | Select-String -Pattern "^$container$" -Quiet
+            if ($exists) {
+              Write-Host "Removing container: $container"
+              docker rm -f $container 2>$null | Out-Null
+            }
+          }
+          
+          docker compose -p hamalog -f docker-compose.benchmark.yml down --remove-orphans 2>$null | Out-Null
+          docker network rm hamalog-network 2>$null | Out-Null
+          
+          Write-Host "=== Cleanup complete ==="
+          exit 0
+
+      - name: Pull latest image
+        shell: powershell
+        run: |
+          docker pull ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}:latest
+
+      - name: Start services in benchmark mode
+        shell: powershell
+        run: |
+          Write-Host "Starting services with BENCHMARK mode enabled..."
+          docker compose -p hamalog -f docker-compose.benchmark.yml up -d
+
+      - name: Verify benchmark deployment
+        shell: powershell
+        run: |
+          Write-Host "Checking container status..."
+          docker compose -p hamalog -f docker-compose.benchmark.yml ps
+          
+          $attempts = 20
+          for ($i = 1; $i -le $attempts; $i++) {
+            $result = docker exec hamalog-app curl -sf http://localhost:8080/actuator/health 2>$null
+            if ($LASTEXITCODE -eq 0) {
+              Write-Host "OK: Application health check passed!"
+              break
+            }
+            Write-Host "Retry $i/$attempts..."
+            Start-Sleep -Seconds 10
+          }
+          
+          # 벤치마크 API 활성화 확인
+          Write-Host "Checking benchmark API availability..."
+          $benchmarkCheck = docker exec hamalog-app curl -sf `
+            -H "X-Benchmark-API-Key: ${{ secrets.BENCHMARK_API_KEY }}" `
+            http://localhost:8080/api/v1/benchmark/health 2>$null
+          
+          if ($LASTEXITCODE -eq 0) {
+            Write-Host "OK: Benchmark API is active!"
+          } else {
+            Write-Host "WARNING: Benchmark API check failed, but continuing..."
+          }
+          
+          docker ps --format "table {{.Names}}\t{{.Status}}\t{{.Ports}}"
+
+      - name: Load benchmark test data
+        if: ${{ inputs.load_test_data == 'true' }}
+        shell: powershell
+        run: |
+          Write-Host "Loading benchmark test data..."
+          
+          # SQL 파일을 컨테이너로 복사
+          docker cp scripts/benchmark/load-test-data.sql mysql-hamalog:/tmp/load-test-data.sql
+          
+          # SQL 실행
+          docker exec mysql-hamalog mysql -u root -p"${{ secrets.MYSQL_ROOT_PASSWORD }}" ${{ secrets.DB_NAME }} -e "source /tmp/load-test-data.sql"
+          
+          if ($LASTEXITCODE -eq 0) {
+            Write-Host "OK: Benchmark test data loaded successfully!"
+          } else {
+            Write-Host "WARNING: Failed to load test data"
+          }
+
+      - name: Display benchmark instructions
+        shell: powershell
+        run: |
+          Write-Host ""
+          Write-Host "============================================"
+          Write-Host "  BENCHMARK MODE ACTIVATED"
+          Write-Host "============================================"
+          Write-Host ""
+          Write-Host "Benchmark API is now available at:"
+          Write-Host "  https://api.hamalog.shop/api/v1/benchmark/*"
+          Write-Host ""
+          Write-Host "Required header for benchmark requests:"
+          Write-Host "  X-Benchmark-API-Key: <your-api-key>"
+          Write-Host ""
+          Write-Host "Run benchmark from your local machine:"
+          Write-Host "  ./scripts/benchmark/run-remote-benchmark.sh"
+          Write-Host ""
+          Write-Host "Duration: ${{ inputs.duration_minutes }} minutes"
+          Write-Host "Auto-rollback: ${{ inputs.auto_rollback }}"
+          Write-Host ""
+          Write-Host "============================================"
+
+      - name: Cleanup
+        if: always()
+        shell: powershell
+        run: |
+          Remove-Item -Path docker-compose.benchmark.yml -Force -ErrorAction SilentlyContinue
+          docker image prune -f 2>$null
+
+  # 자동 롤백 작업 (선택적)
+  schedule-rollback:
+    name: Schedule Rollback
+    needs: deploy-benchmark
+    runs-on: ubuntu-latest
+    if: ${{ inputs.auto_rollback == 'true' }}
+
+    steps:
+      - name: Wait for benchmark duration
+        run: |
+          echo "Waiting for ${{ inputs.duration_minutes }} minutes before triggering rollback..."
+          sleep $((${{ inputs.duration_minutes }} * 60))
+
+      - name: Trigger production rollback
+        uses: actions/github-script@v7
+        with:
+          github-token: ${{ secrets.GITHUB_TOKEN }}
+          script: |
+            await github.rest.actions.createWorkflowDispatch({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              workflow_id: 'deploy-main.yml',
+              ref: 'main'
+            });
+            console.log('Triggered production rollback workflow');
+

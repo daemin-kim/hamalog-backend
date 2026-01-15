@@ -62,16 +62,51 @@ gatling {
 벤치마크 API는 `dev`, `test`, `benchmark` 프로필에서만 활성화됩니다.
 
 ```bash
-# application-benchmark.properties 또는 환경변수
+# 로컬 개발 환경
 SPRING_PROFILES_ACTIVE=dev,benchmark
+
+# 프로덕션 환경 (GitHub Actions 배포 시)
+SPRING_PROFILES_ACTIVE=prod,benchmark
 ```
 
 ### 2.3 테스트 데이터 준비
 
 ```bash
-# 벤치마크용 대량 데이터 생성 (100개 스케줄, 수천 개 기록)
+# 벤치마크용 대량 데이터 생성 (500개 스케줄, 수천 개 기록)
 mysql -u root -p hamalog < scripts/benchmark/load-test-data.sql
 ```
+
+### 2.4 프로덕션 환경 벤치마크 (권장)
+
+프로덕션 서버를 대상으로 벤치마크를 실행하려면:
+
+#### Step 1: GitHub Secrets 설정
+```
+BENCHMARK_API_KEY: <랜덤 생성된 API Key>
+```
+
+#### Step 2: 벤치마크 모드 배포
+1. GitHub Actions → "Deploy Benchmark Mode" 워크플로우 실행
+2. 옵션 선택:
+   - 벤치마크 유지 시간: 30분 (기본)
+   - 테스트 데이터 자동 생성: true
+   - 자동 롤백: true
+
+#### Step 3: 로컬에서 벤치마크 실행
+```bash
+# API Key 설정
+export BENCHMARK_API_KEY='your-api-key'
+
+# 원격 벤치마크 실행
+./scripts/benchmark/run-remote-benchmark.sh
+
+# 특정 시뮬레이션만 실행
+./scripts/benchmark/run-remote-benchmark.sh medication
+```
+
+#### Step 4: 롤백
+자동 롤백이 설정되어 있으면 지정된 시간 후 자동으로 일반 프로덕션 모드로 복원됩니다.
+수동 롤백이 필요한 경우: main 브랜치에 push 또는 "Deploy to Production" 워크플로우 실행
 
 ---
 
@@ -100,7 +135,7 @@ mysql -u root -p hamalog < scripts/benchmark/load-test-data.sql
 
 ## 4. 실행 방법
 
-### 4.1 전체 시뮬레이션 실행
+### 4.1 로컬 환경 (개발/테스트)
 
 ```bash
 # 서버 시작 (별도 터미널)
@@ -110,7 +145,16 @@ mysql -u root -p hamalog < scripts/benchmark/load-test-data.sql
 ./scripts/benchmark/run-benchmark.sh
 ```
 
-### 4.2 개별 시뮬레이션 실행
+### 4.2 프로덕션 환경 (권장)
+
+```bash
+# 1. GitHub Actions에서 벤치마크 모드 배포
+# 2. 로컬에서 원격 벤치마크 실행
+export BENCHMARK_API_KEY='your-api-key'
+./scripts/benchmark/run-remote-benchmark.sh
+```
+
+### 4.3 개별 시뮬레이션 실행
 
 ```bash
 # 복약 스케줄 시뮬레이션만
@@ -120,13 +164,20 @@ mysql -u root -p hamalog < scripts/benchmark/load-test-data.sql
 ./gradlew gatlingRun-com.Hamalog.simulation.AuthenticationSimulation
 ```
 
-### 4.3 사용자 정의 파라미터
+### 4.4 사용자 정의 파라미터
 
 ```bash
+# 로컬 타겟
 ./gradlew gatlingRun \
     -DbaseUrl=http://localhost:8080 \
     -DtestUser=benchmark@test.com \
     -DtestPassword=Benchmark1234!
+
+# 원격 타겟 (프로덕션)
+./gradlew gatlingRun \
+    -DbaseUrl=https://api.hamalog.shop \
+    -DbenchmarkApiKey=your-api-key \
+    -DtestMemberId=1
 ```
 
 ---
@@ -233,9 +284,9 @@ List<MedicationSchedule> findAllByMemberIdWithMember(@Param("memberId") Long mem
 
 | 항목 | 값 |
 |------|-----|
-| 테스트 환경 | MacBook Pro M1, 16GB RAM |
+| 테스트 환경 | 프로덕션 서버 (Self-hosted, Windows Docker) |
 | 데이터베이스 | MySQL 8.0 (Docker) |
-| 테스트 데이터 | 100개 스케줄 / 사용자 |
+| 테스트 데이터 | 500개 스케줄 / 사용자 |
 | Mean (Naive) | _측정 예정_ |
 | Mean (Optimized) | _측정 예정_ |
 | 개선율 | _측정 예정_ |

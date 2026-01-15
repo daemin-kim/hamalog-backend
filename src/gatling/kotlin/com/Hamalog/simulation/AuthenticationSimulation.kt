@@ -20,11 +20,22 @@ class AuthenticationSimulation : Simulation() {
 
     private val baseUrl = System.getProperty("baseUrl", "http://localhost:8080")
 
+    // 벤치마크 API 인증용 (프로덕션 환경에서 필요)
+    private val benchmarkApiKey = System.getProperty("benchmarkApiKey", "")
+
     private val httpProtocol = http
         .baseUrl(baseUrl)
         .acceptHeader("application/json")
         .contentTypeHeader("application/json")
         .userAgentHeader("Gatling/3.11 - Auth Benchmark")
+        // 벤치마크 API Key가 설정된 경우 헤더 추가
+        .let { protocol ->
+            if (benchmarkApiKey.isNotEmpty()) {
+                protocol.header("X-Benchmark-API-Key", benchmarkApiKey)
+            } else {
+                protocol
+            }
+        }
 
     // ========================================
     // 1. 로그인 성능 측정

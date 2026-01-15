@@ -64,3 +64,8 @@ src/main/resources/application-local.properties
 secrets/
 *.secret
 docker-compose.override.yml
+
+### Benchmark ###
+benchmark-results/
+.env.benchmark
+

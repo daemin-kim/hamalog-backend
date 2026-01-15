@@ -20,9 +20,9 @@
 
 **구현 완료 (2026-01-15)**:
 - `build.gradle`에 Gatling 3.11.5 플러그인 추가
-- `src/gatling/scala/com/Hamalog/simulation/` 시뮬레이션 작성
-  - `MedicationScheduleSimulation.scala`: N+1 Before/After 비교
-  - `AuthenticationSimulation.scala`: 인증 플로우 부하 테스트
+- `src/gatling/kotlin/com/Hamalog/simulation/` 시뮬레이션 작성
+  - `MedicationScheduleSimulation.kt`: N+1 Before/After 비교
+  - `AuthenticationSimulation.kt`: 인증 플로우 부하 테스트
 - `scripts/benchmark/run-benchmark.sh`: 벤치마크 실행 스크립트
 - `scripts/benchmark/load-test-data.sql`: 테스트 데이터 생성 SQL
 - Benchmark 전용 API 추가 (`/api/v1/benchmark/*`)

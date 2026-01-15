@@ -24,7 +24,7 @@ WHERE NOT EXISTS (SELECT 1 FROM member WHERE login_id = 'benchmark@test.com');
 SET @benchmark_member_id = (SELECT member_id FROM member WHERE login_id = 'benchmark@test.com');
 
 -- ============================================
--- 2. 대량 복약 스케줄 생성 (100개)
+-- 2. 대량 복약 스케줄 생성 (500개)
 -- ============================================
 -- N+1 문제 효과를 극대화하기 위해 많은 레코드 생성
 
@@ -35,7 +35,7 @@ DROP PROCEDURE IF EXISTS generate_benchmark_schedules//
 CREATE PROCEDURE generate_benchmark_schedules()
 BEGIN
     DECLARE i INT DEFAULT 1;
-    DECLARE schedule_count INT DEFAULT 100;
+    DECLARE schedule_count INT DEFAULT 500;
 
     -- 기존 벤치마크 데이터 삭제
     DELETE FROM medication_record WHERE medication_schedule_id IN
@@ -130,10 +130,12 @@ WHERE ms.member_id = @benchmark_member_id
 ON DUPLICATE KEY UPDATE is_taken = VALUES(is_taken);
 
 -- ============================================
--- 5. 데이터 확인
+-- 5. 데이터 확인 및 Member ID 출력
 -- ============================================
+SELECT '======================================' AS separator;
 SELECT 'Benchmark Data Summary' AS title;
-SELECT '=====================' AS separator;
+SELECT '======================================' AS separator;
+SELECT @benchmark_member_id AS benchmark_member_id;
 SELECT COUNT(*) AS total_schedules FROM medication_schedule WHERE member_id = @benchmark_member_id;
 SELECT COUNT(*) AS total_times FROM medication_time mt
     JOIN medication_schedule ms ON mt.medication_schedule_id = ms.medication_schedule_id
@@ -141,4 +143,7 @@ SELECT COUNT(*) AS total_times FROM medication_time mt
 SELECT COUNT(*) AS total_records FROM medication_record mr
     JOIN medication_schedule ms ON mr.medication_schedule_id = ms.medication_schedule_id
     WHERE ms.member_id = @benchmark_member_id;
+SELECT '======================================' AS separator;
+SELECT 'Use this Member ID for benchmarks:' AS note, @benchmark_member_id AS member_id;
+SELECT '======================================' AS separator;
 

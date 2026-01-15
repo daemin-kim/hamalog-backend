@@ -271,18 +271,22 @@ jobs:
         run: |
           Write-Host "Loading benchmark test data..."
           
-          # SQL 파일을 컨테이너로 복사
-          docker cp scripts/benchmark/load-test-data.sql mysql-hamalog:/tmp/load-test-data.sql
+          # 간소화된 SQL 파일 사용 (DELIMITER 없이 동작)
+          $sqlContent = Get-Content -Path "scripts/benchmark/load-test-data-simple.sql" -Raw
           
-          # SQL 실행 (DELIMITER 지원을 위해 source 명령 사용)
-          docker exec -i mysql-hamalog mysql -u root -p"${{ secrets.MYSQL_ROOT_PASSWORD }}" ${{ secrets.DB_NAME }} < scripts/benchmark/load-test-data.sql
+          # SQL 파일을 컨테이너로 복사
+          docker cp scripts/benchmark/load-test-data-simple.sql mysql-hamalog:/tmp/load-test-data.sql
+          
+          # 컨테이너 내부에서 SQL 실행
+          docker exec mysql-hamalog bash -c "mysql -u root -p'${{ secrets.MYSQL_ROOT_PASSWORD }}' ${{ secrets.DB_NAME }} < /tmp/load-test-data.sql"
           
           if ($LASTEXITCODE -eq 0) {
             Write-Host "OK: Benchmark test data loaded successfully!"
+            # 데이터 확인
+            docker exec mysql-hamalog mysql -u root -p"${{ secrets.MYSQL_ROOT_PASSWORD }}" ${{ secrets.DB_NAME }} -e "SELECT COUNT(*) AS schedule_count FROM medication_schedule WHERE member_id = (SELECT member_id FROM member WHERE login_id = 'benchmark@test.com');"
           } else {
-            Write-Host "WARNING: Failed to load test data, trying alternative method..."
-            # 대안: 컨테이너 내부에서 직접 실행
-            docker exec mysql-hamalog bash -c "mysql -u root -p'${{ secrets.MYSQL_ROOT_PASSWORD }}' ${{ secrets.DB_NAME }} < /tmp/load-test-data.sql"
+            Write-Host "ERROR: Failed to load test data"
+            exit 1
           }
 
       - name: Display benchmark instructions

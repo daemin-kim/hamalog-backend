@@ -8,6 +8,8 @@ plugins {
 	// Kotlin 플러그인
 	id 'org.jetbrains.kotlin.jvm' version '2.0.21'
 	id 'org.jetbrains.kotlin.plugin.spring' version '2.0.21'
+	// Gatling 성능 테스트
+	id 'io.gatling.gradle' version '3.11.5'
 }
 
 spotless {
@@ -178,4 +180,7 @@ dependencyCheck {
 	formats = ['HTML', 'JSON']
 	outputDirectory = layout.buildDirectory.dir('reports/dependency-check').get().asFile.path
 }
+
+// Gatling 성능 테스트 설정
+// 참고: Gatling 3.11+ 플러그인은 gatling.conf 파일로 설정 관리
 

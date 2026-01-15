@@ -29,7 +29,12 @@ public interface MedicationScheduleRepository extends JpaRepository<MedicationSc
     // N+1 문제 해결: JOIN FETCH를 사용한 대안 메서드
     @Query("SELECT ms FROM MedicationSchedule ms JOIN FETCH ms.member WHERE ms.member.memberId = :memberId")
     List<MedicationSchedule> findAllByMemberIdWithMember(@Param("memberId") Long memberId);
-    
+
+    // ⚠️ 벤치마크용: N+1 문제가 발생하는 naive 쿼리 (성능 비교 테스트 전용)
+    // 프로덕션에서는 사용 금지 - findAllByMember_MemberId() 사용할 것
+    @Query("SELECT ms FROM MedicationSchedule ms WHERE ms.member.memberId = :memberId")
+    List<MedicationSchedule> findAllByMemberIdNaive(@Param("memberId") Long memberId);
+
     // DTO Projection: 엔티티 전체가 아닌 필요한 필드만 조회하여 성능 최적화
     @Query("SELECT new com.Hamalog.dto.medication.projection.MedicationScheduleProjection(" +
            "ms.medicationScheduleId, ms.member.memberId, ms.name, ms.hospitalName, " +

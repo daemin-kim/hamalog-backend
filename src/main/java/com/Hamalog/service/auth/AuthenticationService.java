@@ -28,6 +28,12 @@ import org.springframework.transaction.annotation.Transactional;
 @Slf4j
 public class AuthenticationService {
 
+    /**
+     * Access Token 만료 시간 (초 단위)
+     * 15분 = 900초
+     */
+    private static final long ACCESS_TOKEN_EXPIRY_SECONDS = 900L;
+
     private final MemberRepository memberRepository;
     private final JwtTokenProvider jwtTokenProvider;
     private final TokenBlacklistService tokenBlacklistService;
@@ -52,7 +58,6 @@ public class AuthenticationService {
 
         // AccessToken 생성
         String accessToken = jwtTokenProvider.createToken(authentication.getName(), member.getMemberId(), null);
-        long expiresIn = 900;  // 15분
 
         // RefreshToken 생성
         var refreshToken = refreshTokenService.createRefreshToken(member.getMemberId());
@@ -64,7 +69,7 @@ public class AuthenticationService {
         return new LoginResponse(
             accessToken,
             refreshToken.getTokenValue(),
-            expiresIn
+            ACCESS_TOKEN_EXPIRY_SECONDS
         );
     }
 
@@ -97,14 +102,12 @@ public class AuthenticationService {
 
         String newAccessToken = jwtTokenProvider.createToken(member.getLoginId(), member.getMemberId(), null);
 
-        long expiresIn = 900;  // 15분
-
         log.debug("[AUTH] Access token refreshed - memberId: {}", refreshToken.getMemberId());
 
         return new TokenRefreshResponse(
             newAccessToken,
             refreshToken.getTokenValue(),
-            expiresIn
+            ACCESS_TOKEN_EXPIRY_SECONDS
         );
     }
 

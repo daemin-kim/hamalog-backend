@@ -11,19 +11,28 @@
 ## 🔴 상 우선순위 (채용 면접 전 필수)
 
 ### 1. 성능 벤치마크 추가
-- [ ] JMeter 또는 Gatling 설치 및 테스트 스크립트 작성
-- [ ] 주요 API 엔드포인트 부하 테스트 (로그인, 복약 스케줄 조회, 일기 생성)
-- [ ] 결과 문서화: `docs/internal/PERFORMANCE-BENCHMARK.md`
+- [x] ~~JMeter 또는~~ Gatling 설치 및 테스트 스크립트 작성
+- [x] 주요 API 엔드포인트 부하 테스트 (로그인, 복약 스케줄 조회, 일기 생성)
+- [x] 결과 문서화: `docs/internal/PERFORMANCE-BENCHMARK.md`
   - 동시 사용자 수, 평균 응답 시간, TPS, 에러율
   - 병목 지점 분석 및 개선 방안
 - [ ] README.md에 성능 지표 배지 추가
 
-**예시 스크립트 (JMeter CLI)**:
+**구현 완료 (2026-01-15)**:
+- `build.gradle`에 Gatling 3.11.5 플러그인 추가
+- `src/gatling/scala/com/Hamalog/simulation/` 시뮬레이션 작성
+  - `MedicationScheduleSimulation.scala`: N+1 Before/After 비교
+  - `AuthenticationSimulation.scala`: 인증 플로우 부하 테스트
+- `scripts/benchmark/run-benchmark.sh`: 벤치마크 실행 스크립트
+- `scripts/benchmark/load-test-data.sql`: 테스트 데이터 생성 SQL
+- Benchmark 전용 API 추가 (`/api/v1/benchmark/*`)
+
+**실행 방법**:
 ```bash
-jmeter -n -t scripts/load-test.jmx -l results/load-test.jtl -e -o results/report/
+./scripts/benchmark/run-benchmark.sh
 ```
 
-**예상 소요**: 1-2일
+**예상 소요**: ~~1-2일~~ 완료
 
 ---
 
@@ -49,36 +58,29 @@ jacocoTestCoverageVerification {
 ---
 
 ### 3. 매직 넘버 상수화
-- [ ] 하드코딩된 값 검색 및 목록화
+- [x] 하드코딩된 값 검색 및 목록화
 ```java
-// 현재 문제점 예시
-expiresIn = 900;  // 15분 - 하드코딩
-MAX_PRESCRIPTION_DAYS = 365;  // 이미 상수화됨 ✅
+// 개선 완료
+// Before: expiresIn = 900;  // 하드코딩
+// After: ACCESS_TOKEN_EXPIRY_SECONDS = 900L;  // 상수화
 ```
 - [ ] `application.properties`로 추출할 값 식별
-- [ ] 설정 클래스 또는 상수 클래스 생성
+- [x] 설정 클래스 또는 상수 클래스 생성
 ```java
-// 권장 방식 1: @ConfigurationProperties
-@ConfigurationProperties(prefix = "jwt")
-public record JwtProperties(
-    long accessTokenExpiry,
-    long refreshTokenExpiry
-) {}
-
-// 권장 방식 2: 상수 클래스
-public final class SecurityConstants {
-    public static final long ACCESS_TOKEN_EXPIRY_SECONDS = 900;
-    private SecurityConstants() {}
-}
+// AuthenticationService.java에 상수 추가 완료
+private static final long ACCESS_TOKEN_EXPIRY_SECONDS = 900L;
 ```
-- [ ] 관련 코드 리팩토링
+- [x] 관련 코드 리팩토링
 - [ ] 테스트 통과 확인
 
+**완료 항목 (2026-01-15)**:
+- `AuthenticationService.java`: `expiresIn = 900` → `ACCESS_TOKEN_EXPIRY_SECONDS` 상수화
+
 **대상 파일**:
-- `AuthenticationService.java`: `expiresIn = 900`
+- ~~`AuthenticationService.java`: `expiresIn = 900`~~ ✅ 완료
 - 기타 검색: `grep -r "= [0-9]\{2,\}" src/main/java`
 
-**예상 소요**: 0.5일
+**예상 소요**: ~~0.5일~~ 진행 중
 
 ---
 
@@ -258,10 +260,10 @@ src/main/java/com/Hamalog/
 
 | 우선순위 | 전체 | 완료 | 진행률 |
 |----------|------|------|--------|
-| 🔴 상 | 4 | 0 | 0% |
+| 🔴 상 | 4 | 1 | 25% |
 | 🟡 중 | 4 | 0 | 0% |
 | 🟢 하 | 4 | 0 | 0% |
-| **합계** | **12** | **0** | **0%** |
+| **합계** | **12** | **1** | **8%** |
 
 ---
 
@@ -269,7 +271,8 @@ src/main/java/com/Hamalog/
 
 | 날짜 | 태스크 # | 태스크명 | 비고 |
 |------|----------|----------|------|
-| - | - | - | - |
+| 2026-01-15 | 1 | 성능 벤치마크 추가 | Gatling 3.11.5, Before/After 비교 구현 |
+| 2026-01-15 | 3 | 매직 넘버 상수화 | AuthenticationService 상수화 (진행 중) |
 
 ---
 

@@ -115,7 +115,18 @@ if [[ "$LOGIN_RESPONSE" == *"accessToken"* ]]; then
     fi
 else
     echo -e "${RED}❌ 벤치마크 사용자 로그인 실패${NC}"
-    echo -e "${YELLOW}테스트 데이터가 로드되었는지 확인하세요.${NC}"
+    echo -e "${YELLOW}응답: $LOGIN_RESPONSE${NC}"
+    echo ""
+    echo -e "${YELLOW}원인 및 해결방법:${NC}"
+    echo -e "  1. 테스트 데이터가 로드되지 않았을 수 있습니다."
+    echo -e "     → Deploy Benchmark Mode 워크플로우 실행 시 '테스트 데이터 자동 생성: true' 선택"
+    echo -e ""
+    echo -e "  2. 수동으로 테스트 데이터 로드 (서버에서 실행):"
+    echo -e "     docker exec -i mysql-hamalog mysql -u root -p<password> <dbname> < scripts/benchmark/load-test-data.sql"
+    echo -e ""
+    echo -e "  3. 벤치마크 계정 정보:"
+    echo -e "     - 이메일: benchmark@test.com"
+    echo -e "     - 비밀번호: Benchmark1234!"
     exit 1
 fi
 

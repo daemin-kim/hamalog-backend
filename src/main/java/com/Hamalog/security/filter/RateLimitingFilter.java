@@ -127,11 +127,19 @@ public class RateLimitingFilter extends OncePerRequestFilter {
     @Override
     protected boolean shouldNotFilter(HttpServletRequest request) {
         String requestURI = request.getRequestURI();
-        return requestURI.startsWith("/static/") || 
+
+        // 벤치마크 API Key 헤더가 있으면 Rate Limiting 우회
+        String benchmarkApiKey = request.getHeader("X-Benchmark-API-Key");
+        if (benchmarkApiKey != null && !benchmarkApiKey.isEmpty()) {
+            return true;
+        }
+
+        return requestURI.startsWith("/static/") ||
                requestURI.startsWith("/css/") || 
                requestURI.startsWith("/js/") || 
                requestURI.startsWith("/images/") ||
                requestURI.startsWith("/favicon.ico") ||
-               requestURI.startsWith("/actuator/health");
+               requestURI.startsWith("/actuator/health") ||
+               requestURI.startsWith("/api/v1/benchmark");
     }
 }

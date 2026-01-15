@@ -21,7 +21,6 @@ class MedicationScheduleSimulation : Simulation() {
     private val baseUrl = System.getProperty("baseUrl", "http://localhost:8080")
     private val testUserLoginId = System.getProperty("testUser", "benchmark@test.com")
     private val testUserPassword = System.getProperty("testPassword", "Benchmark1234!")
-    private val testMemberId = System.getProperty("testMemberId", "1")
 
     // 벤치마크 API 인증용 (프로덕션 환경에서 필요)
     private val benchmarkApiKey = System.getProperty("benchmarkApiKey", "")
@@ -45,10 +44,11 @@ class MedicationScheduleSimulation : Simulation() {
     // ========================================
     private val login = exec(
         http("Login - Token Acquisition")
-            .post("/api/v1/auth/login")
+            .post("/auth/login")
             .body(StringBody("""{"loginId":"$testUserLoginId","password":"$testUserPassword"}"""))
             .check(status().`is`(200))
-            .check(jsonPath("$.accessToken").saveAs("accessToken")),
+            .check(jsonPath("$.accessToken").saveAs("accessToken"))
+            .check(jsonPath("$.memberId").saveAs("memberId")),
     ).exitHereIfFailed()
 
     // ========================================
@@ -56,7 +56,7 @@ class MedicationScheduleSimulation : Simulation() {
     // ========================================
     private val fetchSchedulesNaive = exec(
         http("Fetch Schedules (Naive - N+1 Problem)")
-            .get("/api/v1/benchmark/medication-schedules/list/$testMemberId?optimized=false")
+            .get("/api/v1/benchmark/medication-schedules/list/#{memberId}?optimized=false")
             .header("Authorization", "Bearer #{accessToken}")
             .check(status().`is`(200))
             .check(jsonPath("$.schedules").exists()),
@@ -67,7 +67,7 @@ class MedicationScheduleSimulation : Simulation() {
     // ========================================
     private val fetchSchedulesOptimized = exec(
         http("Fetch Schedules (Optimized - @EntityGraph)")
-            .get("/api/v1/benchmark/medication-schedules/list/$testMemberId?optimized=true")
+            .get("/api/v1/benchmark/medication-schedules/list/#{memberId}?optimized=true")
             .header("Authorization", "Bearer #{accessToken}")
             .check(status().`is`(200))
             .check(jsonPath("$.schedules").exists()),

@@ -14,6 +14,9 @@ import org.springframework.data.repository.query.Param;
 
 public interface MedicationScheduleRepository extends JpaRepository<MedicationSchedule, Long> {
 
+    // 벤치마크용: 회원별 스케줄 개수 카운트
+    long countByMember_MemberId(Long memberId);
+
     // N+1 문제 해결: @EntityGraph를 사용하여 Member를 EAGER로 함께 조회
     @EntityGraph(attributePaths = {"member"})
     List<MedicationSchedule> findAllByMember_MemberId(Long memberId);

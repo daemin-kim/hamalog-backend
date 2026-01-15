@@ -42,7 +42,7 @@ class AuthenticationSimulation : Simulation() {
     // ========================================
     private val loginFlow = exec(
         http("Login")
-            .post("/api/v1/auth/login")
+            .post("/auth/login")
             .body(StringBody("""{"loginId":"benchmark@test.com","password":"Benchmark1234!"}"""))
             .check(status().`in`(200, 401))
             .check(jsonPath("$.accessToken").optional().saveAs("accessToken"))
@@ -54,7 +54,7 @@ class AuthenticationSimulation : Simulation() {
     // ========================================
     private val refreshTokenFlow = exec(
         http("Refresh Token")
-            .post("/api/v1/auth/refresh")
+            .post("/auth/refresh")
             .body(StringBody("""{"refreshToken":"#{refreshToken}"}"""))
             .check(status().`in`(200, 401))
             .check(jsonPath("$.accessToken").optional().saveAs("newAccessToken")),
@@ -65,7 +65,7 @@ class AuthenticationSimulation : Simulation() {
     // ========================================
     private val logoutFlow = exec(
         http("Logout")
-            .post("/api/v1/auth/logout")
+            .post("/auth/logout")
             .header("Authorization", "Bearer #{accessToken}")
             .check(status().`in`(200, 401)),
     )
@@ -83,7 +83,7 @@ class AuthenticationSimulation : Simulation() {
     private val fullAuthFlowScenario = scenario("Full Auth Flow")
         .exec(
             http("Login for Full Flow")
-                .post("/api/v1/auth/login")
+                .post("/auth/login")
                 .body(StringBody("""{"loginId":"benchmark@test.com","password":"Benchmark1234!"}"""))
                 .check(status().`is`(200))
                 .check(jsonPath("$.accessToken").saveAs("accessToken"))
@@ -98,7 +98,7 @@ class AuthenticationSimulation : Simulation() {
     private val loginSpikeScenario = scenario("Login Spike Test")
         .exec(
             http("Spike Login")
-                .post("/api/v1/auth/login")
+                .post("/auth/login")
                 .body(StringBody("""{"loginId":"benchmark@test.com","password":"Benchmark1234!"}"""))
                 .check(status().`in`(200, 429)), // 429는 Rate Limiting
         )

@@ -66,7 +66,7 @@ echo ""
 echo -e "${BLUE}[2/5] 테스트 데이터 확인 중...${NC}"
 
 # 벤치마크 사용자 토큰 획득 시도
-LOGIN_RESPONSE=$(curl -s -X POST "$BASE_URL/api/v1/auth/login" \
+LOGIN_RESPONSE=$(curl -s -X POST "$BASE_URL/auth/login" \
     -H "Content-Type: application/json" \
     -d '{"loginId":"benchmark@test.com","password":"Benchmark1234!"}' 2>/dev/null || echo '{"error":"failed"}')
 

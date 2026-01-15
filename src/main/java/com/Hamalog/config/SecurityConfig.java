@@ -114,8 +114,7 @@ public class SecurityConfig {
                 .authorizeHttpRequests(auth -> {
                     // 기본 공개 엔드포인트
                     auth.requestMatchers(
-                            "/auth/login", "/auth/signup",
-                            "/api/v1/auth/login", "/api/v1/auth/signup", "/api/v1/auth/refresh",
+                            "/auth/login", "/auth/signup", "/auth/refresh",
                             "/error",
                             "/oauth2/**", "/login/oauth2/**", "/oauth2/authorization/**",
                             "/api/auth/kakao/callback",

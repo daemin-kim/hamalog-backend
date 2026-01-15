@@ -97,7 +97,7 @@ echo -e "${GREEN}✅ 벤치마크 API: 활성화${NC}"
 echo ""
 echo -e "${BLUE}[3/6] 테스트 사용자 인증 확인 중...${NC}"
 
-LOGIN_RESPONSE=$(curl -s -X POST "$REMOTE_URL/api/v1/auth/login" \
+LOGIN_RESPONSE=$(curl -s -X POST "$REMOTE_URL/auth/login" \
     -H "Content-Type: application/json" \
     -H "X-Benchmark-API-Key: $BENCHMARK_API_KEY" \
     -d '{"loginId":"benchmark@test.com","password":"Benchmark1234!"}' 2>/dev/null || echo '{"error":"failed"}')
@@ -149,7 +149,7 @@ echo ""
 
 cd "$PROJECT_ROOT"
 
-GATLING_ARGS="-DbaseUrl=$REMOTE_URL -DbenchmarkApiKey=$BENCHMARK_API_KEY -DtestMemberId=$MEMBER_ID"
+GATLING_ARGS="-DbaseUrl=$REMOTE_URL -DbenchmarkApiKey=$BENCHMARK_API_KEY"
 
 case "$SIMULATION_TYPE" in
     "medication")

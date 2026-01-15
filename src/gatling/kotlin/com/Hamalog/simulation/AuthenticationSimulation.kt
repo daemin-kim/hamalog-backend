@@ -45,8 +45,8 @@ class AuthenticationSimulation : Simulation() {
             .post("/auth/login")
             .body(StringBody("""{"loginId":"benchmark@test.com","password":"Benchmark1234!"}"""))
             .check(status().`in`(200, 401))
-            .check(jsonPath("$.accessToken").optional().saveAs("accessToken"))
-            .check(jsonPath("$.refreshToken").optional().saveAs("refreshToken")),
+            .check(jsonPath("$.access_token").optional().saveAs("accessToken"))
+            .check(jsonPath("$.refresh_token").optional().saveAs("refreshToken")),
     )
 
     // ========================================
@@ -57,7 +57,7 @@ class AuthenticationSimulation : Simulation() {
             .post("/auth/refresh")
             .body(StringBody("""{"refreshToken":"#{refreshToken}"}"""))
             .check(status().`in`(200, 401))
-            .check(jsonPath("$.accessToken").optional().saveAs("newAccessToken")),
+            .check(jsonPath("$.access_token").optional().saveAs("newAccessToken")),
     )
 
     // ========================================
@@ -86,8 +86,8 @@ class AuthenticationSimulation : Simulation() {
                 .post("/auth/login")
                 .body(StringBody("""{"loginId":"benchmark@test.com","password":"Benchmark1234!"}"""))
                 .check(status().`is`(200))
-                .check(jsonPath("$.accessToken").saveAs("accessToken"))
-                .check(jsonPath("$.refreshToken").saveAs("refreshToken")),
+                .check(jsonPath("$.access_token").saveAs("accessToken"))
+                .check(jsonPath("$.refresh_token").saveAs("refreshToken")),
         )
         .pause(Duration.ofSeconds(1))
         .exec(refreshTokenFlow)

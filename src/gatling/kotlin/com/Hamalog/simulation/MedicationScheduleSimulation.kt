@@ -47,8 +47,8 @@ class MedicationScheduleSimulation : Simulation() {
             .post("/auth/login")
             .body(StringBody("""{"loginId":"$testUserLoginId","password":"$testUserPassword"}"""))
             .check(status().`is`(200))
-            .check(jsonPath("$.accessToken").saveAs("accessToken"))
-            .check(jsonPath("$.memberId").saveAs("memberId")),
+            .check(jsonPath("$.access_token").saveAs("accessToken"))
+            .check(jsonPath("$.member_id").saveAs("memberId")),
     ).exitHereIfFailed()
 
     // ========================================

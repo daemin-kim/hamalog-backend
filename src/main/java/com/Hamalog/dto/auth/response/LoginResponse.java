@@ -19,14 +19,22 @@ public record LoginResponse(
 
         @JsonProperty("token_type")
         @Schema(description = "토큰 타입", example = "Bearer")
-        String tokenType
+        String tokenType,
+
+        @JsonProperty("member_id")
+        @Schema(description = "회원 ID", example = "1")
+        Long memberId
 ) {
+    public LoginResponse(String token, String refreshToken, long expiresIn, Long memberId) {
+        this(token, refreshToken, expiresIn, "Bearer", memberId);
+    }
+
     public LoginResponse(String token, String refreshToken, long expiresIn) {
-        this(token, refreshToken, expiresIn, "Bearer");
+        this(token, refreshToken, expiresIn, "Bearer", null);
     }
 
     // 하위 호환성을 위한 생성자
     public LoginResponse(String token) {
-        this(token, null, 3600, "Bearer");
+        this(token, null, 3600, "Bearer", null);
     }
 }

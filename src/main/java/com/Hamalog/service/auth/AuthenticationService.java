@@ -70,7 +70,8 @@ public class AuthenticationService {
         return new LoginResponse(
             accessToken,
             refreshToken.getTokenValue(),
-            ACCESS_TOKEN_EXPIRY_SECONDS
+            ACCESS_TOKEN_EXPIRY_SECONDS,
+            member.getMemberId()
         );
     }
 

@@ -102,12 +102,12 @@ LOGIN_RESPONSE=$(curl -s -X POST "$REMOTE_URL/auth/login" \
     -H "X-Benchmark-API-Key: $BENCHMARK_API_KEY" \
     -d '{"loginId":"benchmark@test.com","password":"Benchmark1234!"}' 2>/dev/null || echo '{"error":"failed"}')
 
-if [[ "$LOGIN_RESPONSE" == *"accessToken"* ]]; then
+if [[ "$LOGIN_RESPONSE" == *"access_token"* ]]; then
     echo -e "${GREEN}✅ 벤치마크 사용자 로그인: 성공${NC}"
 
     # Member ID 추출 (jq가 있으면 사용)
     if command -v jq &> /dev/null; then
-        MEMBER_ID=$(echo "$LOGIN_RESPONSE" | jq -r '.memberId // "1"')
+        MEMBER_ID=$(echo "$LOGIN_RESPONSE" | jq -r '.member_id // "1"')
         echo -e "${GREEN}✅ Member ID: $MEMBER_ID${NC}"
     else
         MEMBER_ID="1"

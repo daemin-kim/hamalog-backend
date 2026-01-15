@@ -242,9 +242,11 @@ public class BotProtectionFilter extends OncePerRequestFilter {
         String requestUri = request.getRequestURI();
 
         // 헬스체크와 정적 리소스는 필터 제외
+        // 벤치마크 API는 별도 보안 필터(BenchmarkApiSecurityFilter)에서 처리
         return requestUri.equals("/actuator/health") ||
                requestUri.startsWith("/static/") ||
-               requestUri.equals("/favicon.ico");
+               requestUri.equals("/favicon.ico") ||
+               requestUri.startsWith("/api/v1/benchmark");
     }
 
     /**

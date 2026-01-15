@@ -134,4 +134,3 @@ public class BenchmarkDataInitializer {
                 savedSchedules.size(), times.size());
     }
 }
-

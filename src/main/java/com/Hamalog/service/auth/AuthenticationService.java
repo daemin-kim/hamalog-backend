@@ -48,6 +48,7 @@ public class AuthenticationService {
      * @return 로그인 응답 (AccessToken, RefreshToken, 만료 시간)
      * @throws CustomException 회원을 찾을 수 없는 경우
      */
+    @Transactional
     public LoginResponse authenticateAndGenerateToken(String loginId, String password) {
         Authentication authentication = authenticationManager.authenticate(
                 new UsernamePasswordAuthenticationToken(loginId, password)
@@ -93,6 +94,7 @@ public class AuthenticationService {
      * @return 새 AccessToken과 RefreshToken
      * @throws CustomException 회원을 찾을 수 없는 경우
      */
+    @Transactional
     public TokenRefreshResponse refreshAccessToken(String refreshTokenValue) {
         var refreshToken = refreshTokenService.rotateToken(refreshTokenValue);
 

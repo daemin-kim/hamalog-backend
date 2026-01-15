@@ -274,13 +274,15 @@ jobs:
           # SQL 파일을 컨테이너로 복사
           docker cp scripts/benchmark/load-test-data.sql mysql-hamalog:/tmp/load-test-data.sql
           
-          # SQL 실행
-          docker exec mysql-hamalog mysql -u root -p"${{ secrets.MYSQL_ROOT_PASSWORD }}" ${{ secrets.DB_NAME }} -e "source /tmp/load-test-data.sql"
+          # SQL 실행 (DELIMITER 지원을 위해 source 명령 사용)
+          docker exec -i mysql-hamalog mysql -u root -p"${{ secrets.MYSQL_ROOT_PASSWORD }}" ${{ secrets.DB_NAME }} < scripts/benchmark/load-test-data.sql
           
           if ($LASTEXITCODE -eq 0) {
             Write-Host "OK: Benchmark test data loaded successfully!"
           } else {
-            Write-Host "WARNING: Failed to load test data"
+            Write-Host "WARNING: Failed to load test data, trying alternative method..."
+            # 대안: 컨테이너 내부에서 직접 실행
+            docker exec mysql-hamalog bash -c "mysql -u root -p'${{ secrets.MYSQL_ROOT_PASSWORD }}' ${{ secrets.DB_NAME }} < /tmp/load-test-data.sql"
           }
 
       - name: Display benchmark instructions

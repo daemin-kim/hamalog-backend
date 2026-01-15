@@ -99,6 +99,7 @@ echo -e "${BLUE}[3/6] 테스트 사용자 인증 확인 중...${NC}"
 
 LOGIN_RESPONSE=$(curl -s -X POST "$REMOTE_URL/api/v1/auth/login" \
     -H "Content-Type: application/json" \
+    -H "X-Benchmark-API-Key: $BENCHMARK_API_KEY" \
     -d '{"loginId":"benchmark@test.com","password":"Benchmark1234!"}' 2>/dev/null || echo '{"error":"failed"}')
 
 if [[ "$LOGIN_RESPONSE" == *"accessToken"* ]]; then

@@ -241,6 +241,7 @@ public class BotProtectionFilter extends OncePerRequestFilter {
     protected boolean shouldNotFilter(HttpServletRequest request) {
         String requestUri = request.getRequestURI();
         String userAgent = request.getHeader("User-Agent");
+        String benchmarkApiKey = request.getHeader("X-Benchmark-API-Key");
 
         // 헬스체크와 정적 리소스는 필터 제외
         // 벤치마크 API는 별도 보안 필터(BenchmarkApiSecurityFilter)에서 처리
@@ -253,6 +254,12 @@ public class BotProtectionFilter extends OncePerRequestFilter {
 
         // Gatling 벤치마크 User-Agent는 필터 제외
         if (userAgent != null && userAgent.contains("Gatling")) {
+            return true;
+        }
+
+        // X-Benchmark-API-Key 헤더가 있으면 벤치마크 요청으로 간주하여 필터 제외
+        // (벤치마크 스크립트에서 curl로 로그인 API 호출 시 사용)
+        if (benchmarkApiKey != null && !benchmarkApiKey.isEmpty()) {
             return true;
         }
 

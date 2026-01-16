@@ -1,0 +1,72 @@
+# ============================================
+# Hamalog 벤치마크 프로파일 설정
+# ============================================
+#
+# 용도: 로컬 성능 벤치마크 전용
+# 특징:
+#   - SQL 로깅 활성화 (쿼리 수 확인용)
+#   - Hibernate 통계 활성화
+
+spring:
+  # 데이터소스 설정 (Docker Compose에서 오버라이드)
+  datasource:
+    url: jdbc:mysql://localhost:3307/hamalog_benchmark?useSSL=false&allowPublicKeyRetrieval=true&serverTimezone=Asia/Seoul
+    username: root
+    password: benchmark
+    driver-class-name: com.mysql.cj.jdbc.Driver
+    hikari:
+      maximum-pool-size: 20
+      minimum-idle: 5
+
+  # JPA 설정
+  jpa:
+    hibernate:
+      ddl-auto: none
+    properties:
+      hibernate:
+        format_sql: true
+        use_sql_comments: true
+        # 쿼리 통계 활성화 (N+1 문제 확인용)
+        generate_statistics: true
+    show-sql: true
+
+  # Flyway 마이그레이션
+  flyway:
+    enabled: true
+    baseline-on-migrate: true
+
+  # Redis 설정
+  data:
+    redis:
+      host: localhost
+      port: 6380
+
+# ============================================
+# 로깅 설정 (쿼리 분석용)
+# ============================================
+logging:
+  level:
+    # Hibernate SQL 로깅
+    org.hibernate.SQL: DEBUG
+    org.hibernate.orm.jdbc.bind: TRACE
+    org.hibernate.stat: DEBUG
+    # Spring Data JPA
+    org.springframework.data.jpa: DEBUG
+    # 애플리케이션 로깅
+    com.Hamalog: DEBUG
+    com.Hamalog.controller.benchmark: INFO
+    com.Hamalog.service.benchmark: INFO
+
+
+# ============================================
+# Actuator 설정
+# ============================================
+management:
+  endpoints:
+    web:
+      exposure:
+        include: health,info,metrics
+  endpoint:
+    health:
+      show-details: always
+

@@ -157,14 +157,19 @@ sourceSets {
 	}
 }
 
-// Gatling 시뮬레이션에 시스템 프로퍼티 전달 (벤치마크 환경 설정)
+// Gatling 시뮬레이션에 환경변수/프로퍼티 전달 (벤치마크 환경 설정)
 gatling {
-	// Gradle에서 전달받은 시스템 프로퍼티를 Gatling JVM으로 전달
+	// 환경변수에서 먼저 읽고, 없으면 프로젝트 프로퍼티에서, 그것도 없으면 기본값
+	def baseUrlValue = System.getenv('BASE_URL') ?: project.findProperty('baseUrl') ?: 'http://localhost:8080'
+	def benchmarkApiKeyValue = System.getenv('BENCHMARK_API_KEY') ?: project.findProperty('benchmarkApiKey') ?: ''
+	def testUserValue = System.getenv('TEST_USER') ?: project.findProperty('testUser') ?: 'benchmark@test.com'
+	def testPasswordValue = System.getenv('TEST_PASSWORD') ?: project.findProperty('testPassword') ?: 'Benchmark1234!'
+
 	jvmArgs = [
-		"-DbaseUrl=${System.getProperty('baseUrl', 'http://localhost:8080')}",
-		"-DbenchmarkApiKey=${System.getProperty('benchmarkApiKey', '')}",
-		"-DtestUser=${System.getProperty('testUser', 'benchmark@test.com')}",
-		"-DtestPassword=${System.getProperty('testPassword', 'Benchmark1234!')}"
+		"-DbaseUrl=${baseUrlValue}",
+		"-DbenchmarkApiKey=${benchmarkApiKeyValue}",
+		"-DtestUser=${testUserValue}",
+		"-DtestPassword=${testPasswordValue}"
 	]
 }
 

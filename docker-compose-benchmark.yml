@@ -1,0 +1,93 @@
+# ============================================
+# Hamalog 성능 벤치마크 전용 Docker Compose
+# ============================================
+#
+# 용도: 로컬 환경에서 N+1 vs Optimized 성능 비교
+#
+# 실행 방법:
+#   docker-compose -f docker-compose-benchmark.yml up -d
+#
+# 종료 방법:
+#   docker-compose -f docker-compose-benchmark.yml down -v
+
+services:
+  # ============================================
+  # Spring Boot Application
+  # ============================================
+  app:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    container_name: hamalog-benchmark-app
+    ports:
+      - "8080:8080"
+    environment:
+      - SPRING_PROFILES_ACTIVE=benchmark
+      - SPRING_DATASOURCE_URL=jdbc:mysql://mysql:3306/hamalog_benchmark?useSSL=false&allowPublicKeyRetrieval=true&serverTimezone=Asia/Seoul
+      - SPRING_DATASOURCE_USERNAME=root
+      - SPRING_DATASOURCE_PASSWORD=benchmark
+      - SPRING_DATA_REDIS_HOST=redis
+      - SPRING_DATA_REDIS_PORT=6379
+      - SPRING_JPA_HIBERNATE_DDL_AUTO=none
+      - SPRING_FLYWAY_ENABLED=true
+      - JWT_SECRET=benchmark-jwt-secret-key-for-local-testing-only-minimum-256-bits
+      - LOGGING_LEVEL_ORG_HIBERNATE_SQL=DEBUG
+      - LOGGING_LEVEL_ORG_HIBERNATE_TYPE_DESCRIPTOR_SQL=TRACE
+    depends_on:
+      mysql:
+        condition: service_healthy
+      redis:
+        condition: service_started
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8080/actuator/health"]
+      interval: 10s
+      timeout: 5s
+      retries: 10
+      start_period: 60s
+    networks:
+      - benchmark-network
+
+  # ============================================
+  # MySQL Database
+  # ============================================
+  mysql:
+    image: mysql:8.0
+    container_name: hamalog-benchmark-mysql
+    ports:
+      - "3307:3306"
+    environment:
+      - MYSQL_DATABASE=hamalog_benchmark
+      - MYSQL_ROOT_PASSWORD=benchmark
+      - MYSQL_CHARACTER_SET_SERVER=utf8mb4
+      - MYSQL_COLLATION_SERVER=utf8mb4_unicode_ci
+    volumes:
+      - ./scripts/benchmark/init-benchmark-data.sql:/docker-entrypoint-initdb.d/99-init-data.sql
+      - benchmark-mysql-data:/var/lib/mysql
+    command: --default-authentication-plugin=mysql_native_password
+    healthcheck:
+      test: ["CMD", "mysqladmin", "ping", "-h", "localhost", "-u", "root", "-pbenchmark"]
+      interval: 5s
+      timeout: 5s
+      retries: 20
+      start_period: 30s
+    networks:
+      - benchmark-network
+
+  # ============================================
+  # Redis (Rate Limiting용 - 벤치마크에서는 비활성화)
+  # ============================================
+  redis:
+    image: redis:7-alpine
+    container_name: hamalog-benchmark-redis
+    ports:
+      - "6380:6379"
+    networks:
+      - benchmark-network
+
+networks:
+  benchmark-network:
+    driver: bridge
+
+volumes:
+  benchmark-mysql-data:
+

@@ -59,9 +59,6 @@ class CsrfValidationFilterTest {
             stringWriter.write(text);
             return null;
         }).when(printWriter).write(anyString());
-
-        // 벤치마크 API Key 헤더는 기본적으로 null (벤치마크 요청 아님)
-        lenient().when(request.getHeader("X-Benchmark-API-Key")).thenReturn(null);
     }
 
     @Test
@@ -198,23 +195,6 @@ class CsrfValidationFilterTest {
         // then
         verify(filterChain).doFilter(request, response);
         verify(csrfTokenProvider, never()).validateToken(anyString(), anyString());
-    }
-
-    @Test
-    @DisplayName("X-Benchmark-API-Key 헤더가 있으면 CSRF 검증을 건너뛰어야 함")
-    void doFilterInternal_BenchmarkApiKeyHeader_ShouldSkipValidation() throws ServletException, IOException {
-        // given
-        given(request.getMethod()).willReturn("POST");
-        given(request.getRequestURI()).willReturn("/api/medication/schedules");
-        given(request.getHeader("X-Benchmark-API-Key")).willReturn("some-api-key");
-
-        // when
-        filter.doFilterInternal(request, response, filterChain);
-
-        // then
-        verify(filterChain).doFilter(request, response);
-        verify(csrfTokenProvider, never()).validateToken(anyString(), anyString());
-        verify(response, never()).setStatus(anyInt());
     }
 
     @Test

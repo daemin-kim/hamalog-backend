@@ -63,13 +63,6 @@ public class CsrfValidationFilter extends OncePerRequestFilter {
         
         String method = request.getMethod();
         String requestUri = request.getRequestURI();
-        
-        // X-Benchmark-API-Key 헤더가 있으면 벤치마크 요청으로 간주하여 CSRF 검증 건너뛰기
-        String benchmarkApiKey = request.getHeader("X-Benchmark-API-Key");
-        if (StringUtils.hasText(benchmarkApiKey)) {
-            filterChain.doFilter(request, response);
-            return;
-        }
 
         // CSRF 검증이 필요하지 않은 경우 건너뛰기
         if (!isCsrfValidationRequired(method, requestUri)) {

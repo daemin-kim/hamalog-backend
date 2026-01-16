@@ -57,7 +57,7 @@ public class BenchmarkController {
             queryType = "Naive (N+1 Problem)";
         }
 
-        // DTO 변환 (N+1 문제 발생 지점)
+        // DTO 변환 (Service에서 이미 medicationTimes 접근하여 N+1 발생/해결됨)
         List<MedicationScheduleResponse> responses = schedules.stream()
                 .map(MedicationScheduleResponse::from)
                 .toList();

@@ -1,0 +1,21 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<configuration>
+    <appender name="CONSOLE" class="ch.qos.logback.core.ConsoleAppender">
+        <encoder>
+            <pattern>%d{HH:mm:ss.SSS} [%thread] %-5level %logger{36} - %msg%n</pattern>
+        </encoder>
+    </appender>
+
+    <!-- Gatling 로그 레벨 설정 -->
+    <logger name="io.gatling" level="WARN"/>
+    <logger name="io.gatling.http.client" level="WARN"/>
+    <logger name="io.gatling.core" level="WARN"/>
+
+    <!-- 시뮬레이션 클래스 로그 -->
+    <logger name="com.Hamalog.simulation" level="INFO"/>
+
+    <root level="WARN">
+        <appender-ref ref="CONSOLE"/>
+    </root>
+</configuration>
+

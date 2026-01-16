@@ -28,6 +28,9 @@ spring:
         use_sql_comments: true
         # 쿼리 통계 활성화 (N+1 문제 확인용)
         generate_statistics: true
+        # ⚠️ 벤치마크용: 배치 패치 비활성화 (순수 N+1 문제 발생)
+        # 프로덕션에서는 100으로 설정되어 있음
+        default_batch_fetch_size: 1
     show-sql: true
 
   # Flyway 마이그레이션

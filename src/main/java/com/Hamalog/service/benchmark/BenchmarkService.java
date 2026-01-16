@@ -41,7 +41,16 @@ public class BenchmarkService {
         validateMemberExists(memberId);
 
         log.debug("[BENCHMARK] Executing optimized query (MedicationTimes fetch) for memberId: {}", memberId);
-        return medicationScheduleRepository.findAllByMemberIdOptimizedForBenchmark(memberId);
+        List<MedicationSchedule> schedules = medicationScheduleRepository.findAllByMemberIdOptimizedForBenchmark(memberId);
+
+        // JOIN FETCH로 이미 로드됨 - N+1 발생하지 않음
+        int totalTimes = 0;
+        for (MedicationSchedule schedule : schedules) {
+            totalTimes += schedule.getMedicationTimes().size();
+        }
+        log.debug("[BENCHMARK] Optimized query loaded {} schedules with {} medicationTimes", schedules.size(), totalTimes);
+
+        return schedules;
     }
 
     /**
@@ -54,7 +63,17 @@ public class BenchmarkService {
         validateMemberExists(memberId);
 
         log.debug("[BENCHMARK] Executing naive query (N+1 problem) for memberId: {}", memberId);
-        return medicationScheduleRepository.findAllByMemberIdNaive(memberId);
+        List<MedicationSchedule> schedules = medicationScheduleRepository.findAllByMemberIdNaive(memberId);
+
+        // N+1 문제 발생: 각 스케줄마다 medicationTimes 조회 쿼리 발생
+        // 트랜잭션 내에서 LAZY 컬렉션 접근하여 초기화
+        int totalTimes = 0;
+        for (MedicationSchedule schedule : schedules) {
+            totalTimes += schedule.getMedicationTimes().size();
+        }
+        log.debug("[BENCHMARK] Naive query loaded {} schedules with {} medicationTimes", schedules.size(), totalTimes);
+
+        return schedules;
     }
 
     /**

@@ -149,27 +149,33 @@ echo ""
 
 cd "$PROJECT_ROOT"
 
-GATLING_ARGS="-DbaseUrl=$REMOTE_URL -DbenchmarkApiKey=$BENCHMARK_API_KEY"
+# 환경변수로 설정 (Gatling JVM에서 System.getenv()로 읽음)
+export BASE_URL="$REMOTE_URL"
+export BENCHMARK_API_KEY="$BENCHMARK_API_KEY"
+export TEST_USER="benchmark@test.com"
+export TEST_PASSWORD="Benchmark1234!"
+
+echo -e "${YELLOW}설정된 환경변수:${NC}"
+echo -e "  BASE_URL: $BASE_URL"
+echo -e "  BENCHMARK_API_KEY: ${BENCHMARK_API_KEY:0:8}..."
+echo ""
 
 case "$SIMULATION_TYPE" in
     "medication")
         echo -e "${YELLOW}▶ 복약 스케줄 시뮬레이션 실행...${NC}"
         ./gradlew gatlingRun \
             -Dgatling.simulationClass=com.Hamalog.simulation.MedicationScheduleSimulation \
-            $GATLING_ARGS \
             --no-daemon
         ;;
     "auth")
         echo -e "${YELLOW}▶ 인증 시뮬레이션 실행...${NC}"
         ./gradlew gatlingRun \
             -Dgatling.simulationClass=com.Hamalog.simulation.AuthenticationSimulation \
-            $GATLING_ARGS \
             --no-daemon
         ;;
     "all"|*)
         echo -e "${YELLOW}▶ 모든 시뮬레이션 실행...${NC}"
         ./gradlew gatlingRun \
-            $GATLING_ARGS \
             --no-daemon
         ;;
 esac

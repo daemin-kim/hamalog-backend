@@ -9,8 +9,8 @@ import jakarta.servlet.http.HttpServletResponse;
 import java.io.IOException;
 import java.util.Map;
 import java.util.Set;
-import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.MediaType;
@@ -19,13 +19,23 @@ import org.springframework.web.filter.OncePerRequestFilter;
 
 @Slf4j
 @Component
-@RequiredArgsConstructor
 @ConditionalOnProperty(name = "spring.data.redis.host")
 public class RateLimitingFilter extends OncePerRequestFilter {
 
     private final RateLimitingService rateLimitingService;
     private final ObjectMapper objectMapper;
     private final TrustedProxyService trustedProxyService;
+
+    @Value("${benchmark.api-key:}")
+    private String configuredBenchmarkApiKey;
+
+    public RateLimitingFilter(RateLimitingService rateLimitingService,
+                              ObjectMapper objectMapper,
+                              TrustedProxyService trustedProxyService) {
+        this.rateLimitingService = rateLimitingService;
+        this.objectMapper = objectMapper;
+        this.trustedProxyService = trustedProxyService;
+    }
 
     private static final Set<String> AUTH_ENDPOINTS = Set.of(
         "/auth/login",
@@ -46,10 +56,16 @@ public class RateLimitingFilter extends OncePerRequestFilter {
         // 벤치마크 API Key가 있으면 Rate Limiting 우회 (프로덕션 성능 테스트용)
         String benchmarkApiKey = request.getHeader("X-Benchmark-API-Key");
         if (benchmarkApiKey != null && !benchmarkApiKey.isEmpty()) {
-            log.debug("[RATE_LIMIT] Bypassing rate limit for benchmark request - URI: {}",
-                    request.getRequestURI());
-            filterChain.doFilter(request, response);
-            return;
+            // 서버에 설정된 API Key와 일치하는지 확인 (설정이 없으면 헤더만 있어도 허용)
+            if (configuredBenchmarkApiKey.isEmpty() || configuredBenchmarkApiKey.equals(benchmarkApiKey)) {
+                log.info("[RATE_LIMIT] Bypassing rate limit for benchmark request - URI: {}",
+                        request.getRequestURI());
+                filterChain.doFilter(request, response);
+                return;
+            } else {
+                log.warn("[RATE_LIMIT] Invalid benchmark API key provided - URI: {}",
+                        request.getRequestURI());
+            }
         }
 
         String requestURI = request.getRequestURI();

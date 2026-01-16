@@ -23,6 +23,7 @@ import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.MediaType;
+import org.springframework.test.util.ReflectionTestUtils;
 
 @ExtendWith(MockitoExtension.class)
 @DisplayName("Rate Limiting Filter Tests")
@@ -61,6 +62,8 @@ class RateLimitingFilterTest {
         lenient().when(request.getRemoteAddr()).thenReturn("192.168.0.10");
         // 벤치마크 API Key 헤더는 기본적으로 null 반환 (Rate Limiting 정상 작동)
         lenient().when(request.getHeader("X-Benchmark-API-Key")).thenReturn(null);
+        // configuredBenchmarkApiKey 필드 기본값 설정
+        ReflectionTestUtils.setField(rateLimitingFilter, "configuredBenchmarkApiKey", "");
     }
 
     @Test
@@ -459,6 +462,43 @@ class RateLimitingFilterTest {
     void doFilterInternal_EmptyBenchmarkApiKey_AppliesRateLimit() throws ServletException, IOException {
         // given
         when(request.getHeader("X-Benchmark-API-Key")).thenReturn("");
+        when(request.getRequestURI()).thenReturn("/auth/login");
+        when(rateLimitingService.tryConsumeAuthRequest(anyString())).thenReturn(true);
+
+        RateLimitingService.RateLimitInfo rateLimitInfo =
+            new RateLimitingService.RateLimitInfo(10, 100, 5);
+        when(rateLimitingService.getRateLimitInfo(anyString(), eq(true))).thenReturn(rateLimitInfo);
+
+        // when
+        rateLimitingFilter.doFilterInternal(request, response, filterChain);
+
+        // then
+        verify(rateLimitingService).tryConsumeAuthRequest(anyString());
+        verify(filterChain).doFilter(request, response);
+    }
+
+    @Test
+    @DisplayName("서버에 설정된 벤치마크 API Key와 일치하면 Rate Limiting 우회")
+    void doFilterInternal_MatchingConfiguredApiKey_BypassesRateLimit() throws ServletException, IOException {
+        // given
+        ReflectionTestUtils.setField(rateLimitingFilter, "configuredBenchmarkApiKey", "test-api-key");
+        when(request.getHeader("X-Benchmark-API-Key")).thenReturn("test-api-key");
+        when(request.getRequestURI()).thenReturn("/auth/login");
+
+        // when
+        rateLimitingFilter.doFilterInternal(request, response, filterChain);
+
+        // then
+        verify(filterChain).doFilter(request, response);
+        verify(rateLimitingService, never()).tryConsumeAuthRequest(anyString());
+    }
+
+    @Test
+    @DisplayName("서버에 설정된 벤치마크 API Key와 불일치하면 Rate Limiting 적용")
+    void doFilterInternal_MismatchingConfiguredApiKey_AppliesRateLimit() throws ServletException, IOException {
+        // given
+        ReflectionTestUtils.setField(rateLimitingFilter, "configuredBenchmarkApiKey", "correct-api-key");
+        when(request.getHeader("X-Benchmark-API-Key")).thenReturn("wrong-api-key");
         when(request.getRequestURI()).thenReturn("/auth/login");
         when(rateLimitingService.tryConsumeAuthRequest(anyString())).thenReturn(true);
 

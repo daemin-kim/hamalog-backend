@@ -18,12 +18,36 @@ import java.time.Duration
 class MedicationScheduleSimulation : Simulation() {
 
     // 환경 설정 (시스템 프로퍼티로 오버라이드 가능)
-    private val baseUrl = System.getProperty("baseUrl", "http://localhost:8080")
-    private val testUserLoginId = System.getProperty("testUser", "benchmark@test.com")
-    private val testUserPassword = System.getProperty("testPassword", "Benchmark1234!")
+    private val baseUrl = System.getProperty("baseUrl")
+        ?: System.getenv("BASE_URL")
+        ?: "http://localhost:8080"
+    private val testUserLoginId = System.getProperty("testUser")
+        ?: System.getenv("TEST_USER")
+        ?: "benchmark@test.com"
+    private val testUserPassword = System.getProperty("testPassword")
+        ?: System.getenv("TEST_PASSWORD")
+        ?: "Benchmark1234!"
 
     // 벤치마크 API 인증용 (프로덕션 환경에서 필요)
-    private val benchmarkApiKey = System.getProperty("benchmarkApiKey", "")
+    private val benchmarkApiKey = System.getProperty("benchmarkApiKey")
+        ?: System.getenv("BENCHMARK_API_KEY")
+        ?: ""
+
+    init {
+        // 디버깅용: 설정값 출력
+        println("=== Gatling Simulation Config ===")
+        println("baseUrl: $baseUrl")
+        println(
+            "benchmarkApiKey: ${if (benchmarkApiKey.isNotEmpty()) {
+                "SET (${benchmarkApiKey.take(
+                    8,
+                )}...)"
+            } else {
+                "NOT SET"
+            }}",
+        )
+        println("================================")
+    }
 
     private val httpProtocol = http
         .baseUrl(baseUrl)

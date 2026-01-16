@@ -18,10 +18,30 @@ import java.time.Duration
  */
 class AuthenticationSimulation : Simulation() {
 
-    private val baseUrl = System.getProperty("baseUrl", "http://localhost:8080")
+    private val baseUrl = System.getProperty("baseUrl")
+        ?: System.getenv("BASE_URL")
+        ?: "http://localhost:8080"
 
     // 벤치마크 API 인증용 (프로덕션 환경에서 필요)
-    private val benchmarkApiKey = System.getProperty("benchmarkApiKey", "")
+    private val benchmarkApiKey = System.getProperty("benchmarkApiKey")
+        ?: System.getenv("BENCHMARK_API_KEY")
+        ?: ""
+
+    init {
+        // 디버깅용: 설정값 출력
+        println("=== Auth Simulation Config ===")
+        println("baseUrl: $baseUrl")
+        println(
+            "benchmarkApiKey: ${if (benchmarkApiKey.isNotEmpty()) {
+                "SET (${benchmarkApiKey.take(
+                    8,
+                )}...)"
+            } else {
+                "NOT SET"
+            }}",
+        )
+        println("==============================")
+    }
 
     private val httpProtocol = http
         .baseUrl(baseUrl)

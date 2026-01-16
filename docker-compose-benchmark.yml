@@ -30,7 +30,8 @@ services:
       - SPRING_DATA_REDIS_PORT=6379
       - SPRING_JPA_HIBERNATE_DDL_AUTO=none
       - SPRING_FLYWAY_ENABLED=true
-      - JWT_SECRET=benchmark-jwt-secret-key-for-local-testing-only-minimum-256-bits
+      # Base64 인코딩된 256비트 JWT 시크릿 (32바이트)
+      - JWT_SECRET=YmVuY2htYXJrLWp3dC1zZWNyZXQta2V5LWZvci1sb2NhbC10ZXN0aW5nLW9ubHk=
       - LOGGING_LEVEL_ORG_HIBERNATE_SQL=DEBUG
       - LOGGING_LEVEL_ORG_HIBERNATE_TYPE_DESCRIPTOR_SQL=TRACE
     depends_on:

@@ -1,27 +1,9 @@
 -- Hamalog Database Schema V2
--- 신규 기능 추가: 이미지 관리, 로그인 이력, 그룹 관리 개선
+-- 신규 기능 추가: 로그인 이력, 그룹 관리 개선
 -- 작성일: 2025-12-23
+-- 수정: 2026-01-16 - V1에 이미 있는 컬럼 제거
 
--- 1. MedicationSchedule에 이미지 경로 컬럼 추가 (이미지 관리 API용)
--- MySQL 8.0에서는 ADD COLUMN IF NOT EXISTS가 지원되지 않으므로 프로시저 사용
-DROP PROCEDURE IF EXISTS add_image_path_column;
-DELIMITER //
-CREATE PROCEDURE add_image_path_column()
-BEGIN
-    IF NOT EXISTS (
-        SELECT 1 FROM INFORMATION_SCHEMA.COLUMNS
-        WHERE TABLE_SCHEMA = DATABASE()
-        AND TABLE_NAME = 'medication_schedule'
-        AND COLUMN_NAME = 'image_path'
-    ) THEN
-        ALTER TABLE medication_schedule ADD COLUMN image_path VARCHAR(500) NULL COMMENT '저장된 이미지 파일 경로';
-    END IF;
-END //
-DELIMITER ;
-CALL add_image_path_column();
-DROP PROCEDURE IF EXISTS add_image_path_column;
-
--- 2. 로그인 이력 테이블 생성 (보안 개선)
+-- 1. 로그인 이력 테이블 생성 (보안 개선)
 CREATE TABLE IF NOT EXISTS login_history (
     login_history_id BIGINT AUTO_INCREMENT PRIMARY KEY,
     member_id BIGINT NOT NULL,
@@ -42,7 +24,7 @@ CREATE TABLE IF NOT EXISTS login_history (
     FOREIGN KEY (member_id) REFERENCES member(member_id) ON DELETE CASCADE
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci COMMENT='로그인 이력 관리';
 
--- 3. MedicationScheduleGroup 테이블 개선 (member_id 추가)
+-- 2. MedicationScheduleGroup 테이블 개선 (member_id 추가)
 -- MySQL 8.0 호환 - 프로시저로 조건부 컬럼 추가
 DROP PROCEDURE IF EXISTS add_schedule_group_columns;
 DELIMITER //
@@ -88,58 +70,6 @@ DELIMITER ;
 CALL add_schedule_group_columns();
 DROP PROCEDURE IF EXISTS add_schedule_group_columns;
 
--- member_id가 NULL인 경우를 위한 인덱스는 나중에 데이터 마이그레이션 후 추가
--- ALTER TABLE medication_schedule_group ADD INDEX idx_schedule_group_member (member_id);
-
--- 4. 알림 설정 테이블 (푸시 알림 관리용)
-CREATE TABLE IF NOT EXISTS notification_settings (
-    notification_settings_id BIGINT AUTO_INCREMENT PRIMARY KEY,
-    member_id BIGINT NOT NULL UNIQUE,
-    fcm_token VARCHAR(500) NULL COMMENT 'Firebase Cloud Messaging 토큰',
-    push_enabled BOOLEAN DEFAULT TRUE COMMENT '푸시 알림 활성화',
-    medication_reminder BOOLEAN DEFAULT TRUE COMMENT '복약 알림',
-    diary_reminder BOOLEAN DEFAULT TRUE COMMENT '일기 작성 알림',
-    quiet_hours_start TIME NULL COMMENT '방해금지 시작 시간',
-    quiet_hours_end TIME NULL COMMENT '방해금지 종료 시간',
-    updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
-    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-    INDEX idx_notification_member (member_id),
-    FOREIGN KEY (member_id) REFERENCES member(member_id) ON DELETE CASCADE
-) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci COMMENT='알림 설정';
-
--- 5. mood_diary 테이블에 template_answer4 컬럼 추가 (기존에 없다면)
-DROP PROCEDURE IF EXISTS add_mood_diary_column;
-DELIMITER //
-CREATE PROCEDURE add_mood_diary_column()
-BEGIN
-    IF NOT EXISTS (
-        SELECT 1 FROM INFORMATION_SCHEMA.COLUMNS
-        WHERE TABLE_SCHEMA = DATABASE()
-        AND TABLE_NAME = 'mood_diary'
-        AND COLUMN_NAME = 'template_answer4'
-    ) THEN
-        ALTER TABLE mood_diary ADD COLUMN template_answer4 TEXT NULL COMMENT '템플릿 답변 4';
-    END IF;
-END //
-DELIMITER ;
-CALL add_mood_diary_column();
-DROP PROCEDURE IF EXISTS add_mood_diary_column;
-
--- 6. medication_schedule에 활성 상태 컬럼 추가 (필터링용)
-DROP PROCEDURE IF EXISTS add_is_active_column;
-DELIMITER //
-CREATE PROCEDURE add_is_active_column()
-BEGIN
-    IF NOT EXISTS (
-        SELECT 1 FROM INFORMATION_SCHEMA.COLUMNS
-        WHERE TABLE_SCHEMA = DATABASE()
-        AND TABLE_NAME = 'medication_schedule'
-        AND COLUMN_NAME = 'is_active'
-    ) THEN
-        ALTER TABLE medication_schedule ADD COLUMN is_active BOOLEAN DEFAULT TRUE COMMENT '활성 상태';
-    END IF;
-END //
-DELIMITER ;
-CALL add_is_active_column();
-DROP PROCEDURE IF EXISTS add_is_active_column;
+-- 3. mood_diary 테이블에 template_answer4 컬럼은 이미 V1에서 추가됨
+-- 빈 섹션으로 유지
 

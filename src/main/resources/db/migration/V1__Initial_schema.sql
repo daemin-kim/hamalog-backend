@@ -22,12 +22,19 @@ CREATE TABLE IF NOT EXISTS member (
 CREATE TABLE IF NOT EXISTS refresh_tokens (
     id BIGINT AUTO_INCREMENT PRIMARY KEY,
     member_id BIGINT NOT NULL,
-    token_value VARCHAR(512) NOT NULL UNIQUE,
-    created_at TIMESTAMP NOT NULL,
-    expires_at TIMESTAMP NOT NULL,
-    rotated_at TIMESTAMP,
+    token_value VARCHAR(500) NOT NULL UNIQUE,
+    created_at DATETIME NOT NULL,
+    expires_at DATETIME NOT NULL,
+    rotated_at DATETIME NOT NULL,
+    last_used_at DATETIME,
+    reuse_detected_at DATETIME,
+    reuse_client_fingerprint VARCHAR(255),
+    reuse_detected BOOLEAN NOT NULL DEFAULT FALSE,
+    reuse_count BIGINT NOT NULL DEFAULT 0,
+    revoked BOOLEAN NOT NULL DEFAULT FALSE,
     INDEX idx_refresh_tokens_member_id (member_id),
     INDEX idx_refresh_tokens_token_value (token_value),
+    INDEX idx_refresh_tokens_expires_at (expires_at),
     FOREIGN KEY (member_id) REFERENCES member(member_id) ON DELETE CASCADE
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
@@ -35,15 +42,17 @@ CREATE TABLE IF NOT EXISTS refresh_tokens (
 CREATE TABLE IF NOT EXISTS mood_diary (
     mood_diary_id BIGINT AUTO_INCREMENT PRIMARY KEY,
     member_id BIGINT NOT NULL,
-    mood_type VARCHAR(50) NOT NULL,
-    diary_type VARCHAR(50) NOT NULL,
-    content TEXT,
-    template_answer1 TEXT,
-    template_answer2 TEXT,
-    template_answer3 TEXT,
+    mood_type VARCHAR(20) NOT NULL,
+    diary_type VARCHAR(20) NOT NULL,
+    template_answer1 VARCHAR(500),
+    template_answer2 VARCHAR(500),
+    template_answer3 VARCHAR(500),
+    template_answer4 VARCHAR(500),
+    free_content VARCHAR(1500),
     diary_date DATE NOT NULL,
-    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-    INDEX idx_mood_diary_member_date (member_id, diary_date),
+    created_at DATETIME NOT NULL,
+    INDEX idx_mood_diary_member_id (member_id),
+    INDEX idx_mood_diary_diary_date (diary_date),
     UNIQUE KEY uk_mood_diary_member_date (member_id, diary_date),
     FOREIGN KEY (member_id) REFERENCES member(member_id) ON DELETE CASCADE
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
@@ -94,13 +103,13 @@ CREATE TABLE IF NOT EXISTS medication_time (
 CREATE TABLE IF NOT EXISTS medication_record (
     medication_record_id BIGINT AUTO_INCREMENT PRIMARY KEY,
     medication_schedule_id BIGINT NOT NULL,
-    is_taken BOOLEAN DEFAULT FALSE,
-    taken_at TIMESTAMP,
-    scheduled_time TIME,
-    record_date DATE NOT NULL,
-    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-    INDEX idx_medication_record_schedule_date (medication_schedule_id, record_date),
-    FOREIGN KEY (medication_schedule_id) REFERENCES medication_schedule(medication_schedule_id) ON DELETE CASCADE
+    medication_time_id BIGINT NOT NULL,
+    is_take_medication BOOLEAN NOT NULL DEFAULT FALSE,
+    real_take_time DATETIME,
+    version BIGINT DEFAULT 0,
+    INDEX idx_medication_record_schedule (medication_schedule_id),
+    FOREIGN KEY (medication_schedule_id) REFERENCES medication_schedule(medication_schedule_id) ON DELETE CASCADE,
+    FOREIGN KEY (medication_time_id) REFERENCES medication_time(medication_time_id) ON DELETE CASCADE
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
 -- 9. Side Effect (부작용) 테이블
@@ -121,12 +130,13 @@ CREATE TABLE IF NOT EXISTS side_effect_degree (
 CREATE TABLE IF NOT EXISTS side_effect_record (
     side_effect_record_id BIGINT AUTO_INCREMENT PRIMARY KEY,
     member_id BIGINT NOT NULL,
-    degree VARCHAR(50),
-    note TEXT,
-    record_date DATE NOT NULL,
-    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-    INDEX idx_side_effect_record_member_date (member_id, record_date),
-    FOREIGN KEY (member_id) REFERENCES member(member_id) ON DELETE CASCADE
+    linked_medication_schedule_id BIGINT NULL COMMENT '연계된 복약 스케줄 ID (선택)',
+    created_at DATETIME NOT NULL,
+    description TEXT,
+    INDEX idx_side_effect_record_member (member_id),
+    INDEX idx_side_effect_linked_schedule (linked_medication_schedule_id),
+    FOREIGN KEY (member_id) REFERENCES member(member_id) ON DELETE CASCADE,
+    FOREIGN KEY (linked_medication_schedule_id) REFERENCES medication_schedule(medication_schedule_id) ON DELETE SET NULL
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
 -- 12. Side Effect - Side Effect Record 연결 테이블

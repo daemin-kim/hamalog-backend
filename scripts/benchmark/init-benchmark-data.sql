@@ -86,7 +86,7 @@ FROM (
 -- ============================================
 -- 아침, 점심, 저녁 시간대로 생성
 INSERT IGNORE INTO medication_time (
-    medication_time_id, medication_schedule_id, take_time
+    medication_time_id, medication_schedule_id, time
 )
 SELECT
     (schedule_id - 1) * 3 + time_offset,

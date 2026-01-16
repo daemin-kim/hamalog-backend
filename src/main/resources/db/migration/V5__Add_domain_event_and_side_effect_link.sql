@@ -1,8 +1,8 @@
--- V5: 도메인 이벤트 저장소 및 부작용-복약 연계 필드 추가
+-- V5: 도메인 이벤트 저장소 추가
 -- 이벤트 소싱 및 감사 로그를 위한 테이블
 
 -- 도메인 이벤트 저장 테이블
-CREATE TABLE domain_event (
+CREATE TABLE IF NOT EXISTS domain_event (
     id BIGINT AUTO_INCREMENT PRIMARY KEY,
     event_id VARCHAR(100) NOT NULL COMMENT '이벤트 고유 ID (UUID)',
     event_type VARCHAR(100) NOT NULL COMMENT '이벤트 타입 (클래스명)',
@@ -23,15 +23,5 @@ CREATE TABLE domain_event (
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci
 COMMENT='도메인 이벤트 저장소 - 감사 로그 및 이벤트 소싱용';
 
--- 부작용 기록에 복약 스케줄 연계 필드 추가
-ALTER TABLE side_effect_record
-ADD COLUMN linked_medication_schedule_id BIGINT NULL COMMENT '연계된 복약 스케줄 ID (선택)',
-ADD CONSTRAINT fk_side_effect_record_medication_schedule
-    FOREIGN KEY (linked_medication_schedule_id)
-    REFERENCES medication_schedule (medication_schedule_id)
-    ON DELETE SET NULL;
-
--- 복약 스케줄별 부작용 조회를 위한 인덱스
-CREATE INDEX idx_side_effect_linked_schedule
-ON side_effect_record (linked_medication_schedule_id);
+-- 부작용 기록에 linked_medication_schedule_id는 이미 V1에서 추가됨
 

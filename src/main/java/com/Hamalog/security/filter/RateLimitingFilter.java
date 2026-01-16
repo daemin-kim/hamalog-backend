@@ -43,6 +43,15 @@ public class RateLimitingFilter extends OncePerRequestFilter {
     protected void doFilterInternal(HttpServletRequest request, HttpServletResponse response, 
                                     FilterChain filterChain) throws ServletException, IOException {
         
+        // 벤치마크 API Key가 있으면 Rate Limiting 우회 (프로덕션 성능 테스트용)
+        String benchmarkApiKey = request.getHeader("X-Benchmark-API-Key");
+        if (benchmarkApiKey != null && !benchmarkApiKey.isEmpty()) {
+            log.debug("[RATE_LIMIT] Bypassing rate limit for benchmark request - URI: {}",
+                    request.getRequestURI());
+            filterChain.doFilter(request, response);
+            return;
+        }
+
         String requestURI = request.getRequestURI();
         String clientIp = getClientIpAddress(request);
         

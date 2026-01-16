@@ -59,6 +59,8 @@ class RateLimitingFilterTest {
         responseWriter = new StringWriter();
         lenient().when(trustedProxyService.isTrustedProxy(anyString())).thenReturn(false);
         lenient().when(request.getRemoteAddr()).thenReturn("192.168.0.10");
+        // 벤치마크 API Key 헤더는 기본적으로 null 반환 (Rate Limiting 정상 작동)
+        lenient().when(request.getHeader("X-Benchmark-API-Key")).thenReturn(null);
     }
 
     @Test
@@ -433,5 +435,42 @@ class RateLimitingFilterTest {
         verify(response).setStatus(HttpStatus.TOO_MANY_REQUESTS.value());
         verify(printWriter).write(expectedJsonResponse);
         verify(filterChain, never()).doFilter(request, response);
+    }
+
+    @Test
+    @DisplayName("벤치마크 API Key가 있으면 Rate Limiting 우회")
+    void doFilterInternal_BenchmarkApiKey_BypassesRateLimit() throws ServletException, IOException {
+        // given
+        when(request.getHeader("X-Benchmark-API-Key")).thenReturn("valid-benchmark-key");
+        when(request.getRequestURI()).thenReturn("/auth/login");
+
+        // when
+        rateLimitingFilter.doFilterInternal(request, response, filterChain);
+
+        // then
+        verify(filterChain).doFilter(request, response);
+        // Rate Limiting 서비스는 호출되지 않아야 함
+        verify(rateLimitingService, never()).tryConsumeAuthRequest(anyString());
+        verify(rateLimitingService, never()).tryConsumeApiRequest(anyString());
+    }
+
+    @Test
+    @DisplayName("벤치마크 API Key가 빈 문자열이면 Rate Limiting 적용")
+    void doFilterInternal_EmptyBenchmarkApiKey_AppliesRateLimit() throws ServletException, IOException {
+        // given
+        when(request.getHeader("X-Benchmark-API-Key")).thenReturn("");
+        when(request.getRequestURI()).thenReturn("/auth/login");
+        when(rateLimitingService.tryConsumeAuthRequest(anyString())).thenReturn(true);
+
+        RateLimitingService.RateLimitInfo rateLimitInfo =
+            new RateLimitingService.RateLimitInfo(10, 100, 5);
+        when(rateLimitingService.getRateLimitInfo(anyString(), eq(true))).thenReturn(rateLimitInfo);
+
+        // when
+        rateLimitingFilter.doFilterInternal(request, response, filterChain);
+
+        // then
+        verify(rateLimitingService).tryConsumeAuthRequest(anyString());
+        verify(filterChain).doFilter(request, response);
     }
 }

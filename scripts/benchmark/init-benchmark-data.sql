@@ -52,23 +52,21 @@ VALUES (
 -- ============================================
 -- 다양한 약물 이름으로 생성
 INSERT IGNORE INTO medication_schedule (
-    medication_schedule_id, member_id, medication_name, dosage, unit, frequency,
-    start_date, end_date, is_active, created_at, updated_at, version
+    medication_schedule_id, member_id, medication_name, medication_nickname, dosage,
+    alarm_type, daily_doses, start_date, end_date, is_active, created_at
 )
 SELECT
     n.num,
     1,
     CONCAT('TestMedication_', n.num),
+    CONCAT('약물별명_', n.num),
     CASE WHEN n.num % 3 = 0 THEN '1정' WHEN n.num % 3 = 1 THEN '2정' ELSE '0.5정' END,
-    'tablet',
-    CASE WHEN n.num % 4 = 0 THEN 'DAILY' WHEN n.num % 4 = 1 THEN 'TWICE_DAILY'
-         WHEN n.num % 4 = 2 THEN 'THREE_TIMES_DAILY' ELSE 'AS_NEEDED' END,
+    CASE WHEN n.num % 2 = 0 THEN 'SOUND' ELSE 'VIBE' END,
+    (n.num % 3) + 1,
     DATE_SUB(CURDATE(), INTERVAL (n.num % 30) DAY),
     DATE_ADD(CURDATE(), INTERVAL (90 + n.num % 60) DAY),
     TRUE,
-    NOW(),
-    NOW(),
-    0
+    NOW()
 FROM (
     SELECT a.N + b.N * 10 + 1 AS num
     FROM
@@ -85,7 +83,7 @@ FROM (
 -- ============================================
 -- 아침, 점심, 저녁 시간대로 생성
 INSERT IGNORE INTO medication_time (
-    medication_time_id, medication_schedule_id, time, created_at, updated_at
+    medication_time_id, medication_schedule_id, time
 )
 SELECT
     (schedule_id - 1) * 3 + time_offset,
@@ -94,9 +92,7 @@ SELECT
         WHEN 1 THEN '08:00:00'
         WHEN 2 THEN '13:00:00'
         WHEN 3 THEN '19:00:00'
-    END,
-    NOW(),
-    NOW()
+    END
 FROM (
     SELECT medication_schedule_id AS schedule_id
     FROM medication_schedule

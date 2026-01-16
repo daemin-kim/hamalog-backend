@@ -3,8 +3,23 @@
 -- 작성일: 2025-12-23
 
 -- 1. MedicationSchedule에 이미지 경로 컬럼 추가 (이미지 관리 API용)
-ALTER TABLE medication_schedule
-    ADD COLUMN IF NOT EXISTS image_path VARCHAR(500) NULL COMMENT '저장된 이미지 파일 경로';
+-- MySQL 8.0에서는 ADD COLUMN IF NOT EXISTS가 지원되지 않으므로 프로시저 사용
+DROP PROCEDURE IF EXISTS add_image_path_column;
+DELIMITER //
+CREATE PROCEDURE add_image_path_column()
+BEGIN
+    IF NOT EXISTS (
+        SELECT 1 FROM INFORMATION_SCHEMA.COLUMNS
+        WHERE TABLE_SCHEMA = DATABASE()
+        AND TABLE_NAME = 'medication_schedule'
+        AND COLUMN_NAME = 'image_path'
+    ) THEN
+        ALTER TABLE medication_schedule ADD COLUMN image_path VARCHAR(500) NULL COMMENT '저장된 이미지 파일 경로';
+    END IF;
+END //
+DELIMITER ;
+CALL add_image_path_column();
+DROP PROCEDURE IF EXISTS add_image_path_column;
 
 -- 2. 로그인 이력 테이블 생성 (보안 개선)
 CREATE TABLE IF NOT EXISTS login_history (
@@ -28,12 +43,50 @@ CREATE TABLE IF NOT EXISTS login_history (
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci COMMENT='로그인 이력 관리';
 
 -- 3. MedicationScheduleGroup 테이블 개선 (member_id 추가)
--- 기존 테이블에 member_id 컬럼이 없다면 추가
-ALTER TABLE medication_schedule_group
-    ADD COLUMN IF NOT EXISTS member_id BIGINT NULL COMMENT '회원 ID',
-    ADD COLUMN IF NOT EXISTS description VARCHAR(255) NULL COMMENT '그룹 설명',
-    ADD COLUMN IF NOT EXISTS color VARCHAR(7) NULL COMMENT '그룹 색상 (#RRGGBB)',
-    ADD COLUMN IF NOT EXISTS created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP;
+-- MySQL 8.0 호환 - 프로시저로 조건부 컬럼 추가
+DROP PROCEDURE IF EXISTS add_schedule_group_columns;
+DELIMITER //
+CREATE PROCEDURE add_schedule_group_columns()
+BEGIN
+    IF NOT EXISTS (
+        SELECT 1 FROM INFORMATION_SCHEMA.COLUMNS
+        WHERE TABLE_SCHEMA = DATABASE()
+        AND TABLE_NAME = 'medication_schedule_group'
+        AND COLUMN_NAME = 'member_id'
+    ) THEN
+        ALTER TABLE medication_schedule_group ADD COLUMN member_id BIGINT NULL COMMENT '회원 ID';
+    END IF;
+
+    IF NOT EXISTS (
+        SELECT 1 FROM INFORMATION_SCHEMA.COLUMNS
+        WHERE TABLE_SCHEMA = DATABASE()
+        AND TABLE_NAME = 'medication_schedule_group'
+        AND COLUMN_NAME = 'description'
+    ) THEN
+        ALTER TABLE medication_schedule_group ADD COLUMN description VARCHAR(255) NULL COMMENT '그룹 설명';
+    END IF;
+
+    IF NOT EXISTS (
+        SELECT 1 FROM INFORMATION_SCHEMA.COLUMNS
+        WHERE TABLE_SCHEMA = DATABASE()
+        AND TABLE_NAME = 'medication_schedule_group'
+        AND COLUMN_NAME = 'color'
+    ) THEN
+        ALTER TABLE medication_schedule_group ADD COLUMN color VARCHAR(7) NULL COMMENT '그룹 색상 (#RRGGBB)';
+    END IF;
+
+    IF NOT EXISTS (
+        SELECT 1 FROM INFORMATION_SCHEMA.COLUMNS
+        WHERE TABLE_SCHEMA = DATABASE()
+        AND TABLE_NAME = 'medication_schedule_group'
+        AND COLUMN_NAME = 'created_at'
+    ) THEN
+        ALTER TABLE medication_schedule_group ADD COLUMN created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP;
+    END IF;
+END //
+DELIMITER ;
+CALL add_schedule_group_columns();
+DROP PROCEDURE IF EXISTS add_schedule_group_columns;
 
 -- member_id가 NULL인 경우를 위한 인덱스는 나중에 데이터 마이그레이션 후 추가
 -- ALTER TABLE medication_schedule_group ADD INDEX idx_schedule_group_member (member_id);
@@ -55,10 +108,38 @@ CREATE TABLE IF NOT EXISTS notification_settings (
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci COMMENT='알림 설정';
 
 -- 5. mood_diary 테이블에 template_answer4 컬럼 추가 (기존에 없다면)
-ALTER TABLE mood_diary
-    ADD COLUMN IF NOT EXISTS template_answer4 TEXT NULL COMMENT '템플릿 답변 4';
+DROP PROCEDURE IF EXISTS add_mood_diary_column;
+DELIMITER //
+CREATE PROCEDURE add_mood_diary_column()
+BEGIN
+    IF NOT EXISTS (
+        SELECT 1 FROM INFORMATION_SCHEMA.COLUMNS
+        WHERE TABLE_SCHEMA = DATABASE()
+        AND TABLE_NAME = 'mood_diary'
+        AND COLUMN_NAME = 'template_answer4'
+    ) THEN
+        ALTER TABLE mood_diary ADD COLUMN template_answer4 TEXT NULL COMMENT '템플릿 답변 4';
+    END IF;
+END //
+DELIMITER ;
+CALL add_mood_diary_column();
+DROP PROCEDURE IF EXISTS add_mood_diary_column;
 
 -- 6. medication_schedule에 활성 상태 컬럼 추가 (필터링용)
-ALTER TABLE medication_schedule
-    ADD COLUMN IF NOT EXISTS is_active BOOLEAN DEFAULT TRUE COMMENT '활성 상태';
+DROP PROCEDURE IF EXISTS add_is_active_column;
+DELIMITER //
+CREATE PROCEDURE add_is_active_column()
+BEGIN
+    IF NOT EXISTS (
+        SELECT 1 FROM INFORMATION_SCHEMA.COLUMNS
+        WHERE TABLE_SCHEMA = DATABASE()
+        AND TABLE_NAME = 'medication_schedule'
+        AND COLUMN_NAME = 'is_active'
+    ) THEN
+        ALTER TABLE medication_schedule ADD COLUMN is_active BOOLEAN DEFAULT TRUE COMMENT '활성 상태';
+    END IF;
+END //
+DELIMITER ;
+CALL add_is_active_column();
+DROP PROCEDURE IF EXISTS add_is_active_column;
 

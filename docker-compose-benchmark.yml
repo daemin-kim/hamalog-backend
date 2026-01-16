@@ -62,7 +62,7 @@ services:
       - MYSQL_CHARACTER_SET_SERVER=utf8mb4
       - MYSQL_COLLATION_SERVER=utf8mb4_unicode_ci
     volumes:
-      - ./scripts/benchmark/init-benchmark-data.sql:/docker-entrypoint-initdb.d/99-init-data.sql
+      # init 스크립트는 앱 시작 후 별도로 실행 (Flyway 마이그레이션 후)
       - benchmark-mysql-data:/var/lib/mysql
     command: --default-authentication-plugin=mysql_native_password
     healthcheck:

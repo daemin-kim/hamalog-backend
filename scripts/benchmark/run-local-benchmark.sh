@@ -114,6 +114,24 @@ fi
 echo -e "${GREEN}✅ 서비스 시작 완료${NC}"
 
 # ============================================
+# 4.5. 테스트 데이터 로드 (Flyway 마이그레이션 후)
+# ============================================
+echo ""
+echo -e "${BLUE}[4.5/6] 테스트 데이터 로드 중...${NC}"
+
+# MySQL 컨테이너에 SQL 실행
+docker exec -i hamalog-benchmark-mysql mysql -uroot -pbenchmark hamalog_benchmark < "$PROJECT_ROOT/scripts/benchmark/init-benchmark-data.sql" 2>/dev/null
+
+if [ $? -eq 0 ]; then
+    echo -e "${GREEN}✅ 테스트 데이터 로드 완료${NC}"
+else
+    echo -e "${YELLOW}⚠️ 테스트 데이터 로드 실패 (이미 존재할 수 있음)${NC}"
+fi
+fi
+
+echo -e "${GREEN}✅ 서비스 시작 완료${NC}"
+
+# ============================================
 # 5. Gatling 벤치마크 실행
 # ============================================
 echo ""

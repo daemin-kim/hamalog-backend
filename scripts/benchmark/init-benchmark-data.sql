@@ -20,23 +20,23 @@
 -- 외래키 제약 조건 임시 비활성화
 SET FOREIGN_KEY_CHECKS = 0;
 
--- 기존 벤치마크 데이터 삭제
-DELETE FROM medication_time WHERE medication_schedule_id IN (
+-- 기존 벤치마크 데이터 삭제 (존재하는 경우만)
+DELETE IGNORE FROM medication_time WHERE medication_schedule_id IN (
     SELECT medication_schedule_id FROM medication_schedule WHERE member_id = 1
 );
-DELETE FROM medication_record WHERE medication_schedule_id IN (
+DELETE IGNORE FROM medication_record WHERE medication_schedule_id IN (
     SELECT medication_schedule_id FROM medication_schedule WHERE member_id = 1
 );
-DELETE FROM medication_schedule WHERE member_id = 1;
-DELETE FROM refresh_tokens WHERE member_id = 1;
-DELETE FROM member WHERE member_id = 1;
+DELETE IGNORE FROM medication_schedule WHERE member_id = 1;
+DELETE IGNORE FROM refresh_tokens WHERE member_id = 1;
+DELETE IGNORE FROM member WHERE member_id = 1;
 
 SET FOREIGN_KEY_CHECKS = 1;
 
 -- ============================================
 -- 벤치마크 사용자 생성
 -- ============================================
-INSERT INTO member (member_id, login_id, password, nickname, created_at, updated_at, version)
+INSERT IGNORE INTO member (member_id, login_id, password, nickname, created_at, updated_at, version)
 VALUES (
     1,
     'benchmark@test.com',
@@ -52,7 +52,7 @@ VALUES (
 -- 복약 스케줄 100개 생성
 -- ============================================
 -- 다양한 약물 이름으로 생성
-INSERT INTO medication_schedule (
+INSERT IGNORE INTO medication_schedule (
     medication_schedule_id, member_id, medication_name, dosage, unit, frequency,
     start_date, end_date, is_active, created_at, updated_at, version
 )
@@ -85,7 +85,7 @@ FROM (
 -- 복약 시간 300개 생성 (각 스케줄당 3개)
 -- ============================================
 -- 아침, 점심, 저녁 시간대로 생성
-INSERT INTO medication_time (
+INSERT IGNORE INTO medication_time (
     medication_time_id, medication_schedule_id, time, created_at, updated_at
 )
 SELECT

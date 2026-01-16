@@ -36,16 +36,15 @@ SET FOREIGN_KEY_CHECKS = 1;
 -- ============================================
 -- 벤치마크 사용자 생성
 -- ============================================
-INSERT IGNORE INTO member (member_id, login_id, password, nickname, created_at, updated_at, version)
+INSERT IGNORE INTO member (member_id, login_id, password, name, nick_name, created_at)
 VALUES (
     1,
     'benchmark@test.com',
     -- BCrypt encoded 'Benchmark1234!'
     '$2a$10$N9qo8uLOickgx2ZMRZoMy.MqrqgKLjHKvDqFfSqJHYT7YEqmPqK7W',
     'BenchmarkUser',
-    NOW(),
-    NOW(),
-    0
+    'benchmark',
+    NOW()
 );
 
 -- ============================================

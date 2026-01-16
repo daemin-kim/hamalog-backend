@@ -4,13 +4,17 @@
 -- 1. Member (회원) 테이블
 CREATE TABLE IF NOT EXISTS member (
     member_id BIGINT AUTO_INCREMENT PRIMARY KEY,
-    login_id VARCHAR(255) NOT NULL UNIQUE,
-    password VARCHAR(255) NOT NULL,
-    name VARCHAR(100) NOT NULL,
-    nick_name VARCHAR(100),
-    phone_number VARCHAR(20),
-    birth DATE,
-    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    login_id VARCHAR(100) NOT NULL UNIQUE,
+    password VARCHAR(60) NOT NULL,
+    name VARCHAR(15) NOT NULL,
+    phone_number VARCHAR(255) NOT NULL,
+    nickname VARCHAR(10) NOT NULL,
+    birthday VARCHAR(255) NOT NULL,
+    created_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    deletion_requested_at TIMESTAMP NULL,
+    deletion_due_at TIMESTAMP NULL,
+    deletion_scheduled BOOLEAN NOT NULL DEFAULT FALSE,
+    version BIGINT DEFAULT 0,
     INDEX idx_member_login_id (login_id)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
@@ -54,18 +58,17 @@ CREATE TABLE IF NOT EXISTS medication_schedule_group (
 CREATE TABLE IF NOT EXISTS medication_schedule (
     medication_schedule_id BIGINT AUTO_INCREMENT PRIMARY KEY,
     member_id BIGINT NOT NULL,
-    medication_name VARCHAR(255) NOT NULL,
-    medication_nickname VARCHAR(255),
-    dosage VARCHAR(100),
-    alarm_type VARCHAR(50),
-    alarm_time TIME,
-    daily_doses INT,
-    total_amount INT,
-    remaining_amount INT,
-    start_date DATE,
-    end_date DATE,
-    image_url VARCHAR(1000),
-    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    name VARCHAR(20) NOT NULL,
+    hospital_name VARCHAR(20) NOT NULL,
+    prescription_date DATE NOT NULL,
+    memo TEXT,
+    start_of_ad DATE NOT NULL,
+    prescription_days INT NOT NULL,
+    per_day INT NOT NULL,
+    alarm_type VARCHAR(50) NOT NULL,
+    image_path VARCHAR(500),
+    is_active BOOLEAN DEFAULT TRUE,
+    version BIGINT DEFAULT 0,
     INDEX idx_medication_schedule_member (member_id),
     FOREIGN KEY (member_id) REFERENCES member(member_id) ON DELETE CASCADE
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
@@ -83,7 +86,7 @@ CREATE TABLE IF NOT EXISTS medication_schedule_medication_schedule_group (
 CREATE TABLE IF NOT EXISTS medication_time (
     medication_time_id BIGINT AUTO_INCREMENT PRIMARY KEY,
     medication_schedule_id BIGINT NOT NULL,
-    time TIME NOT NULL,
+    take_time TIME NOT NULL,
     FOREIGN KEY (medication_schedule_id) REFERENCES medication_schedule(medication_schedule_id) ON DELETE CASCADE
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 

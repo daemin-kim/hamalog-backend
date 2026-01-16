@@ -36,15 +36,18 @@ SET FOREIGN_KEY_CHECKS = 1;
 -- ============================================
 -- 벤치마크 사용자 생성
 -- ============================================
-INSERT IGNORE INTO member (member_id, login_id, password, name, nick_name, created_at)
+INSERT IGNORE INTO member (member_id, login_id, password, name, phone_number, nickname, birthday, created_at, deletion_scheduled)
 VALUES (
     1,
     'benchmark@test.com',
     -- BCrypt encoded 'Benchmark1234!'
     '$2a$10$N9qo8uLOickgx2ZMRZoMy.MqrqgKLjHKvDqFfSqJHYT7YEqmPqK7W',
     'BenchmarkUser',
+    'encrypted_phone',
     'benchmark',
-    NOW()
+    'encrypted_date',
+    NOW(),
+    FALSE
 );
 
 -- ============================================
@@ -52,21 +55,21 @@ VALUES (
 -- ============================================
 -- 다양한 약물 이름으로 생성
 INSERT IGNORE INTO medication_schedule (
-    medication_schedule_id, member_id, medication_name, medication_nickname, dosage,
-    alarm_type, daily_doses, start_date, end_date, is_active, created_at
+    medication_schedule_id, member_id, name, hospital_name, prescription_date,
+    memo, start_of_ad, prescription_days, per_day, alarm_type, is_active
 )
 SELECT
     n.num,
     1,
-    CONCAT('TestMedication_', n.num),
-    CONCAT('약물별명_', n.num),
-    CASE WHEN n.num % 3 = 0 THEN '1정' WHEN n.num % 3 = 1 THEN '2정' ELSE '0.5정' END,
-    CASE WHEN n.num % 2 = 0 THEN 'SOUND' ELSE 'VIBE' END,
-    (n.num % 3) + 1,
+    CONCAT('TestMed_', n.num),
+    CONCAT('Hospital_', n.num),
     DATE_SUB(CURDATE(), INTERVAL (n.num % 30) DAY),
-    DATE_ADD(CURDATE(), INTERVAL (90 + n.num % 60) DAY),
-    TRUE,
-    NOW()
+    CONCAT('벤치마크 테스트 메모 #', n.num),
+    CURDATE(),
+    30 + (n.num % 60),
+    (n.num % 3) + 1,
+    CASE WHEN n.num % 2 = 0 THEN 'SOUND' ELSE 'VIBE' END,
+    TRUE
 FROM (
     SELECT a.N + b.N * 10 + 1 AS num
     FROM
@@ -83,7 +86,7 @@ FROM (
 -- ============================================
 -- 아침, 점심, 저녁 시간대로 생성
 INSERT IGNORE INTO medication_time (
-    medication_time_id, medication_schedule_id, time
+    medication_time_id, medication_schedule_id, take_time
 )
 SELECT
     (schedule_id - 1) * 3 + time_offset,

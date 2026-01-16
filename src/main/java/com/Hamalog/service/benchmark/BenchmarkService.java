@@ -32,7 +32,7 @@ public class BenchmarkService {
     private final EntityManager entityManager;
 
     /**
-     * 최적화된 쿼리로 복약 스케줄 조회 (@EntityGraph 사용)
+     * 최적화된 쿼리로 복약 스케줄 조회 (벤치마크용 - Member fetch 없음)
      *
      * @param memberId 회원 ID
      * @return 복약 스케줄 목록
@@ -40,8 +40,8 @@ public class BenchmarkService {
     public List<MedicationSchedule> getSchedulesOptimized(Long memberId) {
         validateMemberExists(memberId);
 
-        log.debug("[BENCHMARK] Executing optimized query with @EntityGraph for memberId: {}", memberId);
-        return medicationScheduleRepository.findAllByMember_MemberId(memberId);
+        log.debug("[BENCHMARK] Executing optimized query (MedicationTimes fetch) for memberId: {}", memberId);
+        return medicationScheduleRepository.findAllByMemberIdOptimizedForBenchmark(memberId);
     }
 
     /**

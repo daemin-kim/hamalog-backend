@@ -38,6 +38,11 @@ public interface MedicationScheduleRepository extends JpaRepository<MedicationSc
     @Query("SELECT ms FROM MedicationSchedule ms WHERE ms.member.memberId = :memberId")
     List<MedicationSchedule> findAllByMemberIdNaive(@Param("memberId") Long memberId);
 
+    // ⚠️ 벤치마크용: 최적화된 쿼리 (Member fetch 없이 - 암호화 필드 문제 우회)
+    // MedicationTime만 fetch하여 N+1 해결
+    @Query("SELECT DISTINCT ms FROM MedicationSchedule ms LEFT JOIN FETCH ms.medicationTimes WHERE ms.member.memberId = :memberId")
+    List<MedicationSchedule> findAllByMemberIdOptimizedForBenchmark(@Param("memberId") Long memberId);
+
     // DTO Projection: 엔티티 전체가 아닌 필요한 필드만 조회하여 성능 최적화
     @Query("SELECT new com.Hamalog.dto.medication.projection.MedicationScheduleProjection(" +
            "ms.medicationScheduleId, ms.member.memberId, ms.name, ms.hospitalName, " +

@@ -1,16 +1,21 @@
 package com.Hamalog.service.benchmark;
 
 import com.Hamalog.domain.medication.MedicationSchedule;
+import com.Hamalog.domain.member.Member;
+import com.Hamalog.dto.benchmark.MemberBenchmarkResponse;
 import com.Hamalog.exception.member.MemberNotFoundException;
 import com.Hamalog.repository.medication.MedicationScheduleRepository;
 import com.Hamalog.repository.member.MemberRepository;
+import com.Hamalog.service.auth.MemberCacheService;
 import jakarta.persistence.EntityManager;
 import java.util.List;
-import lombok.RequiredArgsConstructor;
+import java.util.Optional;
 import lombok.extern.slf4j.Slf4j;
 import org.hibernate.Session;
 import org.hibernate.stat.Statistics;
+import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.context.annotation.Profile;
+import org.springframework.data.redis.core.RedisTemplate;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -22,7 +27,6 @@ import org.springframework.transaction.annotation.Transactional;
  */
 @Service
 @Transactional(readOnly = true)
-@RequiredArgsConstructor
 @Slf4j
 @Profile({"dev", "test", "benchmark"})
 public class BenchmarkService {
@@ -30,6 +34,123 @@ public class BenchmarkService {
     private final MedicationScheduleRepository medicationScheduleRepository;
     private final MemberRepository memberRepository;
     private final EntityManager entityManager;
+    private final MemberCacheService memberCacheService;
+    private final RedisTemplate<String, Object> redisTemplate;
+
+    @Autowired
+    public BenchmarkService(
+            MedicationScheduleRepository medicationScheduleRepository,
+            MemberRepository memberRepository,
+            EntityManager entityManager,
+            @Autowired(required = false) MemberCacheService memberCacheService,
+            @Autowired(required = false) RedisTemplate<String, Object> redisTemplate) {
+        this.medicationScheduleRepository = medicationScheduleRepository;
+        this.memberRepository = memberRepository;
+        this.entityManager = entityManager;
+        this.memberCacheService = memberCacheService;
+        this.redisTemplate = redisTemplate;
+    }
+
+    // ============================================================
+    // 캐시 벤치마크 메서드
+    // ============================================================
+
+    /**
+     * 캐시를 통한 회원 조회 (Redis 캐시 HIT 시나리오)
+     *
+     * @param memberId 회원 ID
+     * @return 벤치마크 응답 (소스: REDIS_CACHE 또는 CACHE_MISS_THEN_DB)
+     */
+    public MemberBenchmarkResponse getMemberWithCache(Long memberId) {
+        if (memberCacheService == null) {
+            log.warn("[BENCHMARK] MemberCacheService not available, falling back to DB");
+            return getMemberDirectFromDb(memberId);
+        }
+
+        long startTime = System.nanoTime();
+        Optional<Member> memberOpt = memberCacheService.findById(memberId);
+        long endTime = System.nanoTime();
+        long elapsedNanos = endTime - startTime;
+
+        Member member = memberOpt.orElseThrow(MemberNotFoundException::new);
+
+        // 캐시 HIT 여부 판단: 3ms 미만이면 캐시 HIT로 간주
+        boolean cacheHit = elapsedNanos < 3_000_000; // 3ms
+
+        log.info("[BENCHMARK] Cache lookup - memberId: {}, time: {}ns ({}ms), cacheHit: {}",
+                memberId, elapsedNanos, elapsedNanos / 1_000_000.0, cacheHit);
+
+        if (cacheHit) {
+            return MemberBenchmarkResponse.fromCache(
+                    member.getMemberId(),
+                    member.getLoginId(),
+                    elapsedNanos
+            );
+        } else {
+            return MemberBenchmarkResponse.fromCacheMiss(
+                    member.getMemberId(),
+                    member.getLoginId(),
+                    elapsedNanos
+            );
+        }
+    }
+
+    /**
+     * DB 직접 조회 (캐시 우회)
+     *
+     * @param memberId 회원 ID
+     * @return 벤치마크 응답 (소스: DATABASE)
+     */
+    public MemberBenchmarkResponse getMemberDirectFromDb(Long memberId) {
+        long startTime = System.nanoTime();
+        Optional<Member> memberOpt = memberRepository.findById(memberId);
+        long endTime = System.nanoTime();
+        long elapsedNanos = endTime - startTime;
+
+        Member member = memberOpt.orElseThrow(MemberNotFoundException::new);
+
+        log.info("[BENCHMARK] Direct DB lookup - memberId: {}, time: {}ns ({}ms)",
+                memberId, elapsedNanos, elapsedNanos / 1_000_000.0);
+
+        return MemberBenchmarkResponse.fromDatabase(
+                member.getMemberId(),
+                member.getLoginId(),
+                elapsedNanos
+        );
+    }
+
+    /**
+     * 캐시 무효화
+     *
+     * @param memberId 회원 ID
+     */
+    public void evictMemberCache(Long memberId) {
+        if (memberCacheService != null) {
+            memberCacheService.evictByMemberId(memberId);
+            log.info("[BENCHMARK] Cache evicted for memberId: {}", memberId);
+        }
+
+        // 직접 Redis 키 삭제 (확실한 무효화)
+        if (redisTemplate != null) {
+            String cacheKey = "member::memberId:" + memberId;
+            Boolean deleted = redisTemplate.delete(cacheKey);
+            log.info("[BENCHMARK] Redis key deleted: {} = {}", cacheKey, deleted);
+        }
+    }
+
+    /**
+     * 캐시 워밍업 (MISS → DB 조회 → 캐시 저장)
+     *
+     * @param memberId 회원 ID
+     * @return 벤치마크 응답
+     */
+    public MemberBenchmarkResponse warmupMemberCache(Long memberId) {
+        // 먼저 캐시 무효화
+        evictMemberCache(memberId);
+
+        // 캐시 조회하면 MISS 발생 → DB 조회 → 캐시 저장
+        return getMemberWithCache(memberId);
+    }
 
     /**
      * 최적화된 쿼리로 복약 스케줄 조회 (벤치마크용 - Member fetch 없음)

@@ -1,6 +1,7 @@
 package com.Hamalog.controller.benchmark;
 
 import com.Hamalog.domain.medication.MedicationSchedule;
+import com.Hamalog.dto.benchmark.MemberBenchmarkResponse;
 import com.Hamalog.dto.medication.response.MedicationScheduleListResponse;
 import com.Hamalog.dto.medication.response.MedicationScheduleResponse;
 import com.Hamalog.service.benchmark.BenchmarkService;
@@ -104,4 +105,57 @@ public class BenchmarkController {
             int queryCount,
             long durationMs
     ) {}
+
+    // ============================================================
+    // 캐시 벤치마크 엔드포인트
+    // ============================================================
+
+    @Operation(summary = "캐시를 통한 회원 조회",
+            description = "Redis 캐시를 활용한 회원 조회 (캐시 HIT 시 빠른 응답)")
+    @GetMapping("/member/cache/{member-id}")
+    public ResponseEntity<MemberBenchmarkResponse> getMemberWithCache(
+            @Parameter(description = "회원 ID", required = true, example = "1")
+            @PathVariable("member-id") Long memberId
+    ) {
+        MemberBenchmarkResponse response = benchmarkService.getMemberWithCache(memberId);
+        log.info("[BENCHMARK] Cache lookup - source: {}, time: {}ms",
+                response.source(), response.queryTimeMs());
+        return ResponseEntity.ok(response);
+    }
+
+    @Operation(summary = "DB 직접 회원 조회 (캐시 우회)",
+            description = "캐시를 우회하고 DB에서 직접 조회")
+    @GetMapping("/member/db/{member-id}")
+    public ResponseEntity<MemberBenchmarkResponse> getMemberDirectFromDb(
+            @Parameter(description = "회원 ID", required = true, example = "1")
+            @PathVariable("member-id") Long memberId
+    ) {
+        MemberBenchmarkResponse response = benchmarkService.getMemberDirectFromDb(memberId);
+        log.info("[BENCHMARK] Direct DB lookup - time: {}ms", response.queryTimeMs());
+        return ResponseEntity.ok(response);
+    }
+
+    @Operation(summary = "캐시 워밍업",
+            description = "캐시를 무효화하고 새로 조회하여 캐시에 저장")
+    @PostMapping("/member/cache/warmup/{member-id}")
+    public ResponseEntity<MemberBenchmarkResponse> warmupMemberCache(
+            @Parameter(description = "회원 ID", required = true, example = "1")
+            @PathVariable("member-id") Long memberId
+    ) {
+        MemberBenchmarkResponse response = benchmarkService.warmupMemberCache(memberId);
+        log.info("[BENCHMARK] Cache warmup - source: {}, time: {}ms",
+                response.source(), response.queryTimeMs());
+        return ResponseEntity.ok(response);
+    }
+
+    @Operation(summary = "캐시 무효화",
+            description = "특정 회원의 캐시 삭제")
+    @DeleteMapping("/member/cache/{member-id}")
+    public ResponseEntity<String> evictMemberCache(
+            @Parameter(description = "회원 ID", required = true, example = "1")
+            @PathVariable("member-id") Long memberId
+    ) {
+        benchmarkService.evictMemberCache(memberId);
+        return ResponseEntity.ok("Cache evicted for memberId: " + memberId);
+    }
 }

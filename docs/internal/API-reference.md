@@ -106,6 +106,49 @@ API 요청 → Producer (발행) → Redis Stream → Consumer (소비) → FCM 
 
 ---
 
+## 내부 전용 API (개발/테스트 환경)
+
+### 벤치마크 API (`/api/v1/benchmark`)
+
+> ⚠️ **이 API는 개발/테스트/벤치마크 환경에서만 활성화됩니다.**
+> 프로덕션 환경에서는 `@Profile` 설정으로 비활성화됩니다.
+
+성능 테스트 및 N+1 문제 개선 효과를 측정하기 위한 내부 API입니다.
+
+#### 활성화 프로파일
+
+| 클래스 | 프로파일 | 설명 |
+|--------|----------|------|
+| `BenchmarkController` | `dev`, `test`, `benchmark` | 벤치마크 엔드포인트 |
+| `BenchmarkService` | `dev`, `test`, `benchmark` | 벤치마크 비즈니스 로직 |
+| `BenchmarkApiSecurityFilter` | `benchmark` | API Key 인증 필터 |
+
+#### 엔드포인트
+
+| 기능 | EndPoint | Method | 비고 |
+|------|----------|--------|------|
+| 헬스 체크 | `/api/v1/benchmark/health` | `GET` | API 활성화 확인 |
+| 복약 스케줄 조회 (Before/After) | `/api/v1/benchmark/medication-schedules/list/{member-id}` | `GET` | `?optimized=true/false` |
+| 쿼리 카운트 측정 | `/api/v1/benchmark/query-count/{member-id}` | `GET` | N+1 문제 쿼리 수 측정 |
+
+#### 벤치마크 보안 (benchmark 프로파일)
+
+benchmark 프로파일 활성화 시 `BenchmarkApiSecurityFilter`가 추가 보안을 적용합니다.
+
+| 설정 | 프로퍼티 | 설명 |
+|------|----------|------|
+| API Key | `hamalog.benchmark.api-key` | `X-Benchmark-API-Key` 헤더로 전송 |
+| IP 화이트리스트 | `hamalog.benchmark.allowed-ips` | 허용할 IP 목록 (콤마 구분) |
+
+**요청 예시:**
+```
+GET /api/v1/benchmark/health HTTP/1.1
+Host: localhost:8080
+X-Benchmark-API-Key: your-secret-api-key
+```
+
+---
+
 ## 데이터베이스 스키마
 
 ### ERD 개요
@@ -619,3 +662,21 @@ INSERT INTO side_effect (type, name) VALUES
     - **문서 간 일관성 개선**: 세 문서 간 상호 참조 링크 검증 완료
     - **버전 관리**: 문서 버전 1.5.0으로 갱신, 상세 변경 이력은 CHANGELOG.md 참조 안내 추가
     - **DDL 스키마 버전**: 2026-01-12로 갱신
+- **2026/01/20**: **미구현 컨트롤러 구현 및 프로젝트 정리**
+    - **ExportController 구현 완료**:
+        - `GET /export/my-data` - 전체 데이터 JSON 객체 반환
+        - `GET /export/my-data/download` - JSON 파일 다운로드
+        - `GET /export/medication-records` - 복약 기록 CSV 내보내기 (UTF-8 BOM)
+    - **MedicationScheduleGroupController 구현 완료**:
+        - `GET /medication-group` - 그룹 목록 조회
+        - `GET /medication-group/{group-id}` - 그룹 상세 조회
+        - `POST /medication-group` - 그룹 생성
+        - `PUT /medication-group/{group-id}` - 그룹 수정
+        - `DELETE /medication-group/{group-id}` - 그룹 삭제
+    - **보안 설정 개선**:
+        - CORS 허용 헤더에 `X-CSRF-TOKEN`, `X-FCM-Token` 추가
+    - **벤치마크 API (내부 전용)**: `/api/v1/benchmark/*`
+        - `@Profile({"dev", "test", "benchmark"})` - 개발/테스트 환경에서만 활성화
+        - `BenchmarkApiSecurityFilter` - API Key 인증 (`@Profile("benchmark")`)
+        - 공개 API 명세서에서 제외, 내부 문서에만 기록
+    - **문서 정리**: 공개 명세서 현행화, 프로젝트 구조 문서 신규 표시 정리

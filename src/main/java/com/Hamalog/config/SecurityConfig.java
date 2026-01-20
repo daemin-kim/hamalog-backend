@@ -206,6 +206,8 @@ public class SecurityConfig {
         config.addAllowedHeader("Content-Type");
         config.addAllowedHeader("Accept");
         config.addAllowedHeader("X-Requested-With");
+        config.addAllowedHeader("X-CSRF-TOKEN");  // CSRF 토큰 헤더 (SPA 필수)
+        config.addAllowedHeader("X-FCM-Token");   // FCM 토큰 비활성화 헤더
 
         // ✅ 필요한 HTTP 메서드만 허용
         config.addAllowedMethod("GET");

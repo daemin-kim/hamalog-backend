@@ -928,6 +928,7 @@ formData.append('image', imageFile); // 선택
 
 | 날짜 | 변경 내용 |
 |------|----------|
+| 2026-01-20 | ExportController 및 MedicationScheduleGroupController 구현, CORS 설정 X-CSRF-TOKEN 헤더 추가, 벤치마크 API는 공개 명세서에서 제외 |
 | 2026-01-12 | Redis Stream 비동기 알림 처리 섹션 추가, 문서 현행화 |
 | 2026-01-03 | 푸시 알림 API 추가 |
 | 2025-12-25 | FCM 토큰 관리, 알림 설정 API 추가 |

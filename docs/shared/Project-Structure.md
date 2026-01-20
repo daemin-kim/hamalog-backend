@@ -110,11 +110,12 @@ HTTP 요청을 처리하는 REST API 컨트롤러 계층입니다.
 | | `MedicationRecordController.java` | 복약 기록 관리, 배치 작업 |
 | | `MedicationStatsController.java` | 복약 통계 (이행률, 요약) |
 | | `MedicationTimeController.java` | 복약 알림 시간 CRUD |
-| | `MedicationScheduleGroupController.java` | 복약 스케줄 그룹 관리 **(신규)** |
+| | `MedicationScheduleGroupController.java` | 복약 스케줄 그룹 관리 |
 | `controller/oauth2/` | `OAuth2Controller.java` | 카카오 OAuth2 로그인 처리 |
 | `controller/sideEffect/` | `SideEffectController.java` | 부작용 기록 CRUD, 목록 조회 |
-| `controller/export/` | `ExportController.java` | 데이터 내보내기 (JSON/CSV) **(신규)** |
-| `controller/notification/` | `NotificationController.java` | 알림 설정 및 FCM 토큰 관리 **(신규)** |
+| `controller/export/` | `ExportController.java` | 데이터 내보내기 (JSON/CSV) |
+| `controller/notification/` | `NotificationController.java` | 알림 설정 및 FCM 토큰 관리 |
+| `controller/benchmark/` | `BenchmarkController.java` | 성능 벤치마크 전용 (개발/테스트 환경만) |
 
 ---
 
@@ -138,7 +139,7 @@ HTTP 요청을 처리하는 REST API 컨트롤러 계층입니다.
 | | `MedicationRecordService.java` | 복약 기록 비즈니스 로직, 배치 작업 |
 | | `MedicationStatsService.java` | 복약 이행률 및 통계 |
 | | `MedicationTimeService.java` | 복약 알림 시간 관리 |
-| | `MedicationScheduleGroupService.java` | 복약 스케줄 그룹 관리 **(신규)** |
+| | `MedicationScheduleGroupService.java` | 복약 스케줄 그룹 관리 |
 | | `FileStorageService.java` | 파일 저장/조회/삭제 서비스 |
 | | `MedicationScheduleEventHandler.java` | 복약 스케줄 이벤트 처리 |
 | `service/sideEffect/` | `SideEffectService.java` | 부작용 비즈니스 로직 |
@@ -149,18 +150,19 @@ HTTP 요청을 처리하는 REST API 컨트롤러 계층입니다.
 | | `RefreshTokenService.java` | 리프레시 토큰 관리 |
 | `service/i18n/` | `MessageService.java` | 다국어 메시지 서비스 |
 | `service/monitoring/` | `TransactionMetricsService.java` | 트랜잭션 메트릭 서비스 |
-| `service/export/` | `ExportService.java` | 데이터 내보내기 서비스 **(신규)** |
-| `service/notification/` | `NotificationSettingsService.java` | 알림 설정 및 FCM 토큰 관리 **(신규)** |
-| | `FcmPushService.java` | FCM 푸시 알림 발송 **(신규)** |
-| | `NotificationSchedulerService.java` | 알림 스케줄러 **(신규)** |
-| | `NotificationSettingsEventHandler.java` | 알림 설정 이벤트 핸들러 **(신규)** |
-| `service/queue/` | `MessageQueueService.java` | 메시지 발행 (Producer) **(신규)** |
-| | `NotificationConsumerService.java` | 메시지 소비 및 FCM 발송 **(신규)** |
-| | `QueuedNotificationService.java` | 큐 활성화 여부에 따른 Facade **(신규)** |
-| | `DiscordWebhookService.java` | DLQ 알림 발송 **(신규)** |
-| `service/queue/message/` | `NotificationMessage.java` | 알림 메시지 DTO **(신규)** |
-| | `NotificationType.java` | 알림 유형 상수 **(신규)** |
-| `service/alert/` | `DiscordAlertService.java` | Discord Webhook 알림 서비스 **(신규)** |
+| `service/export/` | `ExportService.java` | 데이터 내보내기 서비스 |
+| `service/notification/` | `NotificationSettingsService.java` | 알림 설정 및 FCM 토큰 관리 |
+| | `FcmPushService.java` | FCM 푸시 알림 발송 |
+| | `NotificationSchedulerService.java` | 알림 스케줄러 |
+| | `NotificationSettingsEventHandler.java` | 알림 설정 이벤트 핸들러 |
+| `service/queue/` | `MessageQueueService.java` | 메시지 발행 (Producer) |
+| | `NotificationConsumerService.java` | 메시지 소비 및 FCM 발송 |
+| | `QueuedNotificationService.java` | 큐 활성화 여부에 따른 Facade |
+| | `DiscordWebhookService.java` | DLQ 알림 발송 |
+| `service/queue/message/` | `NotificationMessage.java` | 알림 메시지 DTO |
+| | `NotificationType.java` | 알림 유형 상수 |
+| `service/alert/` | `DiscordAlertService.java` | Discord Webhook 알림 서비스 |
+| `service/benchmark/` | `BenchmarkService.java` | 성능 벤치마크 서비스 (개발/테스트 환경만) |
 
 ---
 
@@ -208,7 +210,7 @@ JPA 엔티티 및 도메인 모델을 정의합니다.
 | `repository/medication/` | `MedicationScheduleRepository.java` | 복약 스케줄 데이터 접근 |
 | | `MedicationRecordRepository.java` | 복약 기록 데이터 접근 |
 | | `MedicationTimeRepository.java` | 복약 시간 데이터 접근 |
-| | `MedicationScheduleGroupRepository.java` | 복약 그룹 데이터 접근 **(신규)** |
+| | `MedicationScheduleGroupRepository.java` | 복약 그룹 데이터 접근 |
 | `repository/sideEffect/` | `SideEffectRepository.java` | 부작용 데이터 접근 |
 | | `SideEffectRecordRepository.java` | 부작용 기록 데이터 접근 |
 | | `SideEffectSideEffectRecordRepository.java` | 부작용-기록 연결 데이터 접근 |
@@ -845,6 +847,30 @@ src/test/java/com/Hamalog/
 - `src/main/kotlin/com/Hamalog/` 디렉토리 구조 문서화
 - Kotlin 유틸리티 파일 (`DateExtensions.kt`, `StringExtensions.kt`) 반영
 - Kotlin DTO 디렉토리 구조 (`dto/medication/request`, `response`) 명시
+
+---
+
+### v1.4.0 (2026-01-20) - 미구현 컨트롤러 구현 및 보안 설정 정리
+
+#### 🆕 구현 완료
+
+**신규 컨트롤러 구현**
+| 컨트롤러 | 기능 | 엔드포인트 |
+|----------|------|-----------|
+| `ExportController` | 데이터 내보내기 (JSON/CSV) | `/export/*` |
+| `MedicationScheduleGroupController` | 복약 스케줄 그룹 관리 | `/medication-group/*` |
+
+**보안 설정 개선**
+- CORS 허용 헤더에 `X-CSRF-TOKEN`, `X-FCM-Token` 추가
+- 벤치마크 API는 개발/테스트 환경에서만 활성화 (`@Profile`)
+
+#### 📚 문서 정리
+- 공개 API 명세서에서 벤치마크 API 제외 (내부 문서만 기록)
+- 컨트롤러/서비스 목록 현행화 (**(신규)** 표시 정리)
+
+---
+
+### v1.3.0 (2026-01-12) - 프로젝트 정리 및 현행화
 
 **문서 간 일관성 개선**
 - API 명세서, API 참고 문서와 상호 참조 링크 검증

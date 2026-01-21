@@ -43,6 +43,9 @@ public class MedicationScheduleGroup {
     @Column(name = "created_at")
     private LocalDateTime createdAt;
 
+    @Version
+    private Long version;
+
     @PrePersist
     protected void onCreate() {
         this.createdAt = LocalDateTime.now();

@@ -22,6 +22,9 @@ public class MedicationTime {
     @Column(name = "take_time", nullable = false)
     private LocalTime takeTime;
 
+    @Version
+    private Long version;
+
     public MedicationTime(MedicationSchedule medicationSchedule, LocalTime takeTime) {
         this.medicationSchedule = medicationSchedule;
         this.takeTime = takeTime;

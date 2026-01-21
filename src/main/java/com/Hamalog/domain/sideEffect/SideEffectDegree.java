@@ -1,10 +1,13 @@
 package com.Hamalog.domain.sideEffect;
 
 import jakarta.persistence.*;
+import lombok.AccessLevel;
 import lombok.Getter;
+import lombok.NoArgsConstructor;
 
 @Entity
 @Getter
+@NoArgsConstructor(access = AccessLevel.PROTECTED)
 public class SideEffectDegree {
 
     @Id
@@ -16,4 +19,7 @@ public class SideEffectDegree {
     private SideEffectRecord sideEffectRecord;
 
     private Integer degree;
+
+    @Version
+    private Long version;
 }

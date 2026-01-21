@@ -55,6 +55,9 @@ public class SideEffectRecord {
     @Convert(converter = EncryptedStringConverter.class)
     private String description;
 
+    @Version
+    private Long version;
+
     // ========== 도메인 로직 (비즈니스 규칙) ==========
 
     /**

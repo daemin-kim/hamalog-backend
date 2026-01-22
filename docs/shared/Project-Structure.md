@@ -67,28 +67,52 @@ Hamalog/
 ├── .github/
 │   ├── workflows/
 │   │   └── ci.yml                           # GitHub Actions CI 파이프라인
-│   └── copilot-instructions.md              # GitHub Copilot 지시 파일 **(신규)**
+│   └── copilot-instructions.md              # GitHub Copilot 지시 파일
 ├── scripts/
-│   └── generate-crud.sh                     # CRUD 스캐폴딩 스크립트 **(신규)**
+│   ├── generate-crud.sh                     # CRUD 스캐폴딩 스크립트
+│   └── benchmark/                           # 벤치마크 스크립트
 ├── docs/
-│   ├── adr/                                 # Architecture Decision Records **(신규)**
-│   │   ├── 0001-adr-template.md
-│   │   ├── 0002-jwt-csrf-dual-protection.md
-│   │   ├── 0003-aop-cross-cutting-concerns.md
-│   │   ├── 0004-domain-event-pattern.md
-│   │   ├── 0005-redis-cache-strategy.md
-│   │   └── 0006-sensitive-data-encryption.md
-│   ├── VIBE-CODING-GUIDE.md                 # 바이브 코딩 가이드 **(신규)**
-│   ├── CODING-CONVENTIONS.md                # 코딩 컨벤션 **(신규)**
-│   └── ...                                  # 기타 문서
-├── .cursorrules                             # Cursor IDE 컨텍스트 **(신규)**
-├── CHANGELOG.md                             # 변경 이력 **(신규)**
+│   ├── README.md                            # 문서 가이드
+│   ├── PORTFOLIO.md                         # 메인 포트폴리오
+│   ├── PORTFOLIO-SUMMARY.md                 # 포트폴리오 요약
+│   ├── GITHUB-PROJECT-CARD.md               # GitHub 프로젝트 카드
+│   ├── shared/                              # 공유용 문서 (프론트엔드, 기획자)
+│   │   ├── API-specification.md
+│   │   ├── Project-Structure.md
+│   │   └── FUTURE-IMPROVEMENTS.md
+│   ├── internal/                            # 개발용 내부 문서
+│   │   ├── API-reference.md
+│   │   ├── CODING-CONVENTIONS.md
+│   │   ├── KOTLIN-GUIDE.md
+│   │   ├── PROJECT-AUDIT-GUIDE.md
+│   │   ├── IMPROVEMENT-TASKS.md
+│   │   ├── adr/                             # Architecture Decision Records
+│   │   │   ├── 0001-adr-template.md
+│   │   │   ├── 0002-jwt-csrf-dual-protection.md
+│   │   │   ├── 0003-aop-cross-cutting-concerns.md
+│   │   │   ├── 0004-domain-event-pattern.md
+│   │   │   ├── 0005-redis-cache-strategy.md
+│   │   │   ├── 0006-sensitive-data-encryption.md
+│   │   │   └── 0007-message-queue-redis-stream.md
+│   │   └── patterns/                        # 선언적 패턴 가이드
+│   │       ├── ANNOTATION-GUIDE.md
+│   │       ├── ERROR-HANDLING.md
+│   │       ├── SECURITY-PATTERNS.md
+│   │       ├── CACHING-PATTERNS.md
+│   │       ├── JPA-PERFORMANCE.md
+│   │       └── MESSAGE-QUEUE-PATTERNS.md
+│   ├── portfolio/                           # 기술적 도전 심층 분석 (9개)
+│   │   ├── README.md
+│   │   └── 01~09-*.md
+│   └── ai/                                  # AI 협업 가이드
+│       └── VIBE-CODING-GUIDE.md
+├── .cursorrules                             # Cursor IDE 컨텍스트
+├── CHANGELOG.md                             # 변경 이력
 ├── build.gradle                             # Gradle 빌드 설정
 ├── docker-compose.yml                       # Docker 컴포즈 (프로덕션)
 ├── docker-compose-dev.yml                   # Docker 컴포즈 (개발)
 ├── Dockerfile                               # Docker 이미지 빌드
 ├── nginx-docker.conf                        # Nginx 설정
-├── API-specification.md                     # API 명세서
 └── README.md                                # 프로젝트 소개
 ```
 

@@ -167,3 +167,62 @@ EOF
 echo -e "${GREEN}✅ 결과 저장: $RESULT_FILE${NC}"
 echo ""
 
+# ============================================================
+# 2-Tier 캐시 비교 (L1 Caffeine vs L2 Redis)
+# ============================================================
+
+echo -e "${BLUE}============================================${NC}"
+echo -e "${BLUE}   2-Tier 캐시 성능 비교 (L1 vs L2)${NC}"
+echo -e "${BLUE}============================================${NC}"
+echo ""
+
+# 2-Tier 벤치마크 API 호출
+TWO_TIER_RESPONSE=$(curl -s "$BASE_URL/api/v1/benchmark/cache/two-tier/$MEMBER_ID?iterations=$ITERATIONS")
+
+if [ -n "$TWO_TIER_RESPONSE" ]; then
+    # JSON 파싱
+    L1_AVG=$(echo "$TWO_TIER_RESPONSE" | grep -o '"l1Caffeine":{[^}]*"avgTimeMs":[0-9.]*' | grep -o '"avgTimeMs":[0-9.]*' | cut -d':' -f2)
+    L2_AVG=$(echo "$TWO_TIER_RESPONSE" | grep -o '"l2Redis":{[^}]*"avgTimeMs":[0-9.]*' | grep -o '"avgTimeMs":[0-9.]*' | cut -d':' -f2)
+    DB_AVG_2T=$(echo "$TWO_TIER_RESPONSE" | grep -o '"database":{[^}]*"avgTimeMs":[0-9.]*' | grep -o '"avgTimeMs":[0-9.]*' | cut -d':' -f2)
+    L1_VS_DB=$(echo "$TWO_TIER_RESPONSE" | grep -o '"l1VsDbSpeedup":[0-9.]*' | cut -d':' -f2)
+    L2_VS_DB=$(echo "$TWO_TIER_RESPONSE" | grep -o '"l2VsDbSpeedup":[0-9.]*' | cut -d':' -f2)
+    L1_VS_L2=$(echo "$TWO_TIER_RESPONSE" | grep -o '"l1VsL2Speedup":[0-9.]*' | cut -d':' -f2)
+
+    echo "┌──────────────────────┬────────────────┬────────────────┐"
+    echo "│ 캐시 레이어          │ 평균 응답시간  │ DB 대비 향상   │"
+    echo "├──────────────────────┼────────────────┼────────────────┤"
+    printf "│ %-20s │ %12.3fms │ %12.1fx │\n" "L1 (Caffeine)" "$L1_AVG" "$L1_VS_DB"
+    printf "│ %-20s │ %12.3fms │ %12.1fx │\n" "L2 (Redis)" "$L2_AVG" "$L2_VS_DB"
+    printf "│ %-20s │ %12.3fms │ %12s │\n" "Database" "$DB_AVG_2T" "baseline"
+    echo "└──────────────────────┴────────────────┴────────────────┘"
+    echo ""
+    echo -e "${GREEN}🚀 L1(Caffeine) vs L2(Redis): ${L1_VS_L2}배 빠름${NC}"
+    echo -e "${YELLOW}💡 L1 캐시는 네트워크 RTT가 없어 초고속 응답 가능${NC}"
+    echo ""
+
+    # 결과 파일에 2-Tier 비교 추가
+    cat >> "$RESULT_FILE" << EOF
+
+---
+
+## 2-Tier 캐시 비교 (L1 Caffeine vs L2 Redis)
+
+| 캐시 레이어 | 평균 응답시간 | DB 대비 향상 |
+|-------------|---------------|--------------|
+| **L1 (Caffeine)** | ${L1_AVG}ms | ${L1_VS_DB}x |
+| **L2 (Redis)** | ${L2_AVG}ms | ${L2_VS_DB}x |
+| **Database** | ${DB_AVG_2T}ms | baseline |
+
+### 핵심 인사이트
+
+- **L1 vs L2 성능차**: ${L1_VS_L2}배
+- **L1 캐시 장점**: 네트워크 RTT 제거로 0.1ms 미만 응답 가능
+- **L2 캐시 장점**: 분산 환경에서 캐시 공유, 서버 재시작 시에도 유지
+EOF
+
+    echo -e "${GREEN}✅ 2-Tier 비교 결과 추가됨${NC}"
+else
+    echo -e "${YELLOW}⚠️ 2-Tier 벤치마크 API 응답 없음 (서버가 지원하지 않을 수 있음)${NC}"
+fi
+
+echo ""

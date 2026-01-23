@@ -158,4 +158,71 @@ public class BenchmarkController {
         benchmarkService.evictMemberCache(memberId);
         return ResponseEntity.ok("Cache evicted for memberId: " + memberId);
     }
+
+    // ============================================================
+    // 2-Tier 캐시 벤치마크 엔드포인트 (L1 Caffeine vs L2 Redis)
+    // ============================================================
+
+    @Operation(summary = "2-Tier 캐시 성능 비교",
+            description = "L1(Caffeine) vs L2(Redis) vs DB 성능을 비교합니다.")
+    @GetMapping("/cache/two-tier/{member-id}")
+    public ResponseEntity<TwoTierCacheComparisonResult> compareTwoTierCache(
+            @Parameter(description = "회원 ID", required = true, example = "1")
+            @PathVariable("member-id") Long memberId,
+
+            @Parameter(description = "반복 횟수", example = "10")
+            @RequestParam(defaultValue = "10") int iterations
+    ) {
+        log.info("[2-TIER BENCHMARK] Starting comparison for memberId: {}, iterations: {}", memberId, iterations);
+
+        // DB 성능 측정
+        BenchmarkService.TwoTierBenchmarkResult dbResult = benchmarkService.measureDbPerformance(memberId, iterations);
+
+        // L2 (Redis) 성능 측정
+        BenchmarkService.TwoTierBenchmarkResult l2Result = benchmarkService.measureL2CachePerformance(memberId, iterations);
+
+        // L1 (Caffeine) 성능 측정
+        BenchmarkService.TwoTierBenchmarkResult l1Result = benchmarkService.measureL1CachePerformance(memberId, iterations);
+
+        // 성능 개선율 계산
+        double l1VsDb = dbResult.avgTimeMs() / l1Result.avgTimeMs();
+        double l2VsDb = dbResult.avgTimeMs() / l2Result.avgTimeMs();
+        double l1VsL2 = l2Result.avgTimeMs() / l1Result.avgTimeMs();
+
+        log.info("[2-TIER BENCHMARK] Results - L1: {}ms, L2: {}ms, DB: {}ms",
+                String.format("%.3f", l1Result.avgTimeMs()),
+                String.format("%.3f", l2Result.avgTimeMs()),
+                String.format("%.3f", dbResult.avgTimeMs()));
+        log.info("[2-TIER BENCHMARK] Improvement - L1 vs DB: {}x, L2 vs DB: {}x, L1 vs L2: {}x",
+                String.format("%.1f", l1VsDb),
+                String.format("%.1f", l2VsDb),
+                String.format("%.1f", l1VsL2));
+
+        return ResponseEntity.ok(new TwoTierCacheComparisonResult(
+                l1Result,
+                l2Result,
+                dbResult,
+                l1VsDb,
+                l2VsDb,
+                l1VsL2
+        ));
+    }
+
+    public record TwoTierCacheComparisonResult(
+            BenchmarkService.TwoTierBenchmarkResult l1Caffeine,
+            BenchmarkService.TwoTierBenchmarkResult l2Redis,
+            BenchmarkService.TwoTierBenchmarkResult database,
+            double l1VsDbSpeedup,
+            double l2VsDbSpeedup,
+            double l1VsL2Speedup
+    ) {
+        public String summary() {
+            return String.format(
+                    "L1(Caffeine): %.3fms | L2(Redis): %.3fms | DB: %.3fms | " +
+                    "L1 vs DB: %.1fx faster | L2 vs DB: %.1fx faster | L1 vs L2: %.1fx faster",
+                    l1Caffeine.avgTimeMs(), l2Redis.avgTimeMs(), database.avgTimeMs(),
+                    l1VsDbSpeedup, l2VsDbSpeedup, l1VsL2Speedup
+            );
+        }
+    }
 }

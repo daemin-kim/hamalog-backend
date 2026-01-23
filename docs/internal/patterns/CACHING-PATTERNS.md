@@ -1,6 +1,6 @@
 # 🗄️ Hamalog 캐싱 패턴
 
-> 이 문서는 Hamalog 프로젝트의 Redis 기반 캐싱 전략과 패턴을 설명합니다.
+> 이 문서는 Hamalog 프로젝트의 **2-Tier 캐시(Caffeine + Redis)** 기반 캐싱 전략과 패턴을 설명합니다.
 > 성능 최적화와 일관성 유지를 위해 이 패턴을 따라야 합니다.
 
 ---
@@ -13,38 +13,56 @@
 4. [캐시 무효화 전략](#4-캐시-무효화-전략)
 5. [분산 캐시 고려사항](#5-분산-캐시-고려사항)
 6. [모니터링 및 디버깅](#6-모니터링-및-디버깅)
+7. [2-Tier 캐시 전략](#7-2-tier-캐시-전략)
 
 ---
 
 ## 1. 캐싱 아키텍처
 
-### 1.1 전체 구조
+### 1.1 2-Tier 캐시 구조
 
 ```
-┌─────────────────────────────────────────────────────────────┐
-│                         Client                               │
-└─────────────────────────────────────────────────────────────┘
-                              ↓
-┌─────────────────────────────────────────────────────────────┐
-│                    Application Server                        │
-│  ┌─────────────┐    ┌─────────────┐    ┌─────────────┐      │
-│  │ Controller  │ →  │   Service   │ →  │ Repository  │      │
-│  └─────────────┘    └─────────────┘    └─────────────┘      │
-│                            ↓                   ↓             │
-│                     ┌───────────┐       ┌───────────┐        │
-│                     │   Redis   │       │   MySQL   │        │
-│                     │  (Cache)  │       │   (DB)    │        │
-│                     └───────────┘       └───────────┘        │
-└─────────────────────────────────────────────────────────────┘
+┌─────────────────────────────────────────────────────────────────────────┐
+│                              Client                                      │
+└─────────────────────────────────────────────────────────────────────────┘
+                                    ↓
+┌─────────────────────────────────────────────────────────────────────────┐
+│                         Application Server                               │
+│  ┌─────────────┐    ┌─────────────┐    ┌─────────────┐                  │
+│  │ Controller  │ →  │   Service   │ →  │ Repository  │                  │
+│  └─────────────┘    └─────────────┘    └─────────────┘                  │
+│                            ↓                   ↓                         │
+│                    ┌──────────────┐                                      │
+│                    │  L1: Caffeine │ ← 로컬 메모리 (~0.01ms)             │
+│                    │  (10,000개)   │                                     │
+│                    └──────────────┘                                      │
+│                            ↓ MISS                                        │
+│                    ┌──────────────┐     ┌───────────┐                    │
+│                    │  L2: Redis   │     │   MySQL   │                    │
+│                    │  (분산캐시)   │     │   (DB)    │                    │
+│                    │  (~0.5-1ms)  │     │ (~2-3ms)  │                    │
+│                    └──────────────┘     └───────────┘                    │
+└─────────────────────────────────────────────────────────────────────────┘
 ```
 
-### 1.2 캐시 레이어 역할
+### 1.2 캐시 조회 흐름
 
-| 레이어 | 캐시 용도 | 예시 |
-|--------|-----------|------|
-| Controller | 응답 캐싱 (드물게 사용) | 정적 데이터 |
-| Service | 비즈니스 로직 결과 캐싱 | 통계, 프로필 |
-| Repository | 쿼리 결과 캐싱 | 자주 조회되는 엔티티 |
+```
+[조회 흐름]
+1. L1 Caffeine 조회 → HIT → 즉시 반환 (네트워크 RTT 없음)
+              ↓ MISS
+2. L2 Redis 조회   → HIT → L1에 저장 후 반환
+              ↓ MISS
+3. DB 조회         → L2 + L1에 저장 후 반환
+```
+
+### 1.3 캐시 레이어 비교
+
+| 레이어 | 특징 | 평균 응답시간 | 용도 |
+|--------|------|---------------|------|
+| **L1 (Caffeine)** | 로컬 메모리, 네트워크 RTT 없음 | ~0.01ms | Hot 데이터, 초고속 조회 |
+| **L2 (Redis)** | 분산 캐시, 서버 간 공유 | ~0.5-1ms | Warm 데이터, 분산 환경 |
+| **Database** | 영구 저장소 | ~2-3ms | Cold 데이터, Source of Truth |
 
 ---
 
@@ -456,13 +474,104 @@ public void update() {
 
 ---
 
+## 8. 2-Tier 캐시 전략
+
+### 8.1 아키텍처 개요
+
+Hamalog는 **Caffeine(L1) + Redis(L2)** 2-Tier 캐시를 사용하여 극강의 성능을 달성합니다.
+
+```java
+// CachingAspect.java - 핵심 구현
+private Object getCachedValue(String key, boolean useLocalFallback) {
+    // L1: Caffeine 로컬 캐시에서 먼저 조회 (네트워크 RTT 없음)
+    if (useLocalFallback && l1Cache != null) {
+        Object l1Value = l1Cache.getIfPresent(key);
+        if (l1Value != null) {
+            l1Hits.increment();
+            return l1Value;  // ~0.01ms
+        }
+    }
+    
+    // L2: Redis에서 조회 (네트워크 RTT 있음)
+    if (redisTemplate != null) {
+        Object l2Value = redisTemplate.opsForValue().get(key);
+        if (l2Value != null) {
+            l2Hits.increment();
+            // L2 히트 시 L1에도 저장 (Read-Through)
+            if (useLocalFallback && l1Cache != null) {
+                l1Cache.put(key, l2Value);
+            }
+            return l2Value;  // ~0.5-1ms
+        }
+    }
+    
+    cacheMisses.increment();
+    return null;  // DB 조회 필요
+}
+```
+
+### 8.2 Caffeine 설정
+
+```java
+@PostConstruct
+public void init() {
+    l1Cache = Caffeine.newBuilder()
+            .maximumSize(10_000)                    // 최대 10,000개 항목
+            .expireAfterWrite(5, TimeUnit.MINUTES)  // 5분 후 만료 (L2보다 짧게)
+            .recordStats()                          // 통계 기록 활성화
+            .build();
+}
+```
+
+### 8.3 성능 비교
+
+| 캐시 레이어 | 평균 응답시간 | DB 대비 향상 | 특징 |
+|-------------|---------------|--------------|------|
+| **L1 (Caffeine)** | ~0.05ms | **~50x** | 네트워크 RTT 없음 |
+| **L2 (Redis)** | ~0.8ms | ~3x | 분산 환경 공유 |
+| **Database** | ~2.4ms | baseline | 디스크 I/O |
+
+### 8.4 TTL 전략
+
+| 레이어 | TTL | 이유 |
+|--------|-----|------|
+| L1 (Caffeine) | 5분 | L2보다 짧아 데이터 일관성 확보 |
+| L2 (Redis) | 10분 | 적절한 밸런스 |
+
+### 8.5 캐시 무효화
+
+```java
+// 단일 키 무효화 (L1 + L2 모두)
+private void evictSingleKey(String key) {
+    // L2: Redis에서 삭제
+    if (redisTemplate != null) {
+        redisTemplate.delete(key);
+    }
+    
+    // L1: Caffeine에서 삭제
+    if (l1Cache != null) {
+        l1Cache.invalidate(key);
+    }
+}
+```
+
+### 8.6 벤치마크
+
+```bash
+# 2-Tier 캐시 성능 비교 API
+curl "http://localhost:8080/api/v1/benchmark/cache/two-tier/1?iterations=10"
+```
+
+---
+
 ## 📚 관련 문서
 
 - [ADR-0005: Redis 캐시 전략](../adr/0005-redis-cache-strategy.md)
 - [커스텀 어노테이션 가이드](./ANNOTATION-GUIDE.md)
 - [보안 패턴](./SECURITY-PATTERNS.md)
+- [캐시 벤치마크 보고서](../../benchmark-results/CACHE-BENCHMARK-REPORT-20260118.md)
 
 ---
 
-> 📝 최종 업데이트: 2026년 1월 5일
+> 📝 최종 업데이트: 2026년 1월 24일
 

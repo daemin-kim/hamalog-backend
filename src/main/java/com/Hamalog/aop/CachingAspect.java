@@ -1,14 +1,17 @@
 package com.Hamalog.aop;
 
+import com.github.benmanes.caffeine.cache.Cache;
+import com.github.benmanes.caffeine.cache.Caffeine;
+import jakarta.annotation.PostConstruct;
 import java.lang.annotation.ElementType;
 import java.lang.annotation.Retention;
 import java.lang.annotation.RetentionPolicy;
 import java.lang.annotation.Target;
 import java.security.MessageDigest;
 import java.time.Duration;
-import java.time.LocalDateTime;
 import java.util.Arrays;
 import java.util.concurrent.ConcurrentHashMap;
+import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.LongAdder;
 import lombok.extern.slf4j.Slf4j;
 import org.aspectj.lang.ProceedingJoinPoint;
@@ -22,6 +25,15 @@ import org.springframework.core.annotation.Order;
 import org.springframework.data.redis.core.RedisTemplate;
 import org.springframework.stereotype.Component;
 
+/**
+ * 2-Tier 캐시 AOP Aspect
+ *
+ * L1: Caffeine (로컬 인메모리, 네트워크 RTT 없음, ~0.01ms)
+ * L2: Redis (분산 캐시, 네트워크 RTT 있음, ~0.5-1ms)
+ *
+ * 조회 순서: L1 → L2 → DB
+ * 저장 순서: L2 → L1 (Write-Through)
+ */
 @Slf4j
 @Aspect
 @Component
@@ -32,11 +44,31 @@ public class CachingAspect {
     @Autowired(required = false)
     private RedisTemplate<String, Object> redisTemplate;
     
+    // L1: Caffeine 로컬 캐시 (고성능, 네트워크 RTT 없음)
+    private Cache<String, Object> l1Cache;
+
     // 로컬 캐시 통계
     private final ConcurrentHashMap<String, CacheStats> cacheStats = new ConcurrentHashMap<>();
     
-    // 메모리 기반 간단한 로컬 캐시 (Redis 장애 시 fallback)
-    private final ConcurrentHashMap<String, CacheEntry> localCache = new ConcurrentHashMap<>();
+    // L1 캐시 히트 통계 (L1 vs L2 성능 비교용)
+    private final LongAdder l1Hits = new LongAdder();
+    private final LongAdder l2Hits = new LongAdder();
+    private final LongAdder cacheMisses = new LongAdder();
+
+    @PostConstruct
+    public void init() {
+        // Caffeine L1 캐시 설정
+        // - 최대 10,000개 항목
+        // - 5분 후 만료 (Redis TTL보다 짧게)
+        // - 통계 기록 활성화
+        l1Cache = Caffeine.newBuilder()
+                .maximumSize(10_000)
+                .expireAfterWrite(5, TimeUnit.MINUTES)
+                .recordStats()
+                .build();
+
+        log.info("[2-TIER CACHE] Caffeine L1 캐시 초기화 완료 (maxSize=10000, TTL=5min)");
+    }
 
     @Around("@annotation(cacheable)")
     public Object handleCaching(ProceedingJoinPoint joinPoint, Cacheable cacheable) throws Throwable {
@@ -164,34 +196,43 @@ public class CachingAspect {
     }
 
     private Object getCachedValue(String key, boolean useLocalFallback) {
-        // Redis에서 먼저 조회 (Redis가 사용 가능한 경우에만)
+        // L1: Caffeine 로컬 캐시에서 먼저 조회 (네트워크 RTT 없음, ~0.01ms)
+        if (useLocalFallback && l1Cache != null) {
+            Object l1Value = l1Cache.getIfPresent(key);
+            if (l1Value != null) {
+                l1Hits.increment();
+                log.trace("[L1 HIT] Key: {}", shortenKey(key));
+                return l1Value;
+            }
+        }
+
+        // L2: Redis에서 조회 (네트워크 RTT 있음, ~0.5-1ms)
         if (redisTemplate != null) {
             try {
-                Object value = redisTemplate.opsForValue().get(key);
-                if (value != null) {
-                    return value;
+                Object l2Value = redisTemplate.opsForValue().get(key);
+                if (l2Value != null) {
+                    l2Hits.increment();
+                    log.trace("[L2 HIT] Key: {}", shortenKey(key));
+
+                    // L2 히트 시 L1에도 저장 (Read-Through)
+                    if (useLocalFallback && l1Cache != null) {
+                        l1Cache.put(key, l2Value);
+                    }
+                    return l2Value;
                 }
             } catch (Exception e) {
-                log.warn("Redis cache access failed for key: {} | Error: {} | Using local fallback: {}", 
-                        shortenKey(key), e.getMessage(), useLocalFallback);
+                log.warn("Redis L2 cache access failed for key: {} | Error: {}",
+                        shortenKey(key), e.getMessage());
             }
         }
         
-        // Redis 실패 시 로컬 캐시 사용
-        if (useLocalFallback) {
-            CacheEntry entry = localCache.get(key);
-            if (entry != null && !entry.isExpired()) {
-                return entry.getValue();
-            } else if (entry != null && entry.isExpired()) {
-                localCache.remove(key);
-            }
-        }
-        
+        cacheMisses.increment();
         return null;
     }
 
     private void cacheValue(String key, Object value, long ttl, boolean useLocalFallback) {
-        // Redis에 저장 (Redis가 사용 가능한 경우에만)
+        // L2: Redis에 저장 (분산 캐시, 모든 인스턴스 공유)
+        boolean redisSuccess = false;
         if (redisTemplate != null) {
             try {
                 if (ttl > 0) {
@@ -199,50 +240,51 @@ public class CachingAspect {
                 } else {
                     redisTemplate.opsForValue().set(key, value);
                 }
-                return; // Redis 저장 성공 시 로컬 캐시에는 저장하지 않음
+                redisSuccess = true;
             } catch (Exception e) {
-                log.warn("Redis cache store failed for key: {} | Error: {} | Using local fallback: {}", 
-                        shortenKey(key), e.getMessage(), useLocalFallback);
+                log.warn("Redis L2 cache store failed for key: {} | Error: {}",
+                        shortenKey(key), e.getMessage());
             }
         }
         
-        // Redis가 없거나 실패한 경우 로컬 캐시에 저장
-        if (useLocalFallback) {
-            LocalDateTime expireTime = ttl > 0 ? 
-                LocalDateTime.now().plusSeconds(ttl) : null;
-            localCache.put(key, new CacheEntry(value, expireTime));
+        // L1: Caffeine에도 저장 (Write-Through 패턴)
+        // L1 TTL은 Redis보다 짧게 설정되어 있으므로 자동 관리됨
+        if (useLocalFallback && l1Cache != null) {
+            l1Cache.put(key, value);
+            log.trace("[L1+L2 STORED] Key: {} | Redis: {}", shortenKey(key), redisSuccess);
         }
     }
 
     private void evictSingleKey(String key) {
-        // Redis에서 삭제 (Redis가 사용 가능한 경우에만)
+        // L2: Redis에서 삭제
         if (redisTemplate != null) {
             try {
                 redisTemplate.delete(key);
             } catch (Exception e) {
-                log.error("Redis cache eviction failed for key: {} | Error: {}", shortenKey(key), e.getMessage());
+                log.error("Redis L2 cache eviction failed for key: {} | Error: {}", shortenKey(key), e.getMessage());
             }
         }
         
-        // 로컬 캐시에서 삭제
-        localCache.remove(key);
+        // L1: Caffeine에서 삭제
+        if (l1Cache != null) {
+            l1Cache.invalidate(key);
+        }
     }
 
     private void evictByPattern(String pattern) {
-        // Redis에서 패턴 매칭으로 삭제 (Redis가 사용 가능한 경우에만)
+        // L2: Redis에서 패턴 매칭으로 삭제
         if (redisTemplate != null) {
             try {
                 redisTemplate.delete(redisTemplate.keys(pattern));
             } catch (Exception e) {
-                log.error("Redis pattern eviction failed for pattern: {} | Error: {}", pattern, e.getMessage());
+                log.error("Redis L2 pattern eviction failed for pattern: {} | Error: {}", pattern, e.getMessage());
             }
         }
-        
-        // 로컬 캐시에서도 패턴 매칭으로 제거
-        try {
-            localCache.entrySet().removeIf(entry -> entry.getKey().matches(pattern.replace("*", ".*")));
-        } catch (Exception e) {
-            log.error("Local cache pattern eviction failed for pattern: {} | Error: {}", pattern, e.getMessage());
+
+        // L1: Caffeine에서 전체 무효화 (패턴 매칭 미지원, 안전하게 전체 삭제)
+        if (l1Cache != null) {
+            l1Cache.invalidateAll();
+            log.debug("[L1 INVALIDATE_ALL] Pattern eviction triggered full L1 cache clear");
         }
     }
 
@@ -354,11 +396,81 @@ public class CachingAspect {
     }
 
     /**
-     * 로컬 캐시를 정리합니다 (만료된 항목 제거).
+     * 로컬 캐시를 정리합니다 (Caffeine은 자동 관리되므로 수동 정리 필요 없음).
      */
     public void cleanupLocalCache() {
-        localCache.entrySet().removeIf(entry -> entry.getValue().isExpired());
-        log.info("Local cache cleanup completed");
+        if (l1Cache != null) {
+            l1Cache.cleanUp();
+            log.info("[L1 CLEANUP] Caffeine cache cleanup completed");
+        }
+    }
+
+    /**
+     * 2-Tier 캐시 전체 무효화
+     */
+    public void invalidateAll() {
+        if (l1Cache != null) {
+            l1Cache.invalidateAll();
+        }
+        log.info("[2-TIER CACHE] All caches invalidated");
+    }
+
+    /**
+     * 2-Tier 캐시 통계를 가져옵니다.
+     */
+    public TwoTierCacheStats getTwoTierStats() {
+        com.github.benmanes.caffeine.cache.stats.CacheStats caffeineStats =
+                l1Cache != null ? l1Cache.stats() : null;
+
+        return new TwoTierCacheStats(
+                l1Hits.sum(),
+                l2Hits.sum(),
+                cacheMisses.sum(),
+                caffeineStats != null ? caffeineStats.hitRate() : 0.0,
+                l1Cache != null ? l1Cache.estimatedSize() : 0
+        );
+    }
+
+    /**
+     * L1 캐시 통계를 초기화합니다.
+     */
+    public void resetTwoTierStats() {
+        l1Hits.reset();
+        l2Hits.reset();
+        cacheMisses.reset();
+        log.info("[2-TIER CACHE] Statistics reset");
+    }
+
+    /**
+     * 2-Tier 캐시 통계 레코드
+     */
+    public record TwoTierCacheStats(
+            long l1Hits,
+            long l2Hits,
+            long misses,
+            double l1HitRate,
+            long l1Size
+    ) {
+        public long totalHits() {
+            return l1Hits + l2Hits;
+        }
+
+        public long totalRequests() {
+            return l1Hits + l2Hits + misses;
+        }
+
+        public double overallHitRate() {
+            long total = totalRequests();
+            return total > 0 ? (double) totalHits() / total : 0.0;
+        }
+
+        @Override
+        public String toString() {
+            return String.format(
+                    "TwoTierCacheStats{L1=%d (%.1f%%), L2=%d, Miss=%d, Overall=%.1f%%, L1Size=%d}",
+                    l1Hits, l1HitRate * 100, l2Hits, misses, overallHitRate() * 100, l1Size
+            );
+        }
     }
 
     /**
@@ -425,27 +537,6 @@ public class CachingAspect {
          * 메서드 실행 전에 무효화할지 여부
          */
         boolean beforeInvocation() default false;
-    }
-
-    /**
-     * 캐시 항목을 나타내는 클래스
-     */
-    private static class CacheEntry {
-        private final Object value;
-        private final LocalDateTime expireTime;
-
-        public CacheEntry(Object value, LocalDateTime expireTime) {
-            this.value = value;
-            this.expireTime = expireTime;
-        }
-
-        public Object getValue() {
-            return value;
-        }
-
-        public boolean isExpired() {
-            return expireTime != null && LocalDateTime.now().isAfter(expireTime);
-        }
     }
 
     /**

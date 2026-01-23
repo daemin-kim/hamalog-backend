@@ -363,10 +363,12 @@ class SideEffectSideEffectRecordRepositoryTest {
     }
 
     private SideEffect createTestSideEffect(String type, String name) {
-        SideEffect sideEffect = new SideEffect();
-        
-        // Use reflection to set fields since SideEffect only has @Getter
+        // Use reflection to instantiate SideEffect since it has protected no-args constructor
         try {
+            java.lang.reflect.Constructor<SideEffect> constructor = SideEffect.class.getDeclaredConstructor();
+            constructor.setAccessible(true);
+            SideEffect sideEffect = constructor.newInstance();
+
             java.lang.reflect.Field typeField = SideEffect.class.getDeclaredField("type");
             typeField.setAccessible(true);
             typeField.set(sideEffect, type);
@@ -374,11 +376,11 @@ class SideEffectSideEffectRecordRepositoryTest {
             java.lang.reflect.Field nameField = SideEffect.class.getDeclaredField("name");
             nameField.setAccessible(true);
             nameField.set(sideEffect, name);
+
+            return sideEffect;
         } catch (Exception e) {
             throw new RuntimeException("Failed to create test SideEffect", e);
         }
-        
-        return sideEffect;
     }
 
     private SideEffectSideEffectRecordId createCompositeId(Long sideEffectRecordId, Long sideEffectId) {

@@ -5,6 +5,7 @@ import com.Hamalog.dto.benchmark.MemberBenchmarkResponse;
 import com.Hamalog.dto.medication.response.MedicationScheduleListResponse;
 import com.Hamalog.dto.medication.response.MedicationScheduleResponse;
 import com.Hamalog.service.benchmark.BenchmarkService;
+import io.swagger.v3.oas.annotations.Hidden;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.Parameter;
 import io.swagger.v3.oas.annotations.tags.Tag;
@@ -25,6 +26,7 @@ import org.springframework.web.bind.annotation.*;
  * - optimized=false: N+1 문제가 발생하는 naive 쿼리 사용
  * - optimized=true: @EntityGraph 최적화 쿼리 사용
  */
+@Hidden
 @Tag(name = "Benchmark API", description = "성능 벤치마크 전용 API (개발/테스트 환경 전용)")
 @RestController
 @RequestMapping("/api/v1/benchmark")

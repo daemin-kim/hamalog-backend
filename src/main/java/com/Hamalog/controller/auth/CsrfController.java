@@ -4,6 +4,11 @@ import com.Hamalog.config.ApiVersion;
 import com.Hamalog.security.csrf.CsrfTokenProvider;
 import com.Hamalog.security.filter.TrustedProxyService;
 import com.Hamalog.security.jwt.JwtTokenProvider;
+import io.swagger.v3.oas.annotations.Operation;
+import io.swagger.v3.oas.annotations.media.Content;
+import io.swagger.v3.oas.annotations.media.Schema;
+import io.swagger.v3.oas.annotations.responses.ApiResponse;
+import io.swagger.v3.oas.annotations.responses.ApiResponses;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import jakarta.servlet.http.HttpServletRequest;
 import java.util.HashMap;
@@ -41,6 +46,17 @@ public class CsrfController {
      * @param request HTTP 요청
      * @return CSRF 토큰과 메타데이터
      */
+    @Operation(summary = "CSRF 토큰 발급",
+            description = "SPA 클라이언트용 CSRF 토큰을 발급합니다. POST, PUT, DELETE 요청 전 반드시 발급받아야 합니다. TTL: 60분")
+    @ApiResponses({
+        @ApiResponse(responseCode = "200", description = "CSRF 토큰 발급 성공"),
+        @ApiResponse(responseCode = "401", description = "인증 실패 (유효한 JWT 토큰 필요)",
+                content = @Content(mediaType = "application/json",
+                        schema = @Schema(ref = "#/components/schemas/ErrorResponse"))),
+        @ApiResponse(responseCode = "500", description = "서버 내부 오류",
+                content = @Content(mediaType = "application/json",
+                        schema = @Schema(ref = "#/components/schemas/ErrorResponse")))
+    })
     @GetMapping("/csrf-token")
     public ResponseEntity<Map<String, Object>> getCsrfToken(HttpServletRequest request) {
         try {
@@ -79,6 +95,17 @@ public class CsrfController {
      * @param request HTTP 요청
      * @return 토큰 검증 상태
      */
+    @Operation(summary = "CSRF 토큰 상태 확인",
+            description = "현재 CSRF 토큰의 유효성을 확인합니다. 개발/디버깅 용도로 사용됩니다.")
+    @ApiResponses({
+        @ApiResponse(responseCode = "200", description = "상태 확인 성공"),
+        @ApiResponse(responseCode = "401", description = "인증 실패",
+                content = @Content(mediaType = "application/json",
+                        schema = @Schema(ref = "#/components/schemas/ErrorResponse"))),
+        @ApiResponse(responseCode = "500", description = "서버 내부 오류",
+                content = @Content(mediaType = "application/json",
+                        schema = @Schema(ref = "#/components/schemas/ErrorResponse")))
+    })
     @GetMapping("/csrf-status")
     public ResponseEntity<Map<String, Object>> getCsrfStatus(HttpServletRequest request) {
         try {

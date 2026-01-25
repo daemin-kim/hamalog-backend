@@ -47,12 +47,34 @@ public class AuthController {
     private final MessageService messageService;
     private final JwtTokenProvider jwtTokenProvider;
 
+    @Operation(summary = "회원가입", description = "이메일 형식의 loginId와 비밀번호로 신규 회원을 등록합니다.")
+    @ApiResponses({
+        @ApiResponse(responseCode = "200", description = "회원가입 성공"),
+        @ApiResponse(responseCode = "400", description = "잘못된 요청 (유효성 검증 실패)",
+                content = @Content(mediaType = "application/json",
+                        schema = @Schema(ref = "#/components/schemas/ValidationErrorResponse"))),
+        @ApiResponse(responseCode = "409", description = "이미 존재하는 회원",
+                content = @Content(mediaType = "application/json",
+                        schema = @Schema(ref = "#/components/schemas/ErrorResponse")))
+    })
     @PostMapping("/signup")
     public ResponseEntity<String> signup(@Valid @RequestBody SignupRequest request) {
         memberRegistrationService.registerMember(request);
         return ResponseEntity.ok(messageService.getMessage("auth.signup.success"));
     }
 
+    @Operation(summary = "로그인", description = "이메일과 비밀번호로 로그인하여 JWT 토큰을 발급받습니다.")
+    @ApiResponses({
+        @ApiResponse(responseCode = "200", description = "로그인 성공",
+                content = @Content(mediaType = "application/json",
+                        schema = @Schema(implementation = LoginResponse.class))),
+        @ApiResponse(responseCode = "400", description = "잘못된 요청",
+                content = @Content(mediaType = "application/json",
+                        schema = @Schema(ref = "#/components/schemas/ErrorResponse"))),
+        @ApiResponse(responseCode = "401", description = "인증 실패 (이메일 또는 비밀번호 불일치)",
+                content = @Content(mediaType = "application/json",
+                        schema = @Schema(ref = "#/components/schemas/ErrorResponse")))
+    })
     @PostMapping("/login")
     public ResponseEntity<LoginResponse> login(@Valid @RequestBody LoginRequest request) {
         LoginResponse loginResponse = authenticationService.authenticateAndGenerateToken(request.loginId(), request.password());
@@ -65,8 +87,12 @@ public class AuthController {
         @ApiResponse(responseCode = "200", description = "토큰 갱신 성공",
                 content = @Content(mediaType = "application/json",
                         schema = @Schema(implementation = TokenRefreshResponse.class))),
-        @ApiResponse(responseCode = "401", description = "유효하지 않은 RefreshToken"),
-        @ApiResponse(responseCode = "400", description = "잘못된 요청")
+        @ApiResponse(responseCode = "401", description = "유효하지 않은 RefreshToken",
+                content = @Content(mediaType = "application/json",
+                        schema = @Schema(ref = "#/components/schemas/ErrorResponse"))),
+        @ApiResponse(responseCode = "400", description = "잘못된 요청",
+                content = @Content(mediaType = "application/json",
+                        schema = @Schema(ref = "#/components/schemas/ValidationErrorResponse")))
     })
     public ResponseEntity<TokenRefreshResponse> refreshToken(
             @Valid @RequestBody TokenRefreshRequest request) {
@@ -78,7 +104,9 @@ public class AuthController {
     @Operation(summary = "로그아웃", description = "현재 로그인된 사용자를 로그아웃하고 토큰을 무효화합니다.")
     @ApiResponses({
         @ApiResponse(responseCode = "200", description = "로그아웃 성공"),
-        @ApiResponse(responseCode = "401", description = "유효하지 않은 토큰")
+        @ApiResponse(responseCode = "401", description = "유효하지 않은 토큰",
+                content = @Content(mediaType = "application/json",
+                        schema = @Schema(ref = "#/components/schemas/ErrorResponse")))
     })
     public ResponseEntity<String> logout(HttpServletRequest request) {
         String authorizationHeader = request.getHeader("Authorization");
@@ -105,8 +133,12 @@ public class AuthController {
             @ApiResponse(responseCode = "200", description = "회원 탈퇴 성공",
                     content = @Content(mediaType = "application/json",
                             examples = @ExampleObject(value = "회원 탈퇴가 예약되었습니다. 30일 후 최종 삭제됩니다."))),
-            @ApiResponse(responseCode = "401", description = "인증되지 않은 사용자"),
-            @ApiResponse(responseCode = "404", description = "사용자를 찾을 수 없음")
+            @ApiResponse(responseCode = "401", description = "인증되지 않은 사용자",
+                    content = @Content(mediaType = "application/json",
+                            schema = @Schema(ref = "#/components/schemas/ErrorResponse"))),
+            @ApiResponse(responseCode = "404", description = "사용자를 찾을 수 없음",
+                    content = @Content(mediaType = "application/json",
+                            schema = @Schema(ref = "#/components/schemas/ErrorResponse")))
     })
     public ResponseEntity<String> deleteAccount(HttpServletRequest request) {
         Authentication authentication = SecurityContextHolder.getContext().getAuthentication();
@@ -134,7 +166,9 @@ public class AuthController {
         @ApiResponse(responseCode = "200", description = "조회 성공",
                 content = @Content(mediaType = "application/json",
                         schema = @Schema(implementation = LoginHistoryListResponse.class))),
-        @ApiResponse(responseCode = "401", description = "인증 실패")
+        @ApiResponse(responseCode = "401", description = "인증 실패",
+                content = @Content(mediaType = "application/json",
+                        schema = @Schema(ref = "#/components/schemas/ErrorResponse")))
     })
     public ResponseEntity<LoginHistoryListResponse> getLoginHistory(
             @Parameter(description = "페이지 번호 (0부터 시작)", example = "0")
@@ -154,7 +188,9 @@ public class AuthController {
         @ApiResponse(responseCode = "200", description = "조회 성공",
                 content = @Content(mediaType = "application/json",
                         schema = @Schema(implementation = ActiveSessionsResponse.class))),
-        @ApiResponse(responseCode = "401", description = "인증 실패")
+        @ApiResponse(responseCode = "401", description = "인증 실패",
+                content = @Content(mediaType = "application/json",
+                        schema = @Schema(ref = "#/components/schemas/ErrorResponse")))
     })
     public ResponseEntity<ActiveSessionsResponse> getActiveSessions(
             HttpServletRequest request,
@@ -170,8 +206,12 @@ public class AuthController {
     @Operation(summary = "세션 강제 종료", description = "특정 세션을 강제로 종료합니다. (다른 기기에서 로그아웃)")
     @ApiResponses({
         @ApiResponse(responseCode = "200", description = "세션 종료 성공"),
-        @ApiResponse(responseCode = "401", description = "인증 실패"),
-        @ApiResponse(responseCode = "404", description = "세션을 찾을 수 없음")
+        @ApiResponse(responseCode = "401", description = "인증 실패",
+                content = @Content(mediaType = "application/json",
+                        schema = @Schema(ref = "#/components/schemas/ErrorResponse"))),
+        @ApiResponse(responseCode = "404", description = "세션을 찾을 수 없음",
+                content = @Content(mediaType = "application/json",
+                        schema = @Schema(ref = "#/components/schemas/ErrorResponse")))
     })
     public ResponseEntity<String> terminateSession(
             @Parameter(description = "종료할 세션 ID", required = true)
@@ -187,7 +227,9 @@ public class AuthController {
     @Operation(summary = "모든 세션 종료", description = "현재 사용자의 모든 세션을 종료합니다. (모든 기기에서 로그아웃)")
     @ApiResponses({
         @ApiResponse(responseCode = "200", description = "모든 세션 종료 성공"),
-        @ApiResponse(responseCode = "401", description = "인증 실패")
+        @ApiResponse(responseCode = "401", description = "인증 실패",
+                content = @Content(mediaType = "application/json",
+                        schema = @Schema(ref = "#/components/schemas/ErrorResponse")))
     })
     public ResponseEntity<String> terminateAllSessions(
             @AuthenticationPrincipal CustomUserDetails userDetails

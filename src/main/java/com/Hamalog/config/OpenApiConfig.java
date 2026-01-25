@@ -13,6 +13,7 @@ import io.swagger.v3.oas.models.media.StringSchema;
 import io.swagger.v3.oas.models.security.SecurityRequirement;
 import io.swagger.v3.oas.models.security.SecurityScheme;
 import io.swagger.v3.oas.models.servers.Server;
+import io.swagger.v3.oas.models.tags.Tag;
 import java.util.List;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.context.annotation.Bean;
@@ -43,6 +44,7 @@ public class OpenApiConfig {
                                 .name("MIT License")
                                 .url("https://opensource.org/licenses/MIT")))
                 .servers(List.of(new Server().url(serverUrl).description(serverDescription)))
+                .tags(createApiTags())
                 .components(new Components()
                         .addSecuritySchemes(
                                 "bearerAuth",
@@ -51,9 +53,38 @@ public class OpenApiConfig {
                                         .scheme("bearer")
                                         .bearerFormat("JWT")
                                         .description("JWT 토큰을 Authorization 헤더에 Bearer 형태로 전달합니다."))
+                        .addSecuritySchemes(
+                                "csrfToken",
+                                new SecurityScheme()
+                                        .type(SecurityScheme.Type.APIKEY)
+                                        .in(SecurityScheme.In.HEADER)
+                                        .name("X-CSRF-TOKEN")
+                                        .description("CSRF 토큰을 X-CSRF-TOKEN 헤더에 전달합니다. POST, PUT, DELETE 요청 시 필수입니다. /auth/csrf-token에서 발급받을 수 있습니다."))
                         .addSchemas("ErrorResponse", createErrorResponseSchema())
                         .addSchemas("ValidationErrorResponse", createValidationErrorResponseSchema()))
-                .addSecurityItem(new SecurityRequirement().addList("bearerAuth"));
+                .addSecurityItem(new SecurityRequirement().addList("bearerAuth").addList("csrfToken"));
+    }
+
+    /**
+     * API 태그 순서 정의
+     * Swagger UI에서 API 그룹 순서를 지정합니다.
+     */
+    private List<Tag> createApiTags() {
+        return List.of(
+                new Tag().name("Authentication API").description("인증 관련 API (회원가입, 로그인, 로그아웃, 토큰 갱신, 로그인 이력)"),
+                new Tag().name("OAuth2 Authentication API").description("OAuth2 소셜 로그인 관련 API"),
+                new Tag().name("CSRF API").description("CSRF 토큰 관리 API"),
+                new Tag().name("Member Profile API").description("회원 프로필 관련 API"),
+                new Tag().name("Medication Schedule API").description("복약 스케줄 관련 CRUD API"),
+                new Tag().name("Medication Time API").description("복약 알림 시간 관련 CRUD API"),
+                new Tag().name("Medication Record API").description("복약 기록 관련 CRUD API"),
+                new Tag().name("Medication Stats API").description("복약 통계 관련 API"),
+                new Tag().name("Medication Group API").description("복약 스케줄 그룹 관리 API"),
+                new Tag().name("Side Effect API").description("사용자 부작용 기록 관련 API"),
+                new Tag().name("Mood Diary API").description("마음 일기 관련 CRUD API"),
+                new Tag().name("Notification API").description("푸시 알림 설정 및 디바이스 토큰 관리 API"),
+                new Tag().name("Export API").description("데이터 내보내기 API (JSON, CSV)")
+        );
     }
 
     @SuppressWarnings("rawtypes")

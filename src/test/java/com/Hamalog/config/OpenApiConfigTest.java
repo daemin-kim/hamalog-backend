@@ -138,6 +138,29 @@ class OpenApiConfigTest {
     }
 
     @Test
+    @DisplayName("Should configure components with security schemes and error response schemas")
+    void customOpenAPI_Components_ConfiguresSecuritySchemesAndSchemas() {
+        // when
+        OpenAPI openAPI = openApiConfig.customOpenAPI();
+        Components components = openAPI.getComponents();
+
+        // then
+        assertThat(components).isNotNull();
+        assertThat(components.getSecuritySchemes()).hasSize(2);
+        assertThat(components.getSecuritySchemes()).containsKeys("bearerAuth", "csrfToken");
+        assertThat(components.getSchemas()).hasSize(2);
+        assertThat(components.getSchemas()).containsKey("ErrorResponse");
+        assertThat(components.getSchemas()).containsKey("ValidationErrorResponse");
+        assertThat(components.getResponses()).isNullOrEmpty();
+        assertThat(components.getParameters()).isNullOrEmpty();
+        assertThat(components.getExamples()).isNullOrEmpty();
+        assertThat(components.getRequestBodies()).isNullOrEmpty();
+        assertThat(components.getHeaders()).isNullOrEmpty();
+        assertThat(components.getLinks()).isNullOrEmpty();
+        assertThat(components.getCallbacks()).isNullOrEmpty();
+    }
+
+    @Test
     @DisplayName("Should configure security requirements correctly")
     void customOpenAPI_SecurityRequirements_SetsCorrectRequirements() {
         // when
@@ -147,8 +170,9 @@ class OpenApiConfigTest {
         // then
         assertThat(security).hasSize(1);
         SecurityRequirement securityRequirement = security.get(0);
-        assertThat(securityRequirement).containsKey("bearerAuth");
-        assertThat(securityRequirement.get("bearerAuth")).isEmpty(); // Empty list for bearer auth
+        assertThat(securityRequirement).containsKeys("bearerAuth", "csrfToken");
+        assertThat(securityRequirement.get("bearerAuth")).isEmpty();
+        assertThat(securityRequirement.get("csrfToken")).isEmpty();
     }
 
     @Test
@@ -204,27 +228,6 @@ class OpenApiConfigTest {
         assertThat(openAPI1.getServers().get(0).getUrl()).isEqualTo(openAPI2.getServers().get(0).getUrl());
     }
 
-    @Test
-    @DisplayName("Should configure components with security schemes and error response schemas")
-    void customOpenAPI_Components_ConfiguresSecuritySchemesAndSchemas() {
-        // when
-        OpenAPI openAPI = openApiConfig.customOpenAPI();
-        Components components = openAPI.getComponents();
-
-        // then
-        assertThat(components).isNotNull();
-        assertThat(components.getSecuritySchemes()).hasSize(1);
-        assertThat(components.getSchemas()).hasSize(2);
-        assertThat(components.getSchemas()).containsKey("ErrorResponse");
-        assertThat(components.getSchemas()).containsKey("ValidationErrorResponse");
-        assertThat(components.getResponses()).isNullOrEmpty();
-        assertThat(components.getParameters()).isNullOrEmpty();
-        assertThat(components.getExamples()).isNullOrEmpty();
-        assertThat(components.getRequestBodies()).isNullOrEmpty();
-        assertThat(components.getHeaders()).isNullOrEmpty();
-        assertThat(components.getLinks()).isNullOrEmpty();
-        assertThat(components.getCallbacks()).isNullOrEmpty();
-    }
 
     @Test
     @DisplayName("Should configure API with Korean description")

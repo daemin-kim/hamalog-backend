@@ -228,7 +228,6 @@ class OpenApiConfigTest {
         assertThat(openAPI1.getServers().get(0).getUrl()).isEqualTo(openAPI2.getServers().get(0).getUrl());
     }
 
-
     @Test
     @DisplayName("Should configure API with Korean description")
     void customOpenAPI_KoreanContent_HandlesCorrectly() {

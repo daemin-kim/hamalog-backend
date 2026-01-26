@@ -187,6 +187,7 @@ Hamalog는 Spring Boot 3.4.5 기반의 헬스케어 백엔드 시스템입니다
 - `docs/internal/patterns/MESSAGE-QUEUE-PATTERNS.md` - 메시지 큐 패턴 (Redis Stream)
 - `docs/internal/CODING-CONVENTIONS.md` - 코딩 컨벤션
 - `docs/internal/KOTLIN-GUIDE.md` - Kotlin 문법 가이드 (Java 개발자용)
+- `docs/internal/DECISION-TROUBLESHOOTING-GUIDE.md` - 의사결정(ADR) 및 트러블슈팅 기록 가이드
 
 ## 🛠️ 도구
 - CRUD 스캐폴딩: `./scripts/generate-crud.sh --domain <Name> --fields "<fields>"`

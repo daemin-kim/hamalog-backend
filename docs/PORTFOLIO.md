@@ -568,6 +568,20 @@ static final ArchRule service_should_not_depend_on_controller =
 | 코딩 컨벤션 | [CODING-CONVENTIONS.md](./internal/CODING-CONVENTIONS.md) |
 | ADR 목록 | [docs/internal/adr/](./internal/adr/) |
 | 패턴 가이드 | [docs/internal/patterns/](./internal/patterns/) |
+| 트러블슈팅 로그 | [docs/troubleshooting/](./troubleshooting/) |
+| 의사결정/트러블슈팅 가이드 | [DECISION-TROUBLESHOOTING-GUIDE.md](./internal/DECISION-TROUBLESHOOTING-GUIDE.md) |
+
+---
+
+## 🔥 Technical Issues & Solutions
+
+> 문제 해결 과정을 "가설 → 검증 → 기각/채택" 사이클로 기록한 수사 일지입니다.
+
+| # | 문제 상황 | 핵심 해결 방법 | 상세 문서 |
+|---|----------|---------------|----------|
+| - | (아직 문서 없음) | - | [트러블슈팅 폴더](./troubleshooting/) |
+
+> 💡 새로운 트러블슈팅 로그는 [트러블슈팅 가이드](./internal/DECISION-TROUBLESHOOTING-GUIDE.md)를 참고하여 작성하세요.
 
 ---
 

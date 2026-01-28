@@ -26,6 +26,7 @@
 │   ├── 📄 IMPROVEMENT-TASKS.md      개선 태스크 체크리스트
 │   ├── 📄 AUDIT-REPORT-20260120.md  프로젝트 점검 보고서
 │   ├── 📄 PRACTICAL-EVALUATION-REPORT.md  실무 평가 보고서
+│   ├── 📄 PROJECT-OVERVIEW.md       내부 온보딩용 프로젝트 전체 구조 요약
 │   │
 │   ├── 📂 adr/                      아키텍처 결정 기록 (ADR)
 │   │   ├── 📄 0001-adr-template.md
@@ -107,6 +108,7 @@
 | `IMPROVEMENT-TASKS.md` | 개선 태스크 우선순위별 체크리스트 |
 | `AUDIT-REPORT-20260120.md` | 프로젝트 점검 결과 보고서 |
 | `PRACTICAL-EVALUATION-REPORT.md` | 실무 평가 보고서 |
+| `PROJECT-OVERVIEW.md` | 내부 온보딩용 프로젝트 전체 구조 요약 |
 
 #### 📂 `internal/adr/` - 아키텍처 결정 기록
 
@@ -184,9 +186,10 @@ AI 도구 (Cursor, GitHub Copilot)가 코드 생성 시 참조하는 문서입�
 
 ### 백엔드 개발자 (신규 합류)
 1. `shared/Project-Structure.md` - 전체 구조
-2. `internal/CODING-CONVENTIONS.md` - 코드 스타일
-3. `internal/patterns/*.md` - 선언적 패턴
-4. `internal/adr/*.md` - 아키텍처 결정 배경
+2. `internal/PROJECT-OVERVIEW.md` - 내부 온보딩 개요
+3. `internal/CODING-CONVENTIONS.md` - 코드 스타일
+4. `internal/patterns/*.md` - 선언적 패턴
+5. `internal/adr/*.md` - 아키텍처 결정 배경
 
 ### AI 도구 설정
 1. `.cursorrules` (루트) - Cursor IDE용

@@ -2,6 +2,7 @@
 
 > 이 문서는 Hamalog를 처음 접하는 내부 구성원을 위한 전체 구조 안내서입니다.
 > 세부 문서는 링크로 연결되어 있으므로 필요한 부분을 빠르게 찾아갈 수 있습니다.
+> 보다 상세한 전체 맥락은 `docs/internal/PROJECT-HANDBOOK.md`를 참고하세요.
 
 ---
 
@@ -111,9 +112,10 @@ sequenceDiagram
 
 ### 필수 읽기
 
-1. `docs/shared/Project-Structure.md` - 전체 구조
-2. `docs/internal/CODING-CONVENTIONS.md` - 코딩 규칙
-3. `docs/internal/patterns/` - 구현 패턴
+1. `docs/internal/PROJECT-HANDBOOK.md` - 내부 종합 가이드
+2. `docs/shared/Project-Structure.md` - 전체 구조
+3. `docs/internal/CODING-CONVENTIONS.md` - 코딩 규칙
+4. `docs/internal/patterns/` - 구현 패턴
 
 ### 문제 해결/의사결정
 
@@ -133,4 +135,5 @@ sequenceDiagram
 
 ## 8. 변경 이력
 
+- 2026-01-29: 내부 종합 가이드 링크 추가
 - 2026-01-28: 내부 온보딩용 개요 문서 최초 작성

@@ -12,6 +12,8 @@
 ├── 📄 PORTFOLIO.md                  📋 메인 포트폴리오
 ├── 📄 PORTFOLIO-SUMMARY.md          📋 포트폴리오 요약 (1페이지)
 ├── 📄 GITHUB-PROJECT-CARD.md        📋 GitHub 프로젝트 카드
+├── 📄 포트폴리오.md                 📋 포트폴리오 보조 문서
+├── 📄 소프트웨어_개발보안_가이드(2021.12.29).pdf  📋 참고 보안 가이드
 │
 ├── 📂 shared/                       🌐 공유용 (프론트엔드, 기획자, 외부 공유)
 │   ├── 📄 API-specification.md      REST API 명세서
@@ -24,9 +26,13 @@
 │   ├── 📄 KOTLIN-GUIDE.md           Kotlin 문법 가이드 (Java 개발자용)
 │   ├── 📄 PROJECT-AUDIT-GUIDE.md    프로젝트 전체 점검 가이드
 │   ├── 📄 IMPROVEMENT-TASKS.md      개선 태스크 체크리스트
+│   ├── 📄 DECISION-TROUBLESHOOTING-GUIDE.md  결정/트러블슈팅 가이드
+│   ├── 📄 DOCS-SYNC-PLAN.md         문서 동기화 점검 계획
+│   ├── 📄 PROJECT-HANDBOOK.md       내부 종합 가이드
 │   ├── 📄 AUDIT-REPORT-20260120.md  프로젝트 점검 보고서
 │   ├── 📄 PRACTICAL-EVALUATION-REPORT.md  실무 평가 보고서
 │   ├── 📄 PROJECT-OVERVIEW.md       내부 온보딩용 프로젝트 전체 구조 요약
+│   ├── 📄 GITHUB-SECRETS-GUIDE.md   GitHub Secrets 설정 가이드
 │   │
 │   ├── 📂 adr/                      아키텍처 결정 기록 (ADR)
 │   │   ├── 📄 0001-adr-template.md
@@ -63,8 +69,12 @@
 │   ├── 📄 08-rate-limiting.md
 │   └── 📄 09-archunit-architecture-test.md
 │
-└── 📂 ai/                           🤖 AI용 (바이브 코딩)
-    └── 📄 VIBE-CODING-GUIDE.md      AI 협업 가이드, 프롬프트
+├── 📂 ai/                           🤖 AI용 (바이브 코딩)
+│   ├── 📄 ARCHITECTURE-DIAGRAM-PROMPT.md  아키텍처 다이어그램 프롬프트
+│   └── 📄 VIBE-CODING-GUIDE.md      AI 협업 가이드, 프롬프트
+│
+└── 📂 troubleshooting/              🧯 문제 해결
+    └── 📄 README.md                 트러블슈팅 인덱스
 ```
 
 ---
@@ -106,9 +116,13 @@
 | `KOTLIN-GUIDE.md` | Java 개발자를 위한 Kotlin 문법 가이드 |
 | `PROJECT-AUDIT-GUIDE.md` | 프로젝트 전체 점검 체크리스트 |
 | `IMPROVEMENT-TASKS.md` | 개선 태스크 우선순위별 체크리스트 |
+| `DECISION-TROUBLESHOOTING-GUIDE.md` | 결정/트러블슈팅 가이드 |
+| `DOCS-SYNC-PLAN.md` | 문서 동기화 점검 계획 |
+| `PROJECT-HANDBOOK.md` | 내부 종합 가이드 |
 | `AUDIT-REPORT-20260120.md` | 프로젝트 점검 결과 보고서 |
 | `PRACTICAL-EVALUATION-REPORT.md` | 실무 평가 보고서 |
 | `PROJECT-OVERVIEW.md` | 내부 온보딩용 프로젝트 전체 구조 요약 |
+| `GITHUB-SECRETS-GUIDE.md` | GitHub Secrets 설정 가이드 |
 
 #### 📂 `internal/adr/` - 아키텍처 결정 기록
 
@@ -141,7 +155,6 @@
 | `BENCHMARK-COMMANDS.md` | 벤치마크 실행 명령어 |
 | `BENCHMARK-LOCAL-STRATEGY.md` | 로컬 환경 벤치마크 전략 |
 | `BENCHMARK-CACHE-PLAN.md` | 캐시 벤치마크 계획 |
-| `GITHUB-SECRETS-GUIDE.md` | GitHub Secrets 설정 가이드 |
 
 ---
 
@@ -171,10 +184,15 @@ AI 도구 (Cursor, GitHub Copilot)가 코드 생성 시 참조하는 문서입�
 | 문서 | 용도 |
 |------|------|
 | `VIBE-CODING-GUIDE.md` | AI 협업 전략, 프롬프트 가이드 |
+| `ARCHITECTURE-DIAGRAM-PROMPT.md` | 아키텍처 다이어그램 프롬프트 |
 
-**관련 파일 (프로젝트 루트)**:
-- `.cursorrules` - Cursor IDE AI 컨텍스트
-- `.github/copilot-instructions.md` - GitHub Copilot 컨텍스트
+---
+
+### 🧯 `troubleshooting/` - 문제 해결
+
+| 문서 | 용도 |
+|------|------|
+| `README.md` | 트러블슈팅 인덱스 |
 
 ---
 
@@ -198,5 +216,4 @@ AI 도구 (Cursor, GitHub Copilot)가 코드 생성 시 참조하는 문서입�
 
 ---
 
-> 📝 최종 업데이트: 2026년 1월 22일
-
+> 📝 최종 업데이트: 2026년 1월 29일

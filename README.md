@@ -8,6 +8,7 @@ Hamalog는 복약 일정, 복약 기록, 부작용, 마음 일기를 한 번에 
 [![MySQL 8.0](https://img.shields.io/badge/MySQL-8.0-blue?logo=mysql)](https://www.mysql.com/)
 [![Redis 7](https://img.shields.io/badge/Redis-7-red?logo=redis)](https://redis.io/)
 [![Docker](https://img.shields.io/badge/Docker-ready-blue?logo=docker)](https://www.docker.com/)
+[![codecov](https://codecov.io/gh/daemin-kim/Hamalog/branch/main/graph/badge.svg)](https://codecov.io/gh/daemin-kim/Hamalog)
 
 ---
 

@@ -57,6 +57,12 @@
 |-------------|------|---------|----------|
 | `FIREBASE_CREDENTIALS` | Firebase 서비스 계정 JSON | `{"type":"service_account",...}` | Firebase Console |
 
+### 코드 커버리지 (Code Coverage)
+
+| Secret Name | 설명 | 예시 값 | 생성 방법 |
+|-------------|------|---------|----------|
+| `CODECOV_TOKEN` | Codecov 업로드 토큰 | `abc123-def456-...` | [Codecov 설정](https://app.codecov.io/gh/{owner}/{repo}/settings) |
+
 ### 배포 서버 (Deployment)
 
 | Secret Name | 설명 | 예시 값 | 생성 방법 |

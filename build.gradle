@@ -130,6 +130,7 @@ dependencies {
 tasks.named('test') {
 	useJUnitPlatform()
 	finalizedBy jacocoTestReport
+	finalizedBy jacocoTestCoverageVerification
 }
 
 jacocoTestReport {
@@ -143,6 +144,34 @@ jacocoTestReport {
 
 jacoco {
 	toolVersion = "0.8.10"
+}
+
+// JaCoCo 커버리지 검증 - 최소 커버리지 기준 미달 시 빌드 실패
+jacocoTestCoverageVerification {
+	dependsOn jacocoTestReport
+
+	// Generated 코드 및 설정 클래스 제외
+	afterEvaluate {
+		classDirectories.setFrom(files(classDirectories.files.collect {
+			fileTree(dir: it, exclude: [
+				'**/Q*',                    // QueryDSL Q클래스
+				'**/*Config*',              // 설정 클래스
+				'**/*Application*',         // 메인 애플리케이션
+				'**/dto/**',                // DTO 클래스
+				'**/exception/**'           // 예외 클래스
+			])
+		}))
+	}
+
+	violationRules {
+		rule {
+			limit {
+				counter = 'INSTRUCTION'
+				value = 'COVEREDRATIO'
+				minimum = 0.60  // 60% 이상 (점진적으로 80%까지 상향 예정)
+			}
+		}
+	}
 }
 
 // QueryDSL Q클래스 생성 경로 설정

@@ -12,6 +12,7 @@ import io.swagger.v3.oas.annotations.media.Content;
 import io.swagger.v3.oas.annotations.media.Schema;
 import io.swagger.v3.oas.annotations.responses.ApiResponse;
 import io.swagger.v3.oas.annotations.responses.ApiResponses;
+import io.swagger.v3.oas.annotations.security.SecurityRequirement;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import java.nio.charset.StandardCharsets;
 import java.time.LocalDate;
@@ -31,6 +32,7 @@ import org.springframework.web.bind.annotation.*;
  * 사용자 데이터를 JSON 또는 CSV 형식으로 내보내는 기능을 제공합니다.
  */
 @Tag(name = "Export API", description = "데이터 내보내기 API (JSON, CSV)")
+@SecurityRequirement(name = "bearerAuth")
 @RestController
 @RequestMapping(ApiVersion.EXPORT)
 @RequiredArgsConstructor

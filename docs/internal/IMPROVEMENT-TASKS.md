@@ -93,11 +93,21 @@ private static final long ACCESS_TOKEN_EXPIRY_SECONDS = 900L;
 ### 4. Swagger UI 배포 확인
 - [ ] 로컬에서 `/swagger-ui/index.html` 접근 테스트
 - [ ] OpenAPI 문서 자동 생성 확인 (`/v3/api-docs`)
-- [ ] 인증 필요 엔드포인트에 대한 Swagger 설정
+- [x] 인증 필요 엔드포인트에 대한 Swagger 설정
 ```java
 @SecurityRequirement(name = "bearerAuth")
 @Operation(summary = "복약 스케줄 조회")
 ```
+
+**구현 진행 중 (2026-02-04)**:
+- 다음 컨트롤러에 `@SecurityRequirement(name = "bearerAuth")` 어노테이션 추가 완료:
+  - MedicationScheduleController
+  - MoodDiaryController
+  - NotificationController
+  - SideEffectController
+  - ExportController
+  - MemberController
+
 - [ ] README.md에 API 문서 링크 추가
 - [ ] 프로덕션 배포 시 Swagger 접근 설정 검토 (보안)
 
@@ -280,6 +290,7 @@ src/main/java/com/Hamalog/
 | 2026-01-15 | 1 | 성능 벤치마크 추가 | Gatling 3.11.5, Before/After 비교 구현 |
 | 2026-01-15 | 3 | 매직 넘버 상수화 | AuthenticationService 상수화 (진행 중) |
 | 2026-02-01 | 2 | JaCoCo 커버리지 목표 설정 및 CI 연동 | 60% 기준 설정, Codecov 배지 추가 |
+| 2026-02-04 | 4 | Swagger UI 배포 확인 | @SecurityRequirement 어노테이션 추가 (진행 중) |
 
 ---
 

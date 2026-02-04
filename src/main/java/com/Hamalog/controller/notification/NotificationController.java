@@ -15,6 +15,7 @@ import io.swagger.v3.oas.annotations.media.Content;
 import io.swagger.v3.oas.annotations.media.Schema;
 import io.swagger.v3.oas.annotations.responses.ApiResponse;
 import io.swagger.v3.oas.annotations.responses.ApiResponses;
+import io.swagger.v3.oas.annotations.security.SecurityRequirement;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
@@ -27,6 +28,7 @@ import org.springframework.web.bind.annotation.*;
  * 알림 설정 및 FCM 토큰 관리 Controller
  */
 @Tag(name = "Notification API", description = "푸시 알림 설정 및 디바이스 토큰 관리 API")
+@SecurityRequirement(name = "bearerAuth")
 @RestController
 @RequestMapping(ApiVersion.NOTIFICATION)
 @RequiredArgsConstructor

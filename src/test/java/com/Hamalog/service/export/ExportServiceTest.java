@@ -83,7 +83,6 @@ class ExportServiceTest {
                 .nickName("테스트")
                 .phoneNumber("01012345678")
                 .birth(LocalDate.of(1990, 1, 1))
-                .socialId("kakao_12345")
                 .build();
         ReflectionTestUtils.setField(testMember, "memberId", TEST_MEMBER_ID);
 

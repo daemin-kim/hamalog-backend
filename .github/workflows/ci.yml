@@ -115,7 +115,7 @@ jobs:
         run: chmod +x gradlew
 
       - name: Run Architecture Tests
-        run: ./gradlew test --tests "com.Hamalog.architecture.*" --no-daemon
+        run: ./gradlew test --tests "com.Hamalog.architecture.*" -x jacocoTestReport -x jacocoTestCoverageVerification --no-daemon
 
   # 4단계: 빌드 검증 (Docker)
   docker-build:

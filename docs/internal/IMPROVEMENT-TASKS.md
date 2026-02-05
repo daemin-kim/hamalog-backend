@@ -108,7 +108,7 @@ private static final long ACCESS_TOKEN_EXPIRY_SECONDS = 900L;
   - ExportController
   - MemberController
 
-- [ ] README.md에 API 문서 링크 추가
+- [x] README.md에 API 문서 링크 추가
 - [ ] 프로덕션 배포 시 Swagger 접근 설정 검토 (보안)
 
 **예상 소요**: 0.5일
@@ -291,6 +291,7 @@ src/main/java/com/Hamalog/
 | 2026-01-15 | 3 | 매직 넘버 상수화 | AuthenticationService 상수화 (진행 중) |
 | 2026-02-01 | 2 | JaCoCo 커버리지 목표 설정 및 CI 연동 | 60% 기준 설정, Codecov 배지 추가 |
 | 2026-02-04 | 4 | Swagger UI 배포 확인 | @SecurityRequirement 어노테이션 추가 (진행 중) |
+| 2026-02-05 | 4 | README에 API 문서 링크 추가 | Swagger UI 링크 추가 완료 |
 
 ---
 

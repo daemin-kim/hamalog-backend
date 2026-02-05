@@ -139,6 +139,7 @@ Hamalog는 높은 코드 품질을 위해 1,300개 이상의 테스트 케이스
 |------|------|
 | [🎨 **포트폴리오**](./docs/PORTFOLIO.md) | 프로젝트 핵심 역량 및 기술적 도전 |
 | [📋 포트폴리오 요약](./docs/PORTFOLIO-SUMMARY.md) | 1~2페이지 축약 버전 |
+| [🔗 Swagger UI](http://localhost:8080/swagger-ui/index.html) | 인터랙티브 API 문서 (로컬 실행 시) |
 | [📖 API 명세서](./docs/shared/API-specification.md) | REST API 엔드포인트 상세 가이드 |
 | [📁 프로젝트 구조](./docs/shared/Project-Structure.md) | 상세 디렉토리 구조 및 인프라 명세 |
 | [📝 API 참고 문서](./docs/internal/API-reference.md) | DB 스키마, 인프라 구성, 변경 이력 |

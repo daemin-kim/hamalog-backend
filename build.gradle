@@ -129,8 +129,13 @@ dependencies {
 
 tasks.named('test') {
 	useJUnitPlatform()
-	finalizedBy jacocoTestReport
-	finalizedBy jacocoTestCoverageVerification
+	// CI에서 -x 플래그로 건너뛸 수 있도록 finalizedBy 조건부 설정
+	if (!project.gradle.startParameter.excludedTaskNames.contains('jacocoTestReport')) {
+		finalizedBy jacocoTestReport
+	}
+	if (!project.gradle.startParameter.excludedTaskNames.contains('jacocoTestCoverageVerification')) {
+		finalizedBy jacocoTestCoverageVerification
+	}
 }
 
 jacocoTestReport {

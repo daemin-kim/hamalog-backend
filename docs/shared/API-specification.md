@@ -102,7 +102,7 @@
 {
   "access_token": "eyJhbGciOiJIUzI1NiJ9...",
   "refresh_token": "eyJhbGciOiJIUzI1NiJ9...",
-  "expires_in": 900,
+  "expires_in": 1800,
   "token_type": "Bearer"
 }
 ```

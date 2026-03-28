@@ -30,9 +30,9 @@ public class AuthenticationService {
 
     /**
      * Access Token 만료 시간 (초 단위)
-     * 15분 = 900초
+     * 30분 = 1800초
      */
-    private static final long ACCESS_TOKEN_EXPIRY_SECONDS = 900L;
+    private static final long ACCESS_TOKEN_EXPIRY_SECONDS = 1800L;
 
     private final MemberRepository memberRepository;
     private final JwtTokenProvider jwtTokenProvider;

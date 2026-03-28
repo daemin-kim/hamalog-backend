@@ -1,218 +1,36 @@
-# Hamalog API 명세서
+**프로젝트 문서**
 
-> 📖 이 문서는 프론트엔드 개발자를 위한 REST API 명세서입니다.
-> 인프라 구성, 데이터베이스 스키마, 변경 이력 등은 [API 참고 문서](../internal/API-reference.md)를 참조하세요.
+> 📖 이 문서는 프론트엔드 개발자를 위한 REST API 명세서입니다. 인프라 구성, 데이터베이스 스키마, 변경 이력 등은 API 참고 문서를 참조하세요.
+> 
 
-## 프로젝트 문서
-
-| 문서 | 설명 | 대상 |
-|------|------|------|
-| [API 명세서](./API-specification.md) | 현재 문서 - REST API 엔드포인트 상세 명세 | 프론트엔드 개발자 |
-| [🔐 인증 흐름 가이드](#-인증-흐름-가이드) | 토큰 발급 및 API 연동 순서 | 프론트엔드 개발자 |
-| [API 참고 문서](../internal/API-reference.md) | 인프라, 스키마, 변경 이력 | 백엔드/DevOps |
-| [프로젝트 구조 설명서](./Project-Structure.md) | 프로젝트 디렉토리 구조, 아키텍처, 배포 구성 | 전체 |
-| [바이브 코딩 가이드](../ai/VIBE-CODING-GUIDE.md) | AI 협업 개발 가이드 | AI/개발자 |
-| [코딩 컨벤션](../internal/CODING-CONVENTIONS.md) | 코드 스타일 및 규칙 | 개발자 |
-| [README](../README.md) | 프로젝트 소개 및 시작 가이드 | 전체 |
+| **문서** | **설명** | **대상** |
+| --- | --- | --- |
+| [API 명세서](https://github.com/daemin-kim/hamalog-backend/blob/main/docs/shared/API-specification.md) | 현재 문서 - REST API 엔드포인트 상세 명세 | 프론트엔드 개발자 |
+| [API 참고 문서](https://github.com/daemin-kim/hamalog-backend/blob/main/docs/internal/API-reference.md) | 인프라, 스키마, 변경 이력 | 백엔드/DevOps |
+| [프로젝트 구조 설명서](https://github.com/daemin-kim/hamalog-backend/blob/main/docs/shared/Project-Structure.md) | 프로젝트 디렉토리 구조, 아키텍처, 배포 구성 | 전체 |
+| [바이브 코딩 가이드](https://github.com/daemin-kim/hamalog-backend/blob/main/docs/ai/VIBE-CODING-GUIDE.md) | AI 협업 개발 가이드 | AI/개발자 |
+| [코딩 컨벤션](https://github.com/daemin-kim/hamalog-backend/blob/main/docs/internal/CODING-CONVENTIONS.md) | 코드 스타일 및 규칙 | 개발자 |
+| [README](https://github.com/daemin-kim/hamalog-backend/blob/main/docs/README.md) | 프로젝트 소개 및 시작 가이드 | 전체 |
 
 ---
 
-## 🔐 인증 흐름 가이드
+**공통 사항**
 
-API 연동 전 반드시 아래 인증 흐름을 이해하고 순서대로 구현해야 합니다.
+⚠️ **로그인 및 회원가입을 제외한 모든 엔드포인트는 JWT 토큰 기반 인증이 필요합니다.** ⚠️
 
----
-
-### 📋 전체 흐름 요약
-
-**1단계: 로그인** → **2단계: 토큰 저장** → **3단계: CSRF 토큰 발급** → **4단계: API 호출** → **5단계: 토큰 갱신** → **6단계: 로그아웃**
-
----
-
-### 🔹 일반 로그인 흐름
-
-| 순서 | 주체 | 액션 | 엔드포인트 | 결과 |
-|:---:|------|------|-----------|------|
-| 1 | 프론트엔드 → 서버 | 회원가입 요청 | `POST /auth/signup` | 201 Created |
-| 2 | 프론트엔드 → 서버 | 로그인 요청 | `POST /auth/login` | Access Token + Refresh Token 반환 |
-
----
-
-### 🔸 OAuth2 카카오 로그인 흐름
-
-| 순서 | 주체 | 액션 | 엔드포인트 | 결과 |
-|:---:|------|------|-----------|------|
-| 1 | 프론트엔드 → 서버 | 카카오 로그인 시작 | `GET /oauth2/auth/kakao` | 302 Redirect (카카오로 이동) |
-| 2 | 사용자 → 카카오 | 카카오에서 로그인 | 카카오 로그인 페이지 | 인가 코드 발급 |
-| 3 | 카카오 → 서버 | 콜백 호출 | `GET /oauth2/auth/kakao/callback?code=xxx` | Access Token + Refresh Token 반환 |
-
----
-
-### 🔹 CSRF 토큰 발급 (SPA 필수)
-
-| 순서 | 주체 | 액션 | 엔드포인트 | 결과 |
-|:---:|------|------|-----------|------|
-| 1 | 프론트엔드 → 서버 | CSRF 토큰 요청 | `GET /auth/csrf-token` | CSRF Token 반환 (TTL: 60분) |
-
-⚠️ **POST, PUT, DELETE 요청 전 반드시 CSRF 토큰을 발급받아야 합니다.**
-
----
-
-### 🔹 인증된 API 호출
-
-| 순서 | 주체 | 액션 | 필수 헤더 | 결과 |
-|:---:|------|------|----------|------|
-| 1 | 프론트엔드 → 서버 | API 요청 | Authorization + X-CSRF-TOKEN | 응답 데이터 |
-
----
-
-### 🔹 토큰 갱신 흐름
-
-| 순서 | 주체 | 액션 | 엔드포인트 | 결과 |
-|:---:|------|------|-----------|------|
-| 1 | 프론트엔드 → 서버 | 토큰 갱신 요청 | `POST /auth/refresh` | 새 Access Token + 새 Refresh Token |
-
----
-
-### 단계별 구현 가이드
-
----
-
-#### Step 1️⃣ 회원가입 또는 로그인
-
-**일반 로그인 방식**
-- `POST /auth/signup` → 회원가입 (최초 1회)
-- `POST /auth/login` → 로그인하여 토큰 발급
-
-**OAuth2 카카오 로그인 방식**
-- `GET /oauth2/auth/kakao` → 카카오 로그인 페이지로 리다이렉트
-- 사용자가 카카오에서 로그인 완료
-- `GET /oauth2/auth/kakao/callback` → 자동 호출, JWT 토큰 반환
-
----
-
-#### Step 2️⃣ 토큰 저장
-
-로그인 성공 시 받은 토큰을 안전하게 저장합니다.
-
-| 토큰 | 용도 | 만료 시간 | 저장 위치 권장 |
-|------|------|----------|---------------|
-| `access_token` | API 호출 인증 | 30분 | 메모리 또는 sessionStorage |
-| `refresh_token` | Access Token 갱신 | 7일 | httpOnly 쿠키 또는 secure storage |
-
----
-
-#### Step 3️⃣ CSRF 토큰 발급 (SPA 필수)
-
-**POST, PUT, DELETE 요청 전 반드시 CSRF 토큰을 발급받아야 합니다.**
-
-- 엔드포인트: `GET /auth/csrf-token`
-- TTL: 60분 (만료 시 재발급 필요)
-
-응답으로 받은 CSRF 토큰을 저장하고, 이후 모든 변경 요청에 포함합니다.
-
----
-
-#### Step 4️⃣ 인증된 API 호출
-
-모든 인증 API 요청 시 아래 헤더를 포함해야 합니다.
-
-| 헤더 | 값 | 필수 여부 |
-|------|-----|----------|
-| `Authorization` | `Bearer {access_token}` | ✅ 모든 인증 API |
-| `X-CSRF-TOKEN` | `{csrf_token}` | ✅ POST, PUT, DELETE |
-| `Content-Type` | `application/json` | 요청 본문이 있는 경우 |
-
-**요청 예시 (GET)**
-```
-GET /medication-schedule/list/1 HTTP/1.1
-Host: api.hamalog.shop
-Authorization: Bearer eyJhbGciOiJIUzI1NiJ9...
-```
-
-**요청 예시 (POST)**
-```
-POST /medication-schedule HTTP/1.1
-Host: api.hamalog.shop
-Authorization: Bearer eyJhbGciOiJIUzI1NiJ9...
-X-CSRF-TOKEN: abc123-csrf-token
-Content-Type: application/json
-```
-
----
-
-#### Step 5️⃣ 토큰 갱신
-
-Access Token 만료 시 (401 `TOKEN_EXPIRED` 응답) Refresh Token으로 갱신합니다.
-
-**요청**
-```
-POST /auth/refresh
-Content-Type: application/json
-
-{
-  "refresh_token": "{저장된 refresh_token}"
-}
-```
-
-**응답**
-```
-{
-  "access_token": "새로운 access token",
-  "refresh_token": "새로운 refresh token (로테이션)",
-  "expires_in": 1800,
-  "token_type": "Bearer"
-}
-```
-
-⚠️ **Refresh Token Rotation**: 갱신 시 새로운 Refresh Token이 발급되므로, 기존 토큰을 반드시 새 토큰으로 교체해야 합니다.
-
----
-
-#### Step 6️⃣ 로그아웃
-
-**요청**
-```
-POST /auth/logout
-Authorization: Bearer {access_token}
-X-CSRF-TOKEN: {csrf_token}
-```
-
-로그아웃 시 토큰이 블랙리스트에 등록되어 더 이상 사용할 수 없습니다.
-
----
-
-### ✅ 인증 흐름 체크리스트
-
-| 완료 | 단계 | 설명 |
-|:---:|:---:|------|
-| ☐ | 1 | 회원가입/로그인으로 Access Token & Refresh Token 획득 |
-| ☐ | 2 | 토큰을 안전한 위치에 저장 |
-| ☐ | 3 | CSRF 토큰 발급 (`GET /auth/csrf-token`) |
-| ☐ | 4 | API 호출 시 `Authorization` 헤더에 Access Token 포함 |
-| ☐ | 5 | POST/PUT/DELETE 시 `X-CSRF-TOKEN` 헤더 추가 |
-| ☐ | 6 | 401 `TOKEN_EXPIRED` 발생 시 `/auth/refresh`로 토큰 갱신 |
-| ☐ | 7 | Refresh Token도 만료되면 재로그인 유도 |
-
----
-
-## 공통 사항
-
-⚠️ **로그인 및 회원가입을 제외한 모든 엔드포인트는 JWT 토큰 기반 인증이 필요합니다.** ⚠️
-
-- 토큰은 요청 헤더에 포함해야 합니다. (예: `Authorization: Bearer {token}`)
-- EndPoint에 파라미터가 포함되는 경우(GET 등), 구별하기 위해 파라미터는 `{}`로 감싸져 있습니다.
+- 토큰은 요청 헤더에 포함해야 합니다. (예: `Authorization: Bearer {token}`)
+- EndPoint에 파라미터가 포함되는 경우(GET 등), 구별하기 위해 파라미터는 `{}`로 감싸져 있습니다.
 - 모든 API는 리소스 소유권 검증을 통해 본인의 데이터만 접근 가능하도록 보안이 강화되었습니다.
-- SPA 클라이언트는 `/auth/csrf-token` 으로 발급받은 CSRF 토큰을 `X-CSRF-TOKEN` 헤더에 포함해 안전하지 않은 메서드(POST, PUT, DELETE)에 함께 전송해야 합니다.
+- SPA 클라이언트는 `/auth/csrf-token` 으로 발급받은 CSRF 토큰을 `X-CSRF-TOKEN` 헤더에 포함해 안전하지 않은 메서드(POST, PUT, DELETE)에 함께 전송해야 합니다.
 
-### Base URL
+**Base URL**
 
-| 환경 | URL | 비고 |
-|------|-----|------|
+| **환경** | **URL** | **비고** |
+| --- | --- | --- |
 | **Production** | `https://api.hamalog.shop` | Cloudflare Tunnel을 통한 보안 연결 |
 | **Local Development** | `http://localhost:8080` | Docker Compose 로컬 환경 |
 
-### 에러 응답 규칙
+**에러 응답 규칙**
 
 모든 에러 응답은 아래와 같이 일관된 형식을 따릅니다.
 
@@ -227,10 +45,10 @@ X-CSRF-TOKEN: {csrf_token}
 }
 ```
 
-### HTTP 상태 코드
+**HTTP 상태 코드**
 
-| 코드 | 의미 | 설명 |
-|------|------|------|
+| **코드** | **의미** | **설명** |
+| --- | --- | --- |
 | **200** | 성공 | 요청 처리 완료 |
 | **201** | 생성 성공 | 리소스 생성 완료 |
 | **204** | 삭제 성공 | 본문 없음 |
@@ -243,12 +61,12 @@ X-CSRF-TOKEN: {csrf_token}
 
 ---
 
-## API 엔드포인트
+**API 엔드포인트**
 
-### 인증 API (`/auth`, `/oauth2`)
+**인증 API (`/auth`, `/oauth2`)**
 
-| 기능 | EndPoint | Method | 비고 |
-|------|----------|--------|------|
+| **기능** | **EndPoint** | **Method** | **비고** |
+| --- | --- | --- | --- |
 | 회원가입 | `/auth/signup` | `POST` | 이메일 형식 필수 |
 | 일반 로그인 | `/auth/login` | `POST` | JWT 토큰 반환 |
 | 토큰 갱신 | `/auth/refresh` | `POST` | Refresh Token 로테이션 |
@@ -263,9 +81,10 @@ X-CSRF-TOKEN: {csrf_token}
 | 카카오 로그인 시작 | `/oauth2/auth/kakao` | `GET` | 카카오로 리다이렉션 |
 | 카카오 로그인 콜백 | `/oauth2/auth/kakao/callback` | `GET` | JWT 발급 |
 
-#### 인증 API 데이터 구조
+**인증 API 데이터 구조**
 
-##### 회원가입 요청
+**회원가입 요청**
+
 ```json
 {
   "loginId": "user@example.com",
@@ -277,17 +96,19 @@ X-CSRF-TOKEN: {csrf_token}
 }
 ```
 
-##### 로그인 응답
+**로그인 응답**
+
 ```json
 {
   "access_token": "eyJhbGciOiJIUzI1NiJ9...",
   "refresh_token": "eyJhbGciOiJIUzI1NiJ9...",
-  "expires_in": 1800,
+  "expires_in": 900,
   "token_type": "Bearer"
 }
 ```
 
-##### 로그인 이력 응답
+**로그인 이력 응답**
+
 ```json
 {
   "histories": [
@@ -311,7 +132,8 @@ X-CSRF-TOKEN: {csrf_token}
 }
 ```
 
-##### 활성 세션 응답
+**활성 세션 응답**
+
 ```json
 {
   "totalActiveSessions": 3,
@@ -330,17 +152,18 @@ X-CSRF-TOKEN: {csrf_token}
 
 ---
 
-### 회원 프로필 API (`/member`)
+**회원 프로필 API (`/member`)**
 
-| 기능 | EndPoint | Method | 비고 |
-|------|----------|--------|------|
+| **기능** | **EndPoint** | **Method** | **비고** |
+| --- | --- | --- | --- |
 | 내 정보 조회 | `/member/profile` | `GET` | JWT 인증 필수 |
 | 프로필 수정 | `/member/profile` | `PUT` | 변경할 필드만 전송 |
 | 비밀번호 변경 | `/member/password` | `PUT` | 현재 비밀번호 확인 필요 |
 
-#### 회원 프로필 데이터 구조
+**회원 프로필 데이터 구조**
 
-##### 프로필 응답
+**프로필 응답**
+
 ```json
 {
   "memberId": 1,
@@ -353,7 +176,8 @@ X-CSRF-TOKEN: {csrf_token}
 }
 ```
 
-##### 비밀번호 변경 요청
+**비밀번호 변경 요청**
+
 ```json
 {
   "currentPassword": "currentPassword123",
@@ -364,10 +188,10 @@ X-CSRF-TOKEN: {csrf_token}
 
 ---
 
-### 복약 스케줄 API (`/medication-schedule`)
+**복약 스케줄 API (`/medication-schedule`)**
 
-| 기능 | EndPoint | Method | 비고 |
-|------|----------|--------|------|
+| **기능** | **EndPoint** | **Method** | **비고** |
+| --- | --- | --- | --- |
 | 목록 조회 | `/medication-schedule/list/{member-id}` | `GET` | 페이지네이션 |
 | 상세 조회 | `/medication-schedule/{id}` | `GET` | - |
 | 등록 | `/medication-schedule` | `POST` | multipart/form-data, 이미지 최대 5MB |
@@ -381,10 +205,11 @@ X-CSRF-TOKEN: {csrf_token}
 | 알림 시간 목록 | `/medication-schedule/{id}/times` | `GET` | 시간순 정렬 |
 | 알림 시간 추가 | `/medication-schedule/{id}/times` | `POST` | - |
 
-#### 복약 스케줄 데이터 구조
+**복약 스케줄 데이터 구조**
 
-##### 등록 요청 (multipart/form-data)
-```javascript
+**등록 요청 (multipart/form-data)**
+
+```jsx
 const formData = new FormData();
 formData.append('data', JSON.stringify({
   memberId: 1,
@@ -400,7 +225,8 @@ formData.append('data', JSON.stringify({
 formData.append('image', imageFile); // 선택
 ```
 
-##### 목록 응답
+**목록 응답**
+
 ```json
 {
   "schedules": [
@@ -427,21 +253,23 @@ formData.append('image', imageFile); // 선택
 
 ---
 
-### 복약 알림 시간 API (`/medication-time`)
+**복약 알림 시간 API (`/medication-time`)**
 
-| 기능 | EndPoint | Method | 비고 |
-|------|----------|--------|------|
+| **기능** | **EndPoint** | **Method** | **비고** |
+| --- | --- | --- | --- |
 | 수정 | `/medication-time/{time-id}` | `PUT` | - |
 | 삭제 | `/medication-time/{time-id}` | `DELETE` | 204 No Content |
 
-##### 알림 시간 생성/수정 요청
+**알림 시간 생성/수정 요청**
+
 ```json
 {
   "takeTime": "09:00"
 }
 ```
 
-##### 알림 시간 응답
+**알림 시간 응답**
+
 ```json
 {
   "medicationTimeId": 1,
@@ -452,10 +280,10 @@ formData.append('image', imageFile); // 선택
 
 ---
 
-### 복약 기록 API (`/medication-record`)
+**복약 기록 API (`/medication-record`)**
 
-| 기능 | EndPoint | Method | 비고 |
-|------|----------|--------|------|
+| **기능** | **EndPoint** | **Method** | **비고** |
+| --- | --- | --- | --- |
 | 목록 조회 | `/medication-record/list/{schedule-id}` | `GET` | 특정 스케줄의 기록 |
 | 상세 조회 | `/medication-record/{id}` | `GET` | - |
 | 생성 | `/medication-record` | `POST` | - |
@@ -464,9 +292,10 @@ formData.append('image', imageFile); // 선택
 | 일괄 생성 | `/medication-record/batch` | `POST` | 최대 100개 |
 | 일괄 수정 | `/medication-record/batch` | `PUT` | 최대 100개 |
 
-#### 복약 기록 데이터 구조
+**복약 기록 데이터 구조**
 
-##### 생성/수정 요청
+**생성/수정 요청**
+
 ```json
 {
   "medicationScheduleId": 101,
@@ -476,7 +305,8 @@ formData.append('image', imageFile); // 선택
 }
 ```
 
-##### 배치 생성 요청
+**배치 생성 요청**
+
 ```json
 {
   "records": [
@@ -490,7 +320,8 @@ formData.append('image', imageFile); // 선택
 }
 ```
 
-##### 배치 응답
+**배치 응답**
+
 ```json
 {
   "totalRequested": 5,
@@ -503,16 +334,17 @@ formData.append('image', imageFile); // 선택
 
 ---
 
-### 복약 통계 API (`/medication-stats`)
+**복약 통계 API (`/medication-stats`)**
 
-| 기능 | EndPoint | Method | 비고 |
-|------|----------|--------|------|
+| **기능** | **EndPoint** | **Method** | **비고** |
+| --- | --- | --- | --- |
 | 이행률 조회 | `/medication-stats/{member-id}/adherence` | `GET` | 기간별 통계 |
 | 현황 요약 | `/medication-stats/{member-id}/summary` | `GET` | 오늘/주간/월간 |
 
-#### 복약 통계 데이터 구조
+**복약 통계 데이터 구조**
 
-##### 이행률 응답
+**이행률 응답**
+
 ```json
 {
   "startDate": "2025-12-01",
@@ -525,7 +357,8 @@ formData.append('image', imageFile); // 선택
 }
 ```
 
-##### 현황 요약 응답
+**현황 요약 응답**
+
 ```json
 {
   "totalActiveSchedules": 5,
@@ -540,19 +373,20 @@ formData.append('image', imageFile); // 선택
 
 ---
 
-### 복약 스케줄 그룹 API (`/medication-group`)
+**복약 스케줄 그룹 API (`/medication-group`)**
 
-| 기능 | EndPoint | Method | 비고 |
-|------|----------|--------|------|
+| **기능** | **EndPoint** | **Method** | **비고** |
+| --- | --- | --- | --- |
 | 그룹 목록 조회 | `/medication-group` | `GET` | JWT 인증 필수 |
 | 그룹 상세 조회 | `/medication-group/{group-id}` | `GET` | - |
 | 그룹 생성 | `/medication-group` | `POST` | - |
 | 그룹 수정 | `/medication-group/{group-id}` | `PUT` | - |
 | 그룹 삭제 | `/medication-group/{group-id}` | `DELETE` | 204 No Content |
 
-#### 그룹 데이터 구조
+**그룹 데이터 구조**
 
-##### 그룹 생성 요청
+**그룹 생성 요청**
+
 ```json
 {
   "name": "아침약",
@@ -561,7 +395,8 @@ formData.append('image', imageFile); // 선택
 }
 ```
 
-##### 그룹 응답
+**그룹 응답**
+
 ```json
 {
   "groupId": 1,
@@ -575,19 +410,20 @@ formData.append('image', imageFile); // 선택
 
 ---
 
-### 부작용 API (`/side-effect`)
+**부작용 API (`/side-effect`)**
 
-| 기능 | EndPoint | Method | 비고 |
-|------|----------|--------|------|
+| **기능** | **EndPoint** | **Method** | **비고** |
+| --- | --- | --- | --- |
 | 최근 부작용 조회 | `/side-effect/recent` | `GET` | 최근 5개, Redis 캐시 |
 | 부작용 기록 생성 | `/side-effect/record` | `POST` | 201 Created |
 | 목록 조회 | `/side-effect/list/{member-id}` | `GET` | 페이지네이션 |
 | 상세 조회 | `/side-effect/{record-id}` | `GET` | - |
 | 삭제 | `/side-effect/{record-id}` | `DELETE` | 204 No Content |
 
-#### 부작용 데이터 구조
+**부작용 데이터 구조**
 
-##### 기록 생성 요청
+**기록 생성 요청**
+
 ```json
 {
   "memberId": 1,
@@ -599,7 +435,8 @@ formData.append('image', imageFile); // 선택
 }
 ```
 
-##### 기록 상세 응답
+**기록 상세 응답**
+
 ```json
 {
   "sideEffectRecordId": 1,
@@ -614,10 +451,10 @@ formData.append('image', imageFile); // 선택
 
 ---
 
-### 마음 일기 API (`/mood-diary`)
+**마음 일기 API (`/mood-diary`)**
 
-| 기능 | EndPoint | Method | 비고 |
-|------|----------|--------|------|
+| **기능** | **EndPoint** | **Method** | **비고** |
+| --- | --- | --- | --- |
 | 생성 | `/mood-diary` | `POST` | 하루 1회 제한 |
 | 상세 조회 | `/mood-diary/{id}` | `GET` | 소유자만 접근 |
 | 목록 조회 | `/mood-diary/list/{member-id}` | `GET` | 최신순, 페이지네이션 |
@@ -628,9 +465,10 @@ formData.append('image', imageFile); // 선택
 | 캘린더 조회 | `/mood-diary/calendar/{member-id}` | `GET` | 월별 작성 현황 |
 | 검색 | `/mood-diary/search/{member-id}` | `GET` | 내용 검색 |
 
-#### 마음 일기 데이터 구조
+**마음 일기 데이터 구조**
 
-##### 생성 요청 (템플릿 형식)
+**생성 요청 (템플릿 형식)**
+
 ```json
 {
   "memberId": 1,
@@ -644,7 +482,8 @@ formData.append('image', imageFile); // 선택
 }
 ```
 
-##### 생성 요청 (자유 형식)
+**생성 요청 (자유 형식)**
+
 ```json
 {
   "memberId": 1,
@@ -656,8 +495,9 @@ formData.append('image', imageFile); // 선택
 ```
 
 **기분 타입 (MoodType):**
-| 값 | 의미 |
-|----|------|
+
+| **값** | **의미** |
+| --- | --- |
 | `HAPPY` | 행복 |
 | `EXCITED` | 신남 |
 | `PEACEFUL` | 평온 |
@@ -666,7 +506,8 @@ formData.append('image', imageFile); // 선택
 | `ANGRY` | 분노 |
 | `SAD` | 슬픔 |
 
-##### 통계 응답
+**통계 응답**
+
 ```json
 {
   "startDate": "2025-12-01",
@@ -684,7 +525,8 @@ formData.append('image', imageFile); // 선택
 }
 ```
 
-##### 캘린더 응답
+**캘린더 응답**
+
 ```json
 {
   "year": 2025,
@@ -706,15 +548,16 @@ formData.append('image', imageFile); // 선택
 
 ---
 
-### 데이터 내보내기 API (`/export`)
+**데이터 내보내기 API (`/export`)**
 
-| 기능 | EndPoint | Method | 비고 |
-|------|----------|--------|------|
+| **기능** | **EndPoint** | **Method** | **비고** |
+| --- | --- | --- | --- |
 | 내 데이터 내보내기 | `/export/my-data` | `GET` | JSON 객체 |
 | JSON 파일 다운로드 | `/export/my-data/download` | `GET` | 파일 첨부 |
 | 복약 기록 CSV | `/export/medication-records` | `GET` | 의사 상담용 |
 
-#### 내보내기 응답
+**내보내기 응답**
+
 ```json
 {
   "meta": {
@@ -736,10 +579,10 @@ formData.append('image', imageFile); // 선택
 
 ---
 
-### 알림 설정 API (`/notification`)
+**알림 설정 API (`/notification`)**
 
-| 기능 | EndPoint | Method | 비고 |
-|------|----------|--------|------|
+| **기능** | **EndPoint** | **Method** | **비고** |
+| --- | --- | --- | --- |
 | 알림 설정 조회 | `/notification/settings` | `GET` | 없으면 기본값 생성 |
 | 알림 설정 수정 | `/notification/settings` | `PUT` | 변경할 필드만 전송 |
 | FCM 토큰 등록 | `/notification/token` | `POST` | 디바이스 푸시 토큰 |
@@ -747,9 +590,10 @@ formData.append('image', imageFile); // 선택
 | 디바이스 토큰 삭제 | `/notification/devices/{tokenId}` | `DELETE` | 특정 디바이스 삭제 |
 | 현재 토큰 비활성화 | `/notification/token` | `DELETE` | 로그아웃 시 호출 |
 
-#### 알림 설정 데이터 구조
+**알림 설정 데이터 구조**
 
-##### 알림 설정 응답
+**알림 설정 응답**
+
 ```json
 {
   "notificationSettingsId": 1,
@@ -767,7 +611,8 @@ formData.append('image', imageFile); // 선택
 }
 ```
 
-##### 알림 설정 수정 요청
+**알림 설정 수정 요청**
+
 ```json
 {
   "pushEnabled": true,
@@ -781,7 +626,8 @@ formData.append('image', imageFile); // 선택
 }
 ```
 
-##### FCM 토큰 등록 요청
+**FCM 토큰 등록 요청**
+
 ```json
 {
   "token": "fcm-token-string...",
@@ -791,13 +637,15 @@ formData.append('image', imageFile); // 선택
 ```
 
 **디바이스 타입 (DeviceType):**
-| 값 | 의미 |
-|----|------|
+
+| **값** | **의미** |
+| --- | --- |
 | `ANDROID` | 안드로이드 기기 |
 | `IOS` | iOS 기기 |
 | `WEB` | 웹 브라우저 |
 
-##### 등록 디바이스 목록 응답
+**등록 디바이스 목록 응답**
+
 ```json
 {
   "memberId": 1,
@@ -819,121 +667,59 @@ formData.append('image', imageFile); // 선택
 
 ---
 
-## 에러 코드 목록
+**에러 코드 목록**
 
-### 인증 관련
-| 에러 코드 | 메시지 | HTTP |
-|-----------|--------|------|
+**인증 관련**
+
+| **에러 코드** | **메시지** | **HTTP** |
+| --- | --- | --- |
 | `UNAUTHORIZED` | 인증이 필요합니다. | 401 |
 | `FORBIDDEN` | 접근 권한이 없습니다. | 403 |
 | `INVALID_TOKEN` | 유효하지 않은 토큰입니다. | 401 |
 | `TOKEN_EXPIRED` | 토큰이 만료되었습니다. | 401 |
-| `TOKEN_BLACKLISTED` | 무효화된 토큰입니다. | 401 |
-| `INVALID_REFRESH_TOKEN` | 유효하지 않은 Refresh Token입니다. | 401 |
-| `REFRESH_TOKEN_EXPIRED` | Refresh Token이 만료되었습니다. | 401 |
 
-### 회원 관련
-| 에러 코드 | 메시지 | HTTP |
-|-----------|--------|------|
+**회원 관련**
+
+| **에러 코드** | **메시지** | **HTTP** |
+| --- | --- | --- |
 | `MEMBER_NOT_FOUND` | 회원을 찾을 수 없습니다. | 404 |
 | `DUPLICATE_MEMBER` | 이미 존재하는 회원입니다. | 409 |
 | `INVALID_CURRENT_PASSWORD` | 현재 비밀번호가 일치하지 않습니다. | 400 |
 | `PASSWORD_CONFIRM_MISMATCH` | 비밀번호와 확인이 일치하지 않습니다. | 400 |
-| `SAME_AS_CURRENT_PASSWORD` | 새 비밀번호는 현재 비밀번호와 달라야 합니다. | 400 |
-| `NO_PROFILE_UPDATE_DATA` | 수정할 프로필 정보가 없습니다. | 400 |
 
-### 복약 관련
-| 에러 코드 | 메시지 | HTTP |
-|-----------|--------|------|
+**복약 관련**
+
+| **에러 코드** | **메시지** | **HTTP** |
+| --- | --- | --- |
 | `SCHEDULE_NOT_FOUND` | 복약 스케줄을 찾을 수 없습니다. | 404 |
 | `RECORD_NOT_FOUND` | 복약 기록을 찾을 수 없습니다. | 404 |
 | `TIME_NOT_FOUND` | 복약 시간 정보를 찾을 수 없습니다. | 404 |
-| `INVALID_SCHEDULE` | 유효하지 않은 복약 스케줄입니다. | 400 |
-| `INVALID_PRESCRIPTION_DAYS` | 처방 일수는 1일 이상이어야 합니다. | 400 |
-| `INVALID_PER_DAY` | 1일 복용 횟수는 1회 이상이어야 합니다. | 400 |
-| `DUPLICATE_GROUP_NAME` | 이미 존재하는 그룹 이름입니다. | 409 |
 
-### 마음 일기 관련
-| 에러 코드 | 메시지 | HTTP |
-|-----------|--------|------|
+**마음 일기 관련**
+
+| **에러 코드** | **메시지** | **HTTP** |
+| --- | --- | --- |
 | `MOOD_DIARY_NOT_FOUND` | 마음 일기를 찾을 수 없습니다. | 404 |
 | `DIARY_ALREADY_EXISTS` | 해당 날짜에 이미 일기가 존재합니다. | 409 |
-| `INVALID_DIARY_TYPE` | 유효하지 않은 일기 형식입니다. | 400 |
-| `INVALID_MOOD_TYPE` | 유효하지 않은 기분 타입입니다. | 400 |
 
-### 부작용 관련
-| 에러 코드 | 메시지 | HTTP |
-|-----------|--------|------|
-| `SIDE_EFFECT_NOT_FOUND` | 부작용 정보를 찾을 수 없습니다. | 404 |
-| `INVALID_DEGREE` | 부작용 정도는 1-5 사이여야 합니다. | 400 |
-| `EMPTY_SIDE_EFFECT_LIST` | 부작용 목록이 비어있습니다. | 400 |
+**파일 관련**
 
-### 파일 관련
-| 에러 코드 | 메시지 | HTTP |
-|-----------|--------|------|
+| **에러 코드** | **메시지** | **HTTP** |
+| --- | --- | --- |
 | `FILE_SAVE_FAIL` | 파일 저장에 실패했습니다. | 500 |
 | `FILE_SIZE_EXCEEDED` | 파일 크기가 제한을 초과했습니다. | 413 |
 | `INVALID_FILE_TYPE` | 지원하지 않는 파일 형식입니다. | 400 |
-| `FILE_NOT_FOUND` | 파일을 찾을 수 없습니다. | 404 |
 
-### 알림 관련
-| 에러 코드 | 메시지 | HTTP |
-|-----------|--------|------|
+**알림 관련**
+
+| **에러 코드** | **메시지** | **HTTP** |
+| --- | --- | --- |
 | `NOTIFICATION_SETTINGS_NOT_FOUND` | 알림 설정을 찾을 수 없습니다. | 404 |
 | `FCM_TOKEN_NOT_FOUND` | FCM 토큰을 찾을 수 없습니다. | 404 |
 | `FCM_SEND_FAILED` | 푸시 알림 전송에 실패했습니다. | 500 |
 | `INVALID_DEVICE_TYPE` | 유효하지 않은 디바이스 타입입니다. | 400 |
 
-### 유효성 검증 관련
-| 에러 코드 | 메시지 | HTTP |
-|-----------|--------|------|
-| `BAD_REQUEST` | 잘못된 요청입니다. | 400 |
-| `INVALID_INPUT` | 입력값이 유효하지 않습니다. | 400 |
-| `INVALID_PARAMETER` | 파라미터가 유효하지 않습니다. | 400 |
-| `MISSING_REQUIRED_FIELD` | 필수 필드가 누락되었습니다. | 400 |
-| `INVALID_DATE_RANGE` | 시작일은 처방일 이후여야 합니다. | 400 |
-
-### 시스템/동시성 관련
-| 에러 코드 | 메시지 | HTTP |
-|-----------|--------|------|
-| `INTERNAL_ERROR` | 서버 내부 오류가 발생했습니다. | 500 |
-| `OPTIMISTIC_LOCK_FAILED` | 다른 사용자가 데이터를 수정했습니다. 다시 시도해주세요. | 409 |
-| `RESOURCE_CONFLICT` | 리소스 충돌이 발생했습니다. | 409 |
-
 ---
 
-## 비동기 알림 처리
-
-알림 API는 Redis Stream 기반 메시지 큐를 통해 비동기로 처리됩니다.
-
-### 처리 흐름
-```
-클라이언트 → API 호출 → 메시지 발행 (Producer) → Redis Stream → 메시지 소비 (Consumer) → FCM 발송
-```
-
-### 재시도 정책
-- **최대 재시도**: 3회
-- **실패 시**: Dead Letter Queue(DLQ)로 이동
-- **DLQ 알림**: Discord Webhook으로 운영팀에 알림
-
-> ⚠️ 푸시 알림은 비동기로 처리되므로, API 응답과 실제 푸시 발송 사이에 약간의 지연이 있을 수 있습니다.
-
----
-
-> 📖 더 자세한 정보(인프라 구성, DB 스키마, 변경 이력 등)는 [API 참고 문서](../internal/API-reference.md)를 참조하세요.
-
----
-
-## 문서 변경 이력
-
-| 날짜 | 변경 내용 |
-|------|----------|
-| 2026-01-20 | ExportController 및 MedicationScheduleGroupController 구현, CORS 설정 X-CSRF-TOKEN 헤더 추가, 벤치마크 API는 공개 명세서에서 제외 |
-| 2026-01-12 | Redis Stream 비동기 알림 처리 섹션 추가, 문서 현행화 |
-| 2026-01-03 | 푸시 알림 API 추가 |
-| 2025-12-25 | FCM 토큰 관리, 알림 설정 API 추가 |
-| 2025-12-23 | 데이터 내보내기, 배치 작업, 로그인 이력/세션 관리 API 추가 |
-| 2025-12-22 | 마음 일기 확장, 회원 프로필, 복약 통계/알림 시간, 부작용 확장 API 추가 |
-
-> 상세한 변경 이력은 [CHANGELOG.md](../../CHANGELOG.md) 또는 [API 참고 문서](../internal/API-reference.md)를 참조하세요.
-
+> 📖 더 자세한 정보(인프라 구성, DB 스키마, 변경 이력 등)는 API 참고 문서를 참조하세요.
+>
